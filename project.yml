@@ -1,0 +1,30 @@
+name: Editeur360
+options:
+  bundleIdPrefix: com.pauly
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  Editeur360:
+    type: application
+    platform: iOS
+    sources:
+      - path: Editeur360/App.swift
+      - path: Editeur360/Assets.xcassets
+      - path: Editeur360/web
+        type: folder
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pauly.editeur360
+        PRODUCT_NAME: Editeur360
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Editeur360/Info.plist
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+    scheme: {}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Éditeur 360</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0d1117; overflow: hidden;
+               -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+  #root { height: 100%; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); box-sizing: border-box; }
+  #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+          font: 15px/1.6 -apple-system, system-ui, sans-serif; color: #8b949e; padding: 40px; text-align: center; }
+  #boot pre { text-align: left; color: #f85149; background: #161b22; padding: 16px; border-radius: 8px;
+              max-width: 760px; max-height: 50vh; overflow: auto; white-space: pre-wrap; font-size: 12px; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="boot">Ouverture de l'éditeur…</div>
+  <script>
+    window.addEventListener("error", function (e) {
+      var b = document.getElementById("boot");
+      if (!b) return;
+      b.innerHTML = "<div><p><b>L'éditeur n'a pas pu démarrer.</b></p><pre></pre></div>";
+      b.querySelector("pre").textContent = (e.error && e.error.stack) || e.message || String(e);
+    });
+  </script>
+  <script src="editor.js"></script>
+</body>
+</html>

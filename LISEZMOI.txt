@@ -1,0 +1,46 @@
+ÉDITEUR 360 SUR IPAD : FABRIQUER L'IPA, PUIS L'INSTALLER
+=========================================================
+
+Ce dossier contient le projet de l'appli iPad (l'éditeur complet + une petite
+coque iOS). Un iPad n'accepte qu'une appli compilée sur un Mac et signée par
+Apple : on fait compiler par un Mac de GitHub (gratuit), puis Sideloadly signe
+l'appli avec ton identifiant Apple depuis ton PC.
+
+1. FABRIQUER L'IPA (une fois, ~10 minutes)
+   a. Crée un compte gratuit sur github.com.
+   b. « New repository » → nom : editeur-360-ipad → Public (minutes de
+      compilation illimitées ; en Privé ça marche aussi, dans la limite du
+      forfait gratuit) → Create.
+   c. « uploading an existing file » → glisse TOUT le contenu de ce dossier,
+      y compris le dossier .github → « Commit changes ».
+   d. Onglet « Actions » : « Fabriquer l'IPA » démarre tout seul. Quand la
+      coche est verte (5 à 10 min), clique dessus, en bas « Artifacts » →
+      Editeur360-ipa. Tu reçois un .zip ; dedans : Editeur360.ipa.
+
+2. INSTALLER SUR L'IPAD (depuis ton PC)
+   a. Installe Sideloadly (sideloadly.io), ainsi qu'iTunes et iCloud
+      téléchargés sur le site d'Apple (pas ceux du Microsoft Store).
+   b. Branche l'iPad en USB-C, déverrouille-le, « Faire confiance ».
+   c. Dans Sideloadly : glisse Editeur360.ipa, tape ton identifiant Apple,
+      « Start ».
+   d. Sur l'iPad :
+      - Réglages › Confidentialité et sécurité › Mode développeur → activer
+        (l'iPad redémarre, confirme).
+      - Réglages › Général › VPN et gestion de l'appareil › ton identifiant
+        Apple › Faire confiance.
+   e. Lance « Éditeur 360 ».
+
+3. À SAVOIR
+   - Avec un identifiant Apple gratuit, l'appli doit être réinstallée tous
+     les 7 jours (refais 2c, ou active le rafraîchissement automatique de
+     Sideloadly). Tes jeux ne sont pas effacés tant que tu utilises le même
+     identifiant Apple. Un compte développeur Apple (99 $/an) porte ce délai
+     à un an.
+   - Tes jeux sont dans l'app Fichiers › Sur mon iPad › Éditeur 360.
+     Exporte quand même tes jeux de temps en temps (sauvegarde).
+   - Tout export (jeu, kit DA, appli mobile…) ouvre la fenêtre de partage :
+     « Enregistrer dans Fichiers », AirDrop vers le PC, mail…
+
+4. METTRE L'APPLI À JOUR
+   Remplace Editeur360/web/editor.js sur GitHub par le nouveau moteur.js
+   (renommé editor.js) : l'IPA se refabrique toute seule, puis 2c.

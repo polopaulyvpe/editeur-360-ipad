@@ -1,0 +1,28 @@
+name: Fabriquer l'IPA
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  ipa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Outils
+        run: brew install xcodegen
+      - name: Projet Xcode
+        run: xcodegen generate
+      - name: Compilation (non signée : Sideloadly signera avec ton identifiant Apple)
+        run: |
+          xcodebuild -project Editeur360.xcodeproj -scheme Editeur360 -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -archivePath build/Editeur360.xcarchive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" archive
+      - name: Paquet .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Editeur360.xcarchive/Products/Applications/Editeur360.app Payload/
+          zip -qry Editeur360.ipa Payload
+          ls -l Editeur360.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Editeur360-ipa
+          path: Editeur360.ipa
