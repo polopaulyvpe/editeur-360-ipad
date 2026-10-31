@@ -1,127 +1,243 @@
-/* Habillage iPad de l'éditeur : uniquement visuel.
-   L'éditeur (editor.js) pose ses styles en ligne ; on les retouche ici avec des
-   sélecteurs sur l'attribut style et des !important. Ce fichier est séparé
-   d'editor.js : remplacer editor.js par une nouvelle version garde cet habillage.
+/* Habillage iPad sobre : uniquement visuel.
+   L'éditeur (editor.js) pose ses styles en ligne ; on les retouche avec des
+   sélecteurs sur l'attribut style et des !important. habillage.js ajoute des
+   repères data-e360 et le menu « Plus ». Ces deux fichiers sont séparés
+   d'editor.js : remplacer editor.js garde l'habillage.
    Le jeu testé tourne dans une iframe : il n'est pas touché. */
 
-:root { color-scheme: dark; --amber: #E8A33D; --ring: rgba(232, 163, 61, 0.38); }
+:root {
+  color-scheme: dark;
+  --fond: #0f1012;
+  --surface: #151619;
+  --surface-2: #1b1c20;
+  --bouton: #222327;
+  --bouton-appui: #2c2d32;
+  --trait: #26272c;
+  --texte: #e8e6e1;
+  --texte-2: #8f9198;
+  --accent: #E8A33D;
+  --accent-doux: rgba(232, 163, 61, .14);
+  --anneau: rgba(232, 163, 61, .35);
+  --rayon: 9px;
+  --police: -apple-system, "SF Pro Text", system-ui, sans-serif;
+}
 
-html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+html, body { background: var(--fond) !important; }
+html { -webkit-font-smoothing: antialiased; }
 * { -webkit-tap-highlight-color: transparent; }
 
-/* ---------- Boutons : cibles tactiles, retour au toucher ---------- */
+/* ---------- Police unique, couleurs neutres ---------- */
+#root, #root [style*="font-family"] { font-family: var(--police) !important; }
+#root [style*="Fraunces"] { font-weight: 600 !important; letter-spacing: 0 !important; }
+
+#root [style*="background: rgb(11, 14, 20)"] { background-color: var(--fond) !important; }
+#root [style*="background: rgb(18, 21, 31)"] { background-color: var(--surface) !important; }
+#root [style*="background: rgb(22, 26, 37)"] { background-color: var(--surface-2) !important; }
+#root [style*="background: rgb(36, 41, 56)"] { background-color: var(--bouton) !important; }
+#root [style*="solid rgb(36, 41, 56)"] { border-color: var(--trait) !important; }
+#root [style*="color: rgb(139, 143, 163)"] { color: var(--texte-2) !important; }
+
+/* ---------- Boutons : plats, grands, retour discret à l'appui ---------- */
 #root button {
   touch-action: manipulation;
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
-  min-height: 34px;
-  transition: transform .12s cubic-bezier(.2, .8, .3, 1.2), filter .15s ease,
-              background-color .18s ease, box-shadow .18s ease, opacity .18s ease;
+  min-height: 36px;
+  border-radius: var(--rayon) !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  font-weight: 500;
+  transition: background-color .15s ease, transform .1s ease, opacity .15s ease;
 }
-#root button:not(:disabled):active { transform: scale(.95); filter: brightness(1.18); }
+#root button:not(:disabled):active { transform: scale(.97); }
+#root button[style*="background: rgb(36, 41, 56)"]:not(:disabled):active { background-color: var(--bouton-appui) !important; }
 #root button:focus { outline: none; }
-#root button:focus-visible { box-shadow: 0 0 0 3px var(--ring) !important; }
+#root button:focus-visible { box-shadow: 0 0 0 3px var(--anneau) !important; }
 
-/* Boutons-icônes (fond transparent, petit padding) : zone de toucher carrée. */
+/* Boutons-icônes : zone de toucher carrée, icône en gris. */
 #root button[style*="background: transparent"][style*="padding: 4px"] {
-  min-width: 34px; justify-content: center; align-items: center; border-radius: 10px !important;
+  min-width: 36px; justify-content: center; align-items: center;
 }
-#root button[style*="background: transparent"][style*="padding: 4px"]:active { background: rgba(255, 255, 255, .08) !important; }
+#root button[style*="background: transparent"]:not(:disabled):active { background-color: rgba(255, 255, 255, .07) !important; }
+#root button[data-e360-icone-seule] { filter: grayscale(1) brightness(1.3); opacity: .85; }
+#root [data-e360-masque] { display: none !important; }
 
-/* Coins plus doux. */
-#root [style*="border-radius: 5px"], #root [style*="border-radius: 6px"] { border-radius: 10px !important; }
-#root [style*="border-radius: 7px"], #root [style*="border-radius: 8px"] { border-radius: 12px !important; }
-#root [style*="border-radius: 10px"] { border-radius: 16px !important; }
+/* Coins homogènes. */
+#root [style*="border-radius: 5px"], #root [style*="border-radius: 6px"],
+#root [style*="border-radius: 7px"], #root [style*="border-radius: 8px"] { border-radius: var(--rayon) !important; }
+#root [style*="border-radius: 10px"] { border-radius: 14px !important; }
 
-/* Bouton principal (ambre) : léger relief et halo. */
-#root button[style*="background: rgb(232, 163, 61)"] {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, 0) 60%) !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 4px 14px rgba(232, 163, 61, .28);
-  font-weight: 600;
-}
-/* Boutons secondaires (gris) : relief discret. */
-#root button[style*="background: rgb(36, 41, 56)"] {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, 0)) !important;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 1px 2px rgba(0, 0, 0, .3);
+/* Ambre réservé à l'action principale. Un bouton ambre désactivé est un état
+   (« Scène de départ ») : contour discret plutôt qu'aplat. */
+#root button[style*="background: rgb(232, 163, 61)"]:disabled {
+  background-color: var(--accent-doux) !important; color: var(--accent) !important; opacity: 1;
 }
 
-/* ---------- Barre du haut ---------- */
-#root > div > div:first-child[style*="border-bottom"] {
-  flex-wrap: wrap; row-gap: 8px; gap: 8px; padding: 10px 16px !important;
-  padding-left: max(16px, env(safe-area-inset-left)) !important;
-  padding-right: max(16px, env(safe-area-inset-right)) !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .35); position: relative; z-index: 5;
+/* Sélecteurs à onglets (Liste / Carte / …) : l'onglet actif est gris clair, pas ambre. */
+#root div[style*="padding: 3px"][style*="background: rgb(22, 26, 37)"] {
+  background-color: var(--fond) !important; border: 1px solid var(--trait); padding: 3px !important;
 }
-#root > div > div:first-child[style*="border-bottom"] > * { flex-shrink: 0; white-space: nowrap; }
-#root > div > div:first-child[style*="border-bottom"] button { line-height: 1.2; }
+#root div[style*="padding: 3px"][style*="background: rgb(22, 26, 37)"] > button { min-height: 32px; }
+#root div[style*="padding: 3px"][style*="background: rgb(22, 26, 37)"] > button[style*="background: rgb(232, 163, 61)"] {
+  background-color: var(--bouton-appui) !important; color: var(--texte) !important;
+}
 
-/* ---------- Champs de saisie ---------- */
+/* Boutons-pastilles à choix (flex: 1) : le choix actif en gris clair. */
+#root button[style*="flex: 1"][style*="background: rgb(232, 163, 61)"] {
+  background-color: var(--bouton-appui) !important; color: var(--texte) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12) !important;
+}
+#root button[style*="flex: 1"][style*="background: rgb(18, 21, 31)"] { background-color: transparent !important; }
+
+/* ---------- Barre du haut : une ligne, actions secondaires dans « Plus » ---------- */
+#root [data-e360="barre"] {
+  gap: 8px !important; padding: 8px 14px !important; flex-wrap: wrap; row-gap: 8px;
+  padding-left: max(14px, env(safe-area-inset-left)) !important;
+  padding-right: max(14px, env(safe-area-inset-right)) !important;
+  background-color: var(--surface) !important;
+}
+#root [data-e360="barre"] > * { flex-shrink: 0; white-space: nowrap; }
+#root [data-e360="logo"], #root [data-e360="marque"], #root [data-e360-menu] { display: none !important; }
+#root [data-e360="nom-jeu"] {
+  order: 1; margin: 0 6px 0 2px !important; font-size: 16px !important; font-weight: 600;
+  color: var(--texte) !important; max-width: 240px !important;
+}
+#root [data-e360="vues"] { order: 2; }
+#root [data-e360="barre"] > div:not([data-e360]) { order: 3; }          /* espace extensible */
+#root [data-e360="mes-jeux"] { order: 4; }
+#root [data-e360="enregistrer"] { order: 5; }
+#root [data-e360="tester-scene"] { order: 6; margin-left: 6px; }
+#root [data-e360="tester-jeu"] { order: 7; }
+#root [data-e360="barre"] > .e360-plus { order: 8; }
+
+#root [data-e360="mes-jeux"], #root [data-e360="enregistrer"], #root [data-e360="tester-scene"] {
+  background-color: transparent !important; border: 1px solid var(--trait) !important;
+}
+#root [data-e360="tester-jeu"] { padding: 6px 16px !important; font-weight: 600; }
+
+#root .e360-plus {
+  width: 40px; min-height: 36px; padding: 0; border: 1px solid var(--trait); background: transparent;
+  color: var(--texte-2); font: 700 12px/1 var(--police); letter-spacing: 1px; cursor: pointer;
+}
+#root .e360-plus:active { background: var(--bouton-appui); }
+
+/* En portrait, les vues passent sur leur propre ligne, pleine largeur. */
+@media (max-width: 1000px) {
+  #root [data-e360="vues"] { order: 10; flex: 1 1 100%; }
+  #root [data-e360="vues"] > button { flex: 1; justify-content: center; }
+}
+
+/* Menu « Plus » (hors de #root). */
+.e360-menu {
+  position: fixed; z-index: 1000; min-width: 240px; padding: 6px;
+  background: var(--surface-2); border: 1px solid var(--trait); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .5);
+  font-family: var(--police); animation: e360-fondu .12s ease-out;
+}
+.e360-menu-titre {
+  padding: 10px 12px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--texte-2);
+}
+.e360-menu-item {
+  display: block; width: 100%; min-height: 44px; padding: 0 12px; text-align: left;
+  background: transparent; border: none; border-radius: 9px; color: var(--texte);
+  font: 500 15px var(--police); -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+.e360-menu-item:active { background: var(--bouton-appui); }
+.e360-menu-item:disabled { color: var(--texte-2); }
+
+/* ---------- Colonne de gauche : une liste, pas des blocs ---------- */
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] {
+  width: 248px !important; padding: 10px 10px 20px !important; background-color: var(--surface) !important;
+}
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
+  font-size: 11px !important; font-weight: 600; letter-spacing: .06em; margin: 18px 6px 6px !important;
+}
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > button {
+  width: 100%; justify-content: flex-start !important; background-color: transparent !important;
+  min-height: 42px; padding: 0 10px !important; font-size: 14px !important; color: var(--texte) !important;
+}
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > button:active {
+  background-color: var(--bouton) !important;
+}
+/* Scènes de la liste. */
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="padding: 8px 10px"] {
+  min-height: 44px; box-sizing: border-box; font-size: 14px;
+}
+
+/* ---------- Zone centrale ---------- */
+/* Barre de la scène : boutons en contour. */
+#root div[style*="padding: 10px 16px"][style*="border-bottom"] > button[style*="background: rgb(36, 41, 56)"] {
+  background-color: transparent !important; border: 1px solid var(--trait) !important;
+}
+#root div[style*="padding: 10px 16px"][style*="border-bottom"] { flex-wrap: wrap; row-gap: 8px; }
+#root div[style*="padding: 10px 16px"][style*="border-bottom"] > span[style*="Fraunces"] { font-size: 17px !important; }
+
+/* Panneau de réglages de la scène : plus large, plus lisible. */
+#root div[style*="width: 170px"][style*="flex-shrink: 0"] { width: 250px !important; }
+
+/* Libellés de section. */
+#root div[style*="text-transform: uppercase"] { letter-spacing: .06em !important; font-weight: 600; }
+
+/* ---------- Champs ---------- */
 #root input:not([type]), #root input[type="text"], #root input[type="number"], #root input[type="search"],
 #root textarea, #root select {
-  min-height: 38px; line-height: 1.4;
-  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+  min-height: 40px; line-height: 1.4; font-size: 14px !important;
+  background-color: var(--fond) !important; border-color: var(--trait) !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 #root input:not([type]):focus, #root input[type="text"]:focus, #root input[type="number"]:focus,
 #root input[type="search"]:focus, #root textarea:focus, #root select:focus {
-  outline: none; border-color: var(--amber) !important; box-shadow: 0 0 0 3px var(--ring);
+  outline: none; border-color: var(--accent) !important; box-shadow: 0 0 0 3px var(--anneau);
 }
 #root textarea { resize: vertical; }
-#root ::placeholder { color: rgba(139, 143, 163, .7); }
+#root ::placeholder { color: var(--texte-2); opacity: .7; }
 
 #root input[type="checkbox"], #root input[type="radio"] {
-  accent-color: var(--amber); width: 20px; height: 20px; vertical-align: middle; flex-shrink: 0;
+  accent-color: var(--accent); width: 20px; height: 20px; vertical-align: middle; flex-shrink: 0;
 }
 
-/* Curseurs : piste et poignée assez grosses pour le doigt. */
 #root input[type="range"] {
-  -webkit-appearance: none; appearance: none; background: transparent; height: 30px; accent-color: var(--amber);
+  -webkit-appearance: none; appearance: none; background: transparent; height: 32px; accent-color: var(--accent);
 }
-#root input[type="range"]::-webkit-slider-runnable-track {
-  height: 6px; border-radius: 3px; background: #2b3142;
-}
+#root input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--bouton-appui); }
 #root input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none; width: 24px; height: 24px; margin-top: -9px; border-radius: 50%;
-  background: var(--amber); border: 3px solid #12151F; box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
-  transition: transform .12s ease;
+  -webkit-appearance: none; width: 24px; height: 24px; margin-top: -10px; border-radius: 50%;
+  background: var(--texte); border: none; box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
 }
-#root input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
 
-/* Sélecteur de fichier natif (« Choisir un fichier »). */
-#root input[type="file"] { font-size: 12px; color: #8B8FA3; max-width: 100%; }
+#root input[type="file"] { font-size: 12px; color: var(--texte-2); max-width: 100%; }
 #root input[type="file"]::-webkit-file-upload-button {
-  font: 600 12px -apple-system, system-ui, sans-serif; color: #E9E6DD; background: #242938;
-  border: none; border-radius: 10px; padding: 8px 12px; margin-right: 8px;
+  font: 500 13px var(--police); color: var(--texte); background: transparent;
+  border: 1px solid var(--trait); border-radius: var(--rayon); padding: 9px 12px; margin-right: 8px;
 }
 #root input[type="file"]::file-selector-button {
-  font: 600 12px -apple-system, system-ui, sans-serif; color: #E9E6DD; background: #242938;
-  border: none; border-radius: 10px; padding: 8px 12px; margin-right: 8px;
+  font: 500 13px var(--police); color: var(--texte); background: transparent;
+  border: 1px solid var(--trait); border-radius: var(--rayon); padding: 9px 12px; margin-right: 8px;
 }
 
-/* ---------- Lisibilité : les tout petits textes un cran plus grands ---------- */
-#root [style*="font-size: 9px"], #root [style*="font-size: 9.5px"] { font-size: 11px !important; }
-#root [style*="font-size: 10px"], #root [style*="font-size: 10.5px"] { font-size: 11.5px !important; line-height: 1.45; }
-#root [style*="font-size: 11px"] { font-size: 12px !important; }
+/* ---------- Lisibilité : pas de texte minuscule ---------- */
+#root [style*="font-size: 9px"], #root [style*="font-size: 9.5px"],
+#root [style*="font-size: 10px"], #root [style*="font-size: 10.5px"] { font-size: 12px !important; line-height: 1.45; }
+#root [style*="font-size: 11px"], #root [style*="font-size: 11.5px"] { font-size: 12.5px !important; }
+#root [style*="font-size: 12px"] { font-size: 13px !important; }
 
-/* ---------- Fenêtres et cartes ---------- */
+/* ---------- Fenêtres ---------- */
 #root [style*="position: fixed"][style*="inset: 0px"][style*="background: rgba(11, 14, 20"] {
-  -webkit-backdrop-filter: blur(8px) saturate(120%); backdrop-filter: blur(8px) saturate(120%);
-  animation: e360-fondu .18s ease-out;
+  background-color: rgba(0, 0, 0, .6) !important; animation: e360-fondu .14s ease-out;
 }
 #root [style*="position: fixed"][style*="inset: 0px"][style*="background: rgba(11, 14, 20"] > div {
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .04);
-  animation: e360-apparition .22s cubic-bezier(.2, .8, .3, 1.1);
+  background-color: var(--surface) !important; border-color: var(--trait) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
 }
 @keyframes e360-fondu { from { opacity: 0; } to { opacity: 1; } }
-@keyframes e360-apparition { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
 
 /* ---------- Défilement ---------- */
-#root * { scrollbar-width: thin; scrollbar-color: #2b3142 transparent; }
-#root ::-webkit-scrollbar { width: 8px; height: 8px; }
-#root ::-webkit-scrollbar-thumb { background: #2b3142; border-radius: 4px; }
+#root * { scrollbar-width: thin; scrollbar-color: var(--bouton-appui) transparent; }
+#root ::-webkit-scrollbar { width: 6px; height: 6px; }
+#root ::-webkit-scrollbar-thumb { background: var(--bouton-appui); border-radius: 3px; }
 #root ::-webkit-scrollbar-track { background: transparent; }
-#root [style*="overflow-y: auto"], #root [style*="overflow: auto"] {
-  -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-}
+#root [style*="overflow-y: auto"], #root [style*="overflow: auto"] { overscroll-behavior: contain; }
 
 @media (prefers-reduced-motion: reduce) {
-  #root *, #root *::before, #root *::after { animation: none !important; transition: none !important; }
+  #root *, .e360-menu { animation: none !important; transition: none !important; }
 }
