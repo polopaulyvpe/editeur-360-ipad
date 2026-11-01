@@ -338,25 +338,29 @@
     return c && /width:\s*220px/.test(c.getAttribute("style") || "") ? c : null;
   }
 
-  function colonne(h) {
-    if (h && !h.querySelector(":scope > .e360-panneau")) {
+  function colonne() {
+    var col = colonneGauche();
+    if (!col) return;
+    col.setAttribute("data-e360", "colonne");
+    // Poignée en tête de la barre latérale : « Réduire » ; réduite, la barre devient
+    // une fine bande qu'on touche pour la rouvrir.
+    if (!col.querySelector(":scope > .e360-replier")) {
       var p = document.createElement("button");
       p.type = "button";
-      p.className = "e360-panneau";
-      p.setAttribute("aria-label", "Afficher ou masquer la colonne de gauche");
-      p.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">' +
-        '<rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2.5"/><line x1="7.5" y1="4" x2="7.5" y2="16"/></svg>';
+      p.className = "e360-replier";
+      p.setAttribute("aria-label", "Réduire ou ouvrir la barre latérale");
+      p.innerHTML = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
+        '<polyline points="12,5 7,10 12,15"/></svg><span class="e360-r-ouvert">Réduire</span>' +
+        '<span class="e360-r-ferme">Scènes · Objets · Énigmes · Intervenants · Sons</span>';
       p.addEventListener("click", function () {
         var masquee = document.documentElement.classList.toggle("e360-colonne-masquee");
         ecrireReglage("e360-colonne-masquee", masquee);
       });
-      h.appendChild(p);
+      col.insertBefore(p, col.firstChild);
     }
-    var col = colonneGauche();
-    if (!col) return;
-    col.setAttribute("data-e360", "colonne");
     var cle = null;
     Array.prototype.forEach.call(col.children, function (el) {
+      if (el.classList.contains("e360-replier")) return;
       var st = el.getAttribute("style") || "";
       if (el.tagName === "DIV" && st.indexOf("uppercase") >= 0) {
         cle = (el.textContent || "").replace(/\?\s*$/, "").trim();
@@ -390,7 +394,7 @@
     var h = barreDuHaut();
     if (h) reperer(h);
     gererAccueil(h);
-    colonne(h);
+    colonne();
     aides(root);
   }
   function planifier() {

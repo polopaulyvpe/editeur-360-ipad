@@ -279,14 +279,33 @@ html { -webkit-font-smoothing: antialiased; }
 #root [data-e360-titre][data-e360-replie] { color: var(--texte-2) !important; }
 #root [data-e360-titre]:active { opacity: .6; }
 
-/* Masquer toute la colonne : bouton à gauche de la barre du haut. */
-#root .e360-panneau {
-  order: 0; width: 40px; min-height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--trait); background: transparent; color: var(--texte-2); cursor: pointer;
+/* Réduire toute la barre latérale : poignée en tête de la barre. */
+#root [data-e360="colonne"] { transition: width .2s ease; }
+#root [data-e360="colonne"] > .e360-replier {
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px; width: 100%;
+  min-height: 32px; margin: -2px 0 4px; padding: 0 4px; border: none; background: transparent;
+  color: var(--texte-2); font: 500 13px var(--police) !important; cursor: pointer;
 }
-#root .e360-panneau:active { background: var(--bouton-appui); }
-html.e360-colonne-masquee #root .e360-panneau { color: var(--accent); border-color: rgba(232, 163, 61, .45); }
-html.e360-colonne-masquee #root [data-e360="colonne"] { display: none !important; }
+#root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child > button.e360-replier {
+  color: var(--texte-2) !important; font-size: 13px !important; min-height: 34px; padding: 0 6px !important;
+}
+#root [data-e360="colonne"] > .e360-replier:active { color: var(--texte); background: transparent !important; }
+
+/* Réduite : une bande de 48 px, toute la bande rouvre la barre. */
+html.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+  width: 48px !important; min-width: 48px; padding: 0 !important; overflow: hidden !important;
+}
+html.e360-colonne-masquee #root [data-e360="colonne"] > :not(.e360-replier) { display: none !important; }
+html.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child > button.e360-replier {
+  flex-direction: column; justify-content: flex-start !important; align-items: center; gap: 14px; height: 100%; margin: 0;
+  padding: 14px 0 !important; border-radius: 0 !important;
+}
+html.e360-colonne-masquee #root [data-e360="colonne"] > .e360-replier svg { transform: rotate(180deg); }
+#root .e360-replier .e360-r-ferme { display: none; }
+html.e360-colonne-masquee #root .e360-replier .e360-r-ouvert { display: none; }
+html.e360-colonne-masquee #root .e360-replier .e360-r-ferme {
+  display: block; writing-mode: vertical-rl; letter-spacing: .06em; white-space: nowrap;
+}
 
 /* ---------- Aides : « ? » à côté du libellé, bulle au toucher ---------- */
 #root [data-e360-aide] { display: none !important; }
