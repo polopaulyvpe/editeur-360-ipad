@@ -38,4 +38,5 @@ jobs:
         with:
           name: Editeur360-ipa
           path: Editeur360.ipa
-          retention-days: 14
+          # Dépôt public : le .ipa n'est téléchargeable qu'un jour, le temps de le récupérer.
+          retention-days: 1
