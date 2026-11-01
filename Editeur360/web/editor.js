@@ -41426,6 +41426,21 @@
   .pz-cb-poignee{position:absolute;left:0;top:0;border-radius:50%;background:var(--pz-accent,#E8A33D);
     box-shadow:0 2px 6px rgba(0,0,0,.4);pointer-events:none;transition:transform .08s linear}
   .pz-cb-curseur .pz-cb-label{position:absolute;left:0;right:0;bottom:100%;font-size:.85em;padding-bottom:2px}
+  .pz-cb-board{overflow:hidden}
+  .pz-cb-ani{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+  .pz-cb-toile{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .pz-cb-fond,.pz-cb-fx{position:absolute;left:0;top:0;pointer-events:none}
+  .pz-cb-fx{z-index:5}
+  .pz-cb-corde,.pz-cb-ressort,.pz-cb-papier,.pz-cb-grattage,.pz-cb-emetteur,.pz-cb-plateforme{pointer-events:none}
+  .pz-cb-corde .pz-cb-corps,.pz-cb-ressort .pz-cb-corps,.pz-cb-emetteur .pz-cb-corps,.pz-cb-papier .pz-cb-corps,.pz-cb-grattage .pz-cb-corps{display:none}
+  .pz-cb-papier .pz-cb-label,.pz-cb-grattage .pz-cb-label{display:none}
+  .pz-cb-objet{touch-action:none;cursor:grab;will-change:transform}
+  .pz-cb-objet.is-tenu{cursor:grabbing;filter:drop-shadow(0 10px 10px rgba(0,0,0,.45))}
+  .pz-cb-objet[data-cb-forme=rond] .pz-cb-corps{border-radius:50%}
+  .pz-cb-plateforme .pz-cb-corps{border-radius:4px}
+  .pz-cb-recipient{touch-action:none;cursor:grab}
+  .pz-cb-recipient .pz-cb-corps{background-color:transparent}
+  .pz-cb-cassable{cursor:pointer}
   .pz-cb-deplacable{cursor:grab;transition:transform .2s ease-out}
   .pz-cb-deplacable.is-drag{cursor:grabbing;transition:none;z-index:5}
   .pz-cb-deplacable.is-drag .pz-cb-corps{box-shadow:0 8px 18px rgba(0,0,0,.45)}
@@ -44547,7 +44562,7 @@
       case "d_calcul":
         return "A " + pr.op + " " + (pr.b === "" ? "B" : pr.b);
       default:
-        return "";
+        return cbResumeVivant(p, n);
     }
   }
   function cbNouvelId(liste, prefixe) {
@@ -44562,7 +44577,7 @@
     const ligne = { ...select, marginTop: 0 };
     const nomEl = (x) => (x.label || CB_GENRES[x.genre].nom) + " (" + x.id + ")";
     const choixEl = /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "\xC9l\xE9ment"), /* @__PURE__ */ import_react.default.createElement("select", { value: pr.element, onChange: (e) => sp({ element: e.target.value, etat: "" }), style: ligne, "data-cbi": "element" }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.elements.map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, nomEl(x)))));
-    const choixGenre = (cle, genre, lab, vide) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement("select", { value: pr[cle], onChange: (e) => sp({ [cle]: e.target.value }), style: ligne, "data-cbi": cle }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, vide || "\u2014 choisir \u2014"), p.elements.filter((x) => x.genre === genre).map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, nomEl(x)))), !p.elements.some((x) => x.genre === genre) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Ajoutez d'abord ", genre === "zone" ? "une zone de d\xE9p\xF4t" : "un \xE9l\xE9ment d\xE9pla\xE7able", " dans le panneau de l'\xE9nigme."));
+    const choixGenre = (cle, genre, lab, vide) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement("select", { value: pr[cle], onChange: (e) => sp({ [cle]: e.target.value }), style: ligne, "data-cbi": cle }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, vide || "\u2014 choisir \u2014"), p.elements.filter((x) => x.genre === genre || genre === "deplacable" && x.genre === "objet").map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, nomEl(x)))), !p.elements.some((x) => x.genre === genre) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Ajoutez d'abord ", genre === "zone" ? "une zone de d\xE9p\xF4t" : "un \xE9l\xE9ment d\xE9pla\xE7able", " dans le panneau de l'\xE9nigme."));
     const choixEtat = (vide) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "\xC9tat"), /* @__PURE__ */ import_react.default.createElement("select", { value: pr.etat, onChange: (e) => sp({ etat: e.target.value }), style: ligne, "data-cbi": "etat" }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, vide || "\u2014 choisir \u2014"), (el ? el.etats : []).map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, x.nom))));
     const choixVar = /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Variable de l'\xE9nigme"), /* @__PURE__ */ import_react.default.createElement("select", { value: pr.variable, onChange: (e) => sp({ variable: e.target.value }), style: ligne, "data-cbi": "variable" }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom))), !p.variables.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Cr\xE9ez d'abord une variable dans le panneau de l'\xE9nigme."));
     const texte = (cle, lab, o = {}) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement(
@@ -44641,7 +44656,7 @@
       case "victoire":
         return /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.textDim } }, "L'\xE9nigme est r\xE9solue d\xE8s que la condition branch\xE9e devient vraie.");
       default:
-        return null;
+        return /* @__PURE__ */ import_react.default.createElement(CbInspecteurVivant, { p, n, sp, ligne });
     }
   }
   var CB_PRESSE = null;
@@ -44696,7 +44711,7 @@
         return "\u2192 la variable \xAB " + (v ? v.nom : ev.variable) + " \xBB change";
       }
       default:
-        return ev.type;
+        return cbLigneEvVivant(p, ev, nom);
     }
   }
   function cbTexteValeur(v) {
@@ -45368,6 +45383,355 @@
     const couleur = (k, lab) => /* @__PURE__ */ import_react.default.createElement("label", { style: ligne }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 52 } }, lab), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: v[k] || "#3a3f4f", onChange: (e) => set({ [k]: e.target.value }), "data-cbv": cle + "." + k }), v[k] ? /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => set({ [k]: "" }), title: "Aucune" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })) : /* @__PURE__ */ import_react.default.createElement("span", null, "aucune"));
     return /* @__PURE__ */ import_react.default.createElement("div", { style: { margin: "4px 0 6px 18px", padding: "6px 8px", borderLeft: `2px solid ${C.amber}`, background: C.ink2, borderRadius: 4 }, "data-cb-visuel-panneau": cle }, couleur("fill", "Fond"), couleur("ink", "Texte"), couleur("border", "Bord"), /* @__PURE__ */ import_react.default.createElement("label", { style: ligne }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 52 } }, "Opacit\xE9"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: 0, max: 100, value: Math.round(v.opacity * 100), onChange: (e) => set({ opacity: parseInt(e.target.value, 10) / 100 }), style: { flex: 1 }, "data-cbv": cle + ".opacity" }), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 30 } }, Math.round(v.opacity * 100), " %")), /* @__PURE__ */ import_react.default.createElement("label", { style: ligne }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 52 } }, "\xC9chelle"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: 20, max: 300, value: Math.round(v.scale * 100), onChange: (e) => set({ scale: parseInt(e.target.value, 10) / 100 }), style: { flex: 1 }, "data-cbv": cle + ".scale" }), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 30 } }, Math.round(v.scale * 100), " %")), /* @__PURE__ */ import_react.default.createElement("div", { style: ligne }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 11 } }, v.image ? "Changer l'image" : "Image", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && lire(e.target.files[0], (u) => set({ image: u })) })), v.image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => set({ image: "" }), title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 11 } }, sp ? "Changer la planche" : "Planche de sprites", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && lire(e.target.files[0], (u) => setSp({ src: u })), "data-cbv-sprite": cle })), sp && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => set({ sprite: null }), title: "Retirer la planche" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim }))), sp && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" } }, [["cols", "Colonnes"], ["rows", "Lignes"], ["frames", "Images (0 = toutes)"], ["fps", "Images / s"]].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("label", { key: k, style: { flex: "1 1 40%", fontFamily: sans, fontSize: 10.5, color: C.textDim } }, l, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: sp[k], onChange: (e) => setSp({ [k]: parseFloat(e.target.value) || 0 }), style: { ...input, marginTop: 2 }, "data-cbv": cle + ".sprite." + k }))), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...ligne, flex: "1 1 100%" } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: sp.loop, onChange: (e) => setSp({ loop: e.target.checked }) }), " En boucle")));
   }
+  var CB_NOMS_TRANSITION = [["", "Aucun"], ["fondu", "Fondu et zoom"], ["glisse", "Glisse depuis la gauche"], ["chute", "Tombe en place"], ["tournoie", "Tournoie"]];
+  var CB_NOMS_COURBE = [["douce", "Douce"], ["lineaire", "R\xE9guli\xE8re"], ["acceleree", "Acc\xE9l\xE8re"], ["freinee", "Freine"], ["rebond", "Rebond"], ["elastique", "\xC9lastique"]];
+  var CB_GRAVITES = [["90", "Vers le bas"], ["-90", "Vers le haut"], ["180", "Vers la gauche"], ["0", "Vers la droite"]];
+  var cbPetitTexte = { fontFamily: sans, fontSize: 10.5, color: C.textDim, lineHeight: 1.45, marginTop: 4 };
+  var cbLigneReglage = { display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontFamily: sans, fontSize: 12, color: C.textDim };
+  function cbApercuAnim(el, effet) {
+    if (typeof document === "undefined") return;
+    const cibles = document.querySelectorAll('[data-puz-preview] [data-cb-el="' + el.id + '"] .pz-cb-ani');
+    cibles.forEach((c) => cbJoueAnim(c, cbDefAnim(el, effet), 0, effet && CB_EFFETS[effet] && CB_EFFETS[effet].fois === 0 ? 2 : -1));
+  }
+  function CbGlisse({ lab, val, min, max, pas, unite, onChange, cle, fmt }) {
+    return /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, lab), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min, max, step: pas, value: val, onChange: (e) => onChange(parseFloat(e.target.value)), style: { flex: 1, minWidth: 0 }, "data-cbv-glisse": cle }), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 46, textAlign: "right", color: C.text } }, fmt ? fmt(val) : val, unite || ""));
+  }
+  function CbCoche({ lab, val, onChange, cle }) {
+    return /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!val, onChange: (e) => onChange(e.target.checked), "data-cbv-coche": cle }), " ", lab);
+  }
+  function CbCouleur({ lab, val, onChange, defaut }) {
+    return /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, lab), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: val || defaut, onChange: (e) => onChange(e.target.value) }), val ? /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => onChange(""), title: "Couleur par d\xE9faut" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })) : /* @__PURE__ */ import_react.default.createElement("span", null, "par d\xE9faut"));
+  }
+  function cbLireImage(f, fait) {
+    const r = new FileReader();
+    r.onload = () => fait(r.result);
+    r.readAsDataURL(f);
+  }
+  function CbAnimations({ el, majEl }) {
+    const [ouverte, setOuverte] = (0, import_react.useState)("");
+    const anims = el.anims || [];
+    const majAnim = (id, patch) => majEl(el.id, { anims: anims.map((a) => a.id === id ? { ...a, ...patch } : a) });
+    const majCle = (a, i, patch) => majAnim(a.id, { cles: a.cles.map((k, j) => j === i ? { ...k, ...patch } : k) });
+    const ajoute = () => {
+      const id = cbNouvelId(anims, "a");
+      const a = {
+        id,
+        nom: "Animation " + (anims.length + 1),
+        duree: 1.2,
+        fois: 1,
+        courbe: "douce",
+        auDebut: false,
+        cles: [{ t: 0, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 }, { t: 0.5, x: 0, y: -30, rot: 12, echelle: 1.2, opacite: 1 }, { t: 1, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 }]
+      };
+      majEl(el.id, { anims: [...anims, a] });
+      setOuverte(id);
+    };
+    const champ = { ...input, marginTop: 0, padding: "4px 5px", fontSize: 11, width: "100%", minWidth: 0 };
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${C.line}` }, "data-cb-animations": el.id }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Animations"), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "En boucle"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.boucle || "", onChange: (e) => majEl(el.id, { boucle: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-boucle": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "Aucune"), /* @__PURE__ */ import_react.default.createElement("optgroup", { label: "Effets tout faits" }, Object.keys(CB_EFFETS).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_EFFETS[k].nom))), anims.length > 0 && /* @__PURE__ */ import_react.default.createElement("optgroup", { label: "Mes animations" }, anims.map((a) => /* @__PURE__ */ import_react.default.createElement("option", { key: a.id, value: "perso:" + a.id }, a.nom)))), el.boucle && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Voir", onClick: () => cbApercuAnim(el, el.boucle) }, "\u25B6")), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Appara\xEEt / dispara\xEEt"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.transition || "", onChange: (e) => majEl(el.id, { transition: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-transition": el.id }, CB_NOMS_TRANSITION.map(([k, n]) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, n)))), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "La transition joue quand un n\u0153ud \xAB Montrer ou cacher \xBB le fait appara\xEEtre ou dispara\xEEtre. Pour lancer une animation \xE0 un moment pr\xE9cis, utilisez le n\u0153ud \xAB Animer \xBB."), anims.map((a) => /* @__PURE__ */ import_react.default.createElement("div", { key: a.id, style: { border: `1px solid ${C.line}`, borderRadius: 6, marginTop: 6, padding: "5px 7px" }, "data-cb-anim": el.id + "." + a.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("input", { value: a.nom, maxLength: 30, onChange: (e) => majAnim(a.id, { nom: e.target.value }), style: { ...champ, flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Voir", onClick: () => cbApercuAnim(el, "perso:" + a.id), "data-cb-anim-voir": a.id }, "\u25B6"), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: ouverte === a.id ? "Replier" : "Modifier", onClick: () => setOuverte(ouverte === a.id ? "" : a.id) }, ouverte === a.id ? "\u25BE" : "\u25B8"), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Supprimer", onClick: () => majEl(el.id, { anims: anims.filter((x) => x.id !== a.id), boucle: el.boucle === "perso:" + a.id ? "" : el.boucle }) }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 11, color: C.danger }))), ouverte === a.id && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 5 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, ...cbPetitTexte, marginTop: 0 } }, "Dur\xE9e (s)", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", step: "0.1", min: "0.05", value: a.duree, onChange: (e) => majAnim(a.id, { duree: parseFloat(e.target.value) || 0.1 }), style: champ })), /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, ...cbPetitTexte, marginTop: 0 } }, "Fois (0 = sans fin)", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: a.fois, onChange: (e) => majAnim(a.id, { fois: parseInt(e.target.value, 10) || 0 }), style: champ })), /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1.3, ...cbPetitTexte, marginTop: 0 } }, "Mouvement", /* @__PURE__ */ import_react.default.createElement("select", { value: a.courbe, onChange: (e) => majAnim(a.id, { courbe: e.target.value }), style: champ }, CB_NOMS_COURBE.map(([k, n]) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, n))))), /* @__PURE__ */ import_react.default.createElement(CbCoche, { lab: "Jouer d\xE8s l'ouverture de l'\xE9nigme", val: a.auDebut, onChange: (v) => majAnim(a.id, { auDebut: v }), cle: a.id + ".auDebut" }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr 1fr 1fr 1fr 22px", gap: 3, marginTop: 6, ...cbPetitTexte } }, /* @__PURE__ */ import_react.default.createElement("span", null, "Moment %"), /* @__PURE__ */ import_react.default.createElement("span", null, "X"), /* @__PURE__ */ import_react.default.createElement("span", null, "Y"), /* @__PURE__ */ import_react.default.createElement("span", null, "Tourne \xB0"), /* @__PURE__ */ import_react.default.createElement("span", null, "Taille %"), /* @__PURE__ */ import_react.default.createElement("span", null, "Opacit\xE9 %"), /* @__PURE__ */ import_react.default.createElement("span", null), a.cles.map((k, i) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, { key: i }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", max: "100", value: Math.round(k.t * 100), onChange: (e) => majCle(a, i, { t: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100 }), style: champ, "data-cb-cle": a.id + "." + i + ".t" }), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: k.x, onChange: (e) => majCle(a, i, { x: parseFloat(e.target.value) || 0 }), style: champ }), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: k.y, onChange: (e) => majCle(a, i, { y: parseFloat(e.target.value) || 0 }), style: champ }), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: k.rot, onChange: (e) => majCle(a, i, { rot: parseFloat(e.target.value) || 0 }), style: champ }), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: Math.round(k.echelle * 100), onChange: (e) => majCle(a, i, { echelle: Math.max(0, parseFloat(e.target.value) || 0) / 100 }), style: champ }), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", max: "100", value: Math.round(k.opacite * 100), onChange: (e) => majCle(a, i, { opacite: Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)) / 100 }), style: champ }), a.cles.length > 2 ? /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer cette cl\xE9", onClick: () => majAnim(a.id, { cles: a.cles.filter((_, j) => j !== i) }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 10, color: C.textDim })) : /* @__PURE__ */ import_react.default.createElement("span", null)))), a.cles.length < 16 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, fontSize: 11, marginTop: 5 }, onClick: () => {
+      const der = a.cles[a.cles.length - 1];
+      const t = Math.min(1, (der ? der.t : 0) + 0.25);
+      majAnim(a.id, { cles: [...a.cles, { t, x: der ? der.x : 0, y: der ? der.y : 0, rot: der ? der.rot : 0, echelle: der ? der.echelle : 1, opacite: der ? der.opacite : 1 }] });
+    } }, "+ Une cl\xE9"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Chaque cl\xE9 dit o\xF9 est l'\xE9l\xE9ment \xE0 ce moment de l'animation (en % de la dur\xE9e) : d\xE9calage en pixels, rotation, taille et opacit\xE9. Entre deux cl\xE9s, le mouvement est calcul\xE9 tout seul.")))), anims.length < 8 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, fontSize: 11, marginTop: 6 }, onClick: ajoute, "data-cb-anim-ajout": el.id }, "+ Une animation faite main"));
+  }
+  function CbVivant({ el, p, majEl }) {
+    const m = (patch) => majEl(el.id, patch);
+    const objets = p.elements.filter((x) => x.genre === "objet");
+    const choixObjet = /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Tient l'objet"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.porte || "", onChange: (e) => m({ porte: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-porte": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 aucun \u2014"), objets.map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, x.label || "Objet", " (", x.id, ")"))));
+    const pc = (v) => Math.round(v * 100);
+    switch (el.genre) {
+      case "objet":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Forme"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.forme, onChange: (e) => m({ forme: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-forme": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "rond" }, "Ronde (roule)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "boite" }, "Bo\xEEte (glisse, s'empile)"))), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Poids", val: el.masse, min: 0.1, max: 10, pas: 0.1, onChange: (v) => m({ masse: v }), cle: el.id + ".masse" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Rebond", val: el.rebond, min: 0, max: 0.95, pas: 0.05, unite: " %", fmt: pc, onChange: (v) => m({ rebond: v }), cle: el.id + ".rebond" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Frottement", val: el.frottement, min: 0, max: 1, pas: 0.05, unite: " %", fmt: pc, onChange: (v) => m({ frottement: v }), cle: el.id + ".frottement" }), /* @__PURE__ */ import_react.default.createElement(CbCoche, { lab: "Le joueur peut le saisir et le lancer", val: el.lancer, onChange: (v) => m({ lancer: v }), cle: el.id + ".lancer" }), /* @__PURE__ */ import_react.default.createElement(CbCoche, { lab: "Fig\xE9 au d\xE9part (le n\u0153ud \xAB Figer ou lib\xE9rer \xBB le l\xE2che)", val: el.fige, onChange: (v) => m({ fige: v }), cle: el.id + ".fige" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Il tombe, roule, rebondit sur les plateformes, les bords et les autres objets. Arr\xEAt\xE9 dans une zone de d\xE9p\xF4t, il d\xE9clenche \xAB Quand on d\xE9pose \xBB."));
+      case "plateforme":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Pente", val: el.angle, min: -85, max: 85, pas: 1, unite: "\xB0", onChange: (v) => m({ angle: v }), cle: el.id + ".angle" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Rebond", val: el.rebond, min: 0, max: 0.95, pas: 0.05, unite: " %", fmt: pc, onChange: (v) => m({ rebond: v }), cle: el.id + ".rebondP" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Un appui fixe pour les objets. Cach\xE9e par un n\u0153ud \xAB Montrer ou cacher \xBB, elle dispara\xEEt et ce qu'elle portait tombe."));
+      case "corde":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, choixObjet, /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Aspect"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.style, onChange: (e) => m({ style: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-style": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "corde" }, "Corde"), /* @__PURE__ */ import_react.default.createElement("option", { value: "chaine" }, "Cha\xEEne"), /* @__PURE__ */ import_react.default.createElement("option", { value: "fil" }, "Fil"), /* @__PURE__ */ import_react.default.createElement("option", { value: "liane" }, "Liane"))), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Souplesse", val: el.segments, min: 3, max: 40, pas: 1, onChange: (v) => m({ segments: Math.round(v) }), cle: el.id + ".segments" }), /* @__PURE__ */ import_react.default.createElement(CbCoche, { lab: "Le joueur la coupe d'un trait du doigt", val: el.coupable, onChange: (v) => m({ coupable: v }), cle: el.id + ".coupable" }), /* @__PURE__ */ import_react.default.createElement(CbCouleur, { lab: "Couleur", val: el.couleur, onChange: (v) => m({ couleur: v }), defaut: "#A97C50" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 11 } }, el.texture ? "Changer la texture" : "Texture (image)", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && cbLireImage(e.target.files[0], (u) => m({ texture: u })) })), el.texture && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => m({ texture: "" }), title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "L'ancre est en haut, au milieu du cadre ; la hauteur du cadre donne la longueur. Avec un objet, c'est un pendule : coup\xE9e, elle le l\xE2che."));
+      case "ressort":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, choixObjet, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Raideur", val: el.raideur, min: 1, max: 100, pas: 1, onChange: (v) => m({ raideur: v }), cle: el.id + ".raideur" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Amorti", val: el.amortissement, min: 0, max: 1, pas: 0.05, unite: " %", fmt: pc, onChange: (v) => m({ amortissement: v }), cle: el.id + ".amorti" }), /* @__PURE__ */ import_react.default.createElement(CbCouleur, { lab: "Couleur", val: el.couleur, onChange: (v) => m({ couleur: v }), defaut: "#C9CCD6" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "L'ancre est en haut, au milieu du cadre ; la hauteur du cadre est la longueur au repos. Tirez l'objet : il revient en oscillant."));
+      case "papier":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "D\xE9clenche \xE0", val: el.seuil, min: 5, max: 100, pas: 5, unite: " %", onChange: (v) => m({ seuil: v }), cle: el.id + ".seuil" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Un trait du doigt qui traverse le papier le d\xE9chire ; le morceau arrach\xE9 tombe. \xAB Quand le papier est d\xE9chir\xE9 \xBB part quand ce pourcentage est arrach\xE9. Ce qui est dessous ne se touche qu'une fois d\xE9couvert. Couleur et image : celles de son \xE9tat."));
+      case "grattage":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "D\xE9clenche \xE0", val: el.seuil, min: 5, max: 100, pas: 5, unite: " %", onChange: (v) => m({ seuil: v }), cle: el.id + ".seuilG" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Doigt", val: el.pinceau, min: 6, max: 60, pas: 1, unite: " px", onChange: (v) => m({ pinceau: v }), cle: el.id + ".pinceau" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Le joueur frotte pour d\xE9couvrir ce qui est dessous. \xC0 ce pourcentage, le reste s'efface et \xAB Quand la surface est gratt\xE9e \xBB part."));
+      case "cassable":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Touches", val: el.resistance, min: 1, max: 20, pas: 1, onChange: (v) => m({ resistance: Math.round(v) }), cle: el.id + ".resistance" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Choc qui casse", val: el.impact, min: 0, max: 2e3, pas: 50, onChange: (v) => m({ impact: v }), cle: el.id + ".impact", fmt: (v) => v ? v : "jamais" }), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "\xC9clats", val: el.eclats, min: 3, max: 30, pas: 1, onChange: (v) => m({ eclats: Math.round(v) }), cle: el.id + ".eclats" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Il se fissure \xE0 chaque toucher et vole en \xE9clats au dernier. Un objet lanc\xE9 assez fort le casse aussi (0 : jamais)."));
+      case "recipient":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Rempli \xE0", val: el.niveau, min: 0, max: 100, pas: 1, unite: " %", onChange: (v) => m({ niveau: v }), cle: el.id + ".niveau" }), /* @__PURE__ */ import_react.default.createElement(CbCouleur, { lab: "Liquide", val: el.couleur, onChange: (v) => m({ couleur: v }), defaut: "#5FB4F0" }), /* @__PURE__ */ import_react.default.createElement(CbCoche, { lab: "Le joueur peut l'incliner pour verser", val: el.inclinable, onChange: (v) => m({ inclinable: v }), cle: el.id + ".inclinable" }), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Variable li\xE9e"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.variable || "", onChange: (e) => m({ variable: e.target.value }), style: { ...select, marginTop: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 aucune \u2014"), p.variables.filter((v) => v.type === "nombre").map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom)))), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Le niveau (0 \xE0 100) suit le liquide : inclin\xE9, il coule par le bord le plus bas et remplit le r\xE9cipient qu'il touche. Lisez-le avec \xAB Niveau de\u2026 \xBB ou \xAB Quand un niveau atteint\u2026 \xBB."));
+      case "emetteur":
+        return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-vivant": el.id }, /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Particules"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.effet, onChange: (e) => m({ effet: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-emet": el.id }, Object.keys(CB_PARTICULES).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_PARTICULES[k].nom)))), /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Par seconde", val: el.debit, min: 0, max: 120, pas: 1, onChange: (v) => m({ debit: v }), cle: el.id + ".debit" }), /* @__PURE__ */ import_react.default.createElement(CbCouleur, { lab: "Couleur", val: el.couleur, onChange: (v) => m({ couleur: v }), defaut: "#ffffff" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Une source continue (feu, fum\xE9e, bulles\u2026). Cach\xE9, il s'arr\xEAte ; montr\xE9, il repart."));
+      default:
+        return null;
+    }
+  }
+  function CbPlateauVivant({ p, set }) {
+    const fx = p.fx || { victoire: "aucun", echec: "aucun", images: {} };
+    const b = p.board;
+    const setB = (patch) => set({ board: { ...b, ...patch } });
+    const setFx = (patch) => set({ fx: { ...fx, ...patch } });
+    const images = fx.images || {};
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-cb-plateau-vivant": true }, /* @__PURE__ */ import_react.default.createElement(CbGlisse, { lab: "Gravit\xE9", val: b.gravite == null ? 1 : b.gravite, min: 0, max: 3, pas: 0.1, unite: " g", onChange: (v) => setB({ gravite: v }), cle: "gravite" }), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Elle tire"), /* @__PURE__ */ import_react.default.createElement("select", { value: String(b.gangle == null ? 90 : b.gangle), onChange: (e) => setB({ gangle: parseFloat(e.target.value) }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-gangle": true }, CB_GRAVITES.map(([k, n]) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, n)))), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "Bords"), /* @__PURE__ */ import_react.default.createElement("select", { value: b.bords || "tous", onChange: (e) => setB({ bords: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-bords": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "tous" }, "Murs et sol : rien ne sort"), /* @__PURE__ */ import_react.default.createElement("option", { value: "sol" }, "Un sol, pas de murs"), /* @__PURE__ */ import_react.default.createElement("option", { value: "aucun" }, "Rien : les objets peuvent tomber"))), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "\xC0 la r\xE9ussite"), /* @__PURE__ */ import_react.default.createElement("select", { value: fx.victoire || "aucun", onChange: (e) => setFx({ victoire: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-fx-victoire": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "aucun" }, "Rien"), Object.keys(CB_PARTICULES).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_PARTICULES[k].nom)))), /* @__PURE__ */ import_react.default.createElement("label", { style: cbLigneReglage }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92, flexShrink: 0 } }, "\xC0 l'\xE9chec"), /* @__PURE__ */ import_react.default.createElement("select", { value: fx.echec || "aucun", onChange: (e) => setFx({ echec: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cb-fx-echec": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "aucun" }, "Rien"), Object.keys(CB_EFFETS).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_EFFETS[k].nom)))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Images des particules"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, Object.keys(CB_PARTICULES).map((k) => /* @__PURE__ */ import_react.default.createElement("span", { key: k, style: { display: "inline-flex", alignItems: "center", gap: 3 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 10.5, padding: "3px 7px", background: images[k] ? C.panel : C.line }, title: "Image de \xAB " + CB_PARTICULES[k].nom + " \xBB" }, images[k] ? /* @__PURE__ */ import_react.default.createElement("img", { src: images[k], alt: "", style: { width: 14, height: 14, objectFit: "contain" } }) : null, CB_PARTICULES[k].nom, /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && cbLireImage(e.target.files[0], (u) => setFx({ images: { ...images, [k]: u } })) })), images[k] && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer", onClick: () => {
+      const n2 = { ...images };
+      delete n2[k];
+      setFx({ images: n2 });
+    } }, /* @__PURE__ */ import_react.default.createElement(X, { size: 10, color: C.textDim }))))), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Sans image, chaque particule a sa forme dessin\xE9e. Toutes ces images, et les visuels des \xE9l\xE9ments, s'exportent et se r\xE9importent aussi dans \u{1F3A8} DA (dossier \xAB 7-Constructeur \xBB)."));
+  }
+  function CbInspecteurVivant({ p, n, sp, ligne }) {
+    const pr = n.props;
+    const nomEl = (x) => (x.label || CB_GENRES[x.genre].nom) + " (" + x.id + ")";
+    const choix = (cle, genre, lab, vide) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement("select", { value: pr[cle], onChange: (e) => sp({ [cle]: e.target.value }), style: ligne, "data-cbi": cle }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, vide || "\u2014 choisir \u2014"), p.elements.filter((x) => !genre || x.genre === genre).map((x) => /* @__PURE__ */ import_react.default.createElement("option", { key: x.id, value: x.id }, nomEl(x)))), genre && !p.elements.some((x) => x.genre === genre) && /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Ajoutez d'abord un \xE9l\xE9ment \xAB ", CB_GENRES[genre].nom, " \xBB dans le panneau de l'\xE9nigme."));
+    const nombre = (cle, lab, o = {}) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", step: o.pas || "any", value: pr[cle], onChange: (e) => sp({ [cle]: parseFloat(e.target.value) || 0 }), style: { ...input, marginTop: 0 }, "data-cbi": cle }));
+    const liste = (cle, lab, opts) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, lab), /* @__PURE__ */ import_react.default.createElement("select", { value: String(pr[cle]), onChange: (e) => sp({ [cle]: e.target.value }), style: ligne, "data-cbi": cle }, opts.map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, l))));
+    const cible = pr.element ? cbElement(p, pr.element) : null;
+    const effetsAnim = Object.keys(CB_EFFETS).map((k) => [k, CB_EFFETS[k].nom]).concat((cible && cible.anims || []).map((a) => ["perso:" + a.id, "\u270E " + a.nom]));
+    const effetsPart = Object.keys(CB_PARTICULES).map((k) => [k, CB_PARTICULES[k].nom]);
+    switch (n.type) {
+      case "ev_choc":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet", "n'importe quel objet"), choix("autre", "", "Contre", "n'importe quoi (m\xEAme un bord)"), nombre("force", "Force minimale (vitesse en px/s)"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "200 : un petit choc ; 800 : un objet lanc\xE9 fort."));
+      case "ev_coupe":
+        return choix("element", "corde", "Corde");
+      case "ev_casse":
+        return choix("element", "cassable", "Objet cassable");
+      case "ev_dechire":
+        return choix("element", "papier", "Papier");
+      case "ev_gratte":
+        return choix("element", "grattage", "Surface \xE0 gratter");
+      case "ev_repos":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet", "n'importe quel objet"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Part quand l'objet reste immobile un demi-seconde."));
+      case "ev_sortie":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet", "n'importe quel objet"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "R\xE9glez \xAB Bords \xBB du plateau sur \xAB Un sol \xBB ou \xAB Rien \xBB pour qu'un objet puisse sortir."));
+      case "ev_niveau":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "recipient", "R\xE9cipient"), liste("op", "Quand le niveau devient", [["\u2265", "au moins"], ["\u2264", "au plus"], ["=", "exactement"]]), nombre("valeur", "Niveau (%)"));
+      case "a_animer":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment", "le plateau entier"), liste("effet", "Animation", effetsAnim), nombre("duree", "Dur\xE9e en secondes (0 : celle de l'animation)", { pas: 0.1 }), nombre("fois", "Combien de fois (0 : sans fin)", { pas: 1 }));
+      case "a_particules":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "Depuis", "le centre du plateau"), liste("effet", "Particules", effetsPart), nombre("quantite", "Combien", { pas: 1 }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Couleur"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: pr.couleur || "#ffffff", onChange: (e) => sp({ couleur: e.target.value }) }), pr.couleur ? /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => sp({ couleur: "" }), title: "Celle de l'effet" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })) : /* @__PURE__ */ import_react.default.createElement("span", { style: cbPetitTexte }, "celle de l'effet")));
+      case "a_impulsion":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet"), liste("angle", "Direction", [["-90", "Vers le haut"], ["90", "Vers le bas"], ["180", "Vers la gauche"], ["0", "Vers la droite"], ["-45", "En haut \xE0 droite"], ["-135", "En haut \xE0 gauche"]]), nombre("force", "Force (px/s)"));
+      case "a_gravite":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, liste("mode", "Vers", [["bas", "Le bas"], ["haut", "Le haut"], ["gauche", "La gauche"], ["droite", "La droite"], ["aucune", "Nulle part (apesanteur)"]]), nombre("force", "Force (1 : normale)", { pas: 0.1 }));
+      case "a_figer":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet"), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Faire"), /* @__PURE__ */ import_react.default.createElement("select", { value: pr.fige ? "1" : "0", onChange: (e) => sp({ fige: e.target.value === "1" }), style: ligne, "data-cbi": "fige" }, /* @__PURE__ */ import_react.default.createElement("option", { value: "1" }, "Le figer (il ne bouge plus)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Le lib\xE9rer (la gravit\xE9 le reprend)")));
+      case "a_couper":
+        return choix("element", "corde", "Corde");
+      case "a_casser":
+        return choix("element", "cassable", "Objet cassable");
+      case "a_remplir":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "recipient", "R\xE9cipient"), liste("op", "Faire", [["=", "Amener \xE0"], ["+", "Ajouter"], ["-", "Retirer"]]), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Niveau (%), ou branchez un fil"), /* @__PURE__ */ import_react.default.createElement("input", { value: pr.valeur, onChange: (e) => sp({ valeur: e.target.value }), style: { ...input, marginTop: 0 }, "data-cbi": "valeur" }), nombre("duree", "Dur\xE9e en secondes", { pas: 0.1 }));
+      case "d_niveau":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "recipient", "R\xE9cipient"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Rend le niveau, de 0 \xE0 100."));
+      case "d_fait":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Vrai quand la corde est coup\xE9e, l'objet cass\xE9, le papier d\xE9chir\xE9 ou la surface gratt\xE9e."));
+      default:
+        return null;
+    }
+  }
+  function cbResumeVivant(p, n) {
+    const pr = n.props, el = cbElement(p, pr.element);
+    const nomEl = el ? (el.label || CB_GENRES[el.genre].nom) + " (" + el.id + ")" : "";
+    const nomAutre = pr.autre ? cbElement(p, pr.autre) ? cbElement(p, pr.autre).label || pr.autre : "?" : "";
+    const effet = (k) => k && k.indexOf("perso:") === 0 ? "\u270E " + (((el && el.anims || []).find((a) => "perso:" + a.id === k) || {}).nom || "?") : CB_EFFETS[k] ? CB_EFFETS[k].nom : CB_PARTICULES[k] ? CB_PARTICULES[k].nom : k;
+    switch (n.type) {
+      case "ev_choc":
+        return (nomEl || "un objet") + " \u27F6 " + (nomAutre || "n'importe quoi") + (pr.force > 0 ? " \xB7 \u2265 " + pr.force : "");
+      case "ev_coupe":
+      case "ev_casse":
+      case "ev_dechire":
+      case "ev_gratte":
+      case "a_couper":
+      case "a_casser":
+      case "d_niveau":
+      case "d_fait":
+        return nomEl || "\u2014";
+      case "ev_repos":
+      case "ev_sortie":
+        return nomEl || "un objet";
+      case "ev_niveau":
+        return (nomEl || "\u2014") + " " + pr.op + " " + pr.valeur + " %";
+      case "a_animer":
+        return (nomEl || "le plateau") + " : " + effet(pr.effet);
+      case "a_particules":
+        return effet(pr.effet) + " \xD7" + pr.quantite + (nomEl ? " \xB7 " + nomEl : "");
+      case "a_impulsion":
+        return (nomEl || "\u2014") + " \xB7 " + pr.force;
+      case "a_gravite":
+        return pr.mode + (pr.force !== 1 ? " \xD7" + pr.force : "");
+      case "a_figer":
+        return (nomEl || "\u2014") + (pr.fige ? " : figer" : " : lib\xE9rer");
+      case "a_remplir":
+        return (nomEl || "\u2014") + " " + (pr.op === "=" ? "\u2192" : pr.op) + " " + pr.valeur + " %";
+      default:
+        return "";
+    }
+  }
+  function cbLigneEvVivant(p, ev, nom) {
+    switch (ev.type) {
+      case "coupe":
+        return "Couper " + nom;
+      case "casse":
+        return "Casser " + nom;
+      case "dechire":
+        return "D\xE9chirer " + nom;
+      case "gratte":
+        return "Gratter " + nom;
+      case "choc": {
+        const a = ev.autre ? cbElement(p, ev.autre) : null;
+        return nom + " heurte " + (a ? "\xAB " + (a.label || a.id) + " \xBB" : "un bord") + " (" + ev.force + ")";
+      }
+      case "repos":
+        return nom + " s'arr\xEAte";
+      case "sortie":
+        return nom + " tombe du plateau";
+      case "niveau":
+        return nom + " \xE0 " + ev.niveau + " %";
+      case "fait":
+        return "\u2192 " + nom + " : " + ev.quoi;
+      case "niveauchange":
+        return "\u2192 " + nom + " passe \xE0 " + ev.apres + " %";
+      default:
+        return ev.type;
+    }
+  }
+  var daCbId = (...parts) => "cb-" + parts.map((x) => String(x).toLowerCase().replace(/[^a-z0-9_]+/g, "_")).join("-");
+  function daAvecCb(H, pzId, f) {
+    const t = getPuzzleType("constructeur");
+    return {
+      ...H,
+      puzzles: (H.puzzles || []).map((z) => {
+        if (z.id !== pzId) return z;
+        const q = JSON.parse(JSON.stringify(t.normalize(z.params || {})));
+        f(q);
+        return { ...z, params: t.normalize(q) };
+      })
+    };
+  }
+  function daCadresCb(H) {
+    const t = getPuzzleType("constructeur");
+    if (!t) return [];
+    const out = [];
+    (H.puzzles || []).filter((z) => z && z.kind === "constructeur").forEach((z) => {
+      const p = t.normalize(z.params || {}), titre = z.title || "\xC9nigme";
+      out.push({
+        id: daCbId(z.id, "plateau"),
+        cat: "constructeur",
+        nom: titre + " \u203A plateau",
+        w: p.board.w,
+        h: p.board.h,
+        coins: 0,
+        aide: "Le fond du plateau de l'\xE9nigme.",
+        look: (HH) => {
+          const q = daCadresLire(HH, z.id, p).board;
+          return { image: q.image, fill: q.color || "#15171f" };
+        },
+        lire: (HH) => daCadresLire(HH, z.id, p).board.image,
+        ecrire: (HH, png) => daAvecCb(HH, z.id, (q) => {
+          q.board.image = png;
+        })
+      });
+      p.elements.forEach((el) => {
+        const nomEl = el.label || CB_GENRES[el.genre].nom;
+        el.etats.forEach((s) => {
+          const trouve = (HH) => {
+            const q = daCadresLire(HH, z.id, p);
+            const e2 = cbElement(q, el.id);
+            const s2 = e2 && e2.etats.find((x) => x.id === s.id);
+            return s2 ? s2.visuel : s.visuel;
+          };
+          const maj = (q, f) => {
+            const e2 = cbElement(q, el.id);
+            const s2 = e2 && e2.etats.find((x) => x.id === s.id);
+            if (s2) f(s2.visuel);
+          };
+          out.push({
+            id: daCbId(z.id, el.id, s.id),
+            cat: "constructeur",
+            nom: titre + " \u203A " + nomEl + (el.etats.length > 1 ? " \u203A " + s.nom : ""),
+            w: el.w,
+            h: el.h,
+            coins: 0,
+            aide: "Le visuel de \xAB " + nomEl + " \xBB" + (el.etats.length > 1 ? " dans l'\xE9tat \xAB " + s.nom + " \xBB" : "") + " (" + CB_GENRES[el.genre].nom.toLowerCase() + ").",
+            look: (HH) => {
+              const v = trouve(HH);
+              return { image: v.image, fill: v.fill || (el.genre === "texte" || el.genre === "zone" ? "" : "#3a3f4f"), border: v.border, bw: v.border ? 2 : 0, radius: el.genre === "objet" && el.forme === "rond" ? Math.min(el.w, el.h) / 2 : 10, label: el.label && el.label.indexOf("{") < 0 ? el.label : "", ink: v.ink || "#E9E6DD", transparent: !v.fill && !v.image && (el.genre === "texte" || el.genre === "zone") };
+            },
+            lire: (HH) => trouve(HH).image,
+            ecrire: (HH, png) => daAvecCb(HH, z.id, (q) => maj(q, (v) => {
+              v.image = png;
+            }))
+          });
+          if (s.visuel.sprite) {
+            const sp = s.visuel.sprite;
+            out.push({
+              id: daCbId(z.id, el.id, s.id, "planche"),
+              cat: "constructeur",
+              nom: titre + " \u203A " + nomEl + " \u203A planche d'animation",
+              w: Math.min(4096, el.w * sp.cols),
+              h: Math.min(4096, el.h * sp.rows),
+              coins: 0,
+              aide: "Planche de sprites : " + sp.cols + " colonnes \xD7 " + sp.rows + " lignes, lue \xE0 " + sp.fps + " images par seconde. Gardez la grille pour que l'animation reste juste.",
+              look: (HH) => {
+                const v = trouve(HH);
+                return { image: v.sprite ? v.sprite.src : "", fill: "#3a3f4f" };
+              },
+              lire: (HH) => {
+                const v = trouve(HH);
+                return v.sprite ? v.sprite.src : "";
+              },
+              ecrire: (HH, png) => daAvecCb(HH, z.id, (q) => maj(q, (v) => {
+                if (png) v.sprite = { ...v.sprite || sp, src: png };
+                else v.sprite = null;
+              }))
+            });
+          }
+        });
+        if (el.genre === "corde") {
+          out.push({
+            id: daCbId(z.id, el.id, "texture"),
+            cat: "constructeur",
+            nom: titre + " \u203A " + nomEl + " \u203A texture de la corde",
+            w: 64,
+            h: 16,
+            coins: 0,
+            aide: "Une bande r\xE9p\xE9t\xE9e le long de la corde.",
+            look: (HH) => {
+              const e2 = cbElement(daCadresLire(HH, z.id, p), el.id);
+              return { image: e2 ? e2.texture : "", fill: el.couleur || "#A97C50" };
+            },
+            lire: (HH) => {
+              const e2 = cbElement(daCadresLire(HH, z.id, p), el.id);
+              return e2 ? e2.texture : "";
+            },
+            ecrire: (HH, png) => daAvecCb(HH, z.id, (q) => {
+              const e2 = cbElement(q, el.id);
+              if (e2) e2.texture = png;
+            })
+          });
+        }
+      });
+      Object.keys(CB_PARTICULES).forEach((k) => {
+        out.push({
+          id: daCbId(z.id, "particule", k),
+          cat: "constructeur",
+          nom: titre + " \u203A particule \xAB " + CB_PARTICULES[k].nom + " \xBB",
+          w: 64,
+          h: 64,
+          coins: 0,
+          icone: true,
+          aide: "L'image d'une particule \xAB " + CB_PARTICULES[k].nom + " \xBB (fond transparent).",
+          look: (HH) => ({ image: (daCadresLire(HH, z.id, p).fx.images || {})[k] || "", glyph: "\u2726", transparent: true }),
+          lire: (HH) => (daCadresLire(HH, z.id, p).fx.images || {})[k] || "",
+          ecrire: (HH, png) => daAvecCb(HH, z.id, (q) => {
+            q.fx.images = { ...q.fx.images || {} };
+            if (png) q.fx.images[k] = png;
+            else delete q.fx.images[k];
+          })
+        });
+      });
+    });
+    return out;
+  }
+  function daCadresLire(H, pzId, defaut) {
+    const t = getPuzzleType("constructeur"), z = (H.puzzles || []).find((x) => x.id === pzId);
+    return z ? t.normalize(z.params || {}) : defaut;
+  }
+  var daTous = (H) => H && H.puzzles ? DA_CADRES.concat(daCadresCb(H)) : DA_CADRES;
   function ConstructeurEditor({ params, onChange, variables, items }) {
     const [noeuds, setNoeuds] = (0, import_react.useState)(false);
     const [ouvert, setOuvert] = (0, import_react.useState)("");
@@ -45396,8 +45760,41 @@
       r.onload = () => fait(r.result);
       r.readAsDataURL(f);
     };
-    const CB_PREFIXES = { interrupteur: "i", voyant: "v", levier: "l", bouton: "b", molette: "m", curseur: "c", deplacable: "d", zone: "z" };
-    const CB_TAILLES = { texte: [200, 40], molette: [80, 80], curseur: [200, 40], deplacable: [60, 60], zone: [140, 100] };
+    const CB_PREFIXES = {
+      interrupteur: "i",
+      voyant: "v",
+      levier: "l",
+      bouton: "b",
+      molette: "m",
+      curseur: "c",
+      deplacable: "d",
+      zone: "z",
+      objet: "o",
+      plateforme: "p",
+      corde: "r",
+      ressort: "s",
+      papier: "pa",
+      grattage: "g",
+      cassable: "k",
+      recipient: "rc",
+      emetteur: "em"
+    };
+    const CB_TAILLES = {
+      texte: [200, 40],
+      molette: [80, 80],
+      curseur: [200, 40],
+      deplacable: [60, 60],
+      zone: [140, 100],
+      objet: [56, 56],
+      plateforme: [220, 18],
+      corde: [30, 130],
+      ressort: [36, 110],
+      papier: [220, 150],
+      grattage: [180, 90],
+      cassable: [90, 90],
+      recipient: [80, 110],
+      emetteur: [60, 60]
+    };
     const ajouteEl = (genre) => {
       const id = cbNouvelId(p.elements, CB_PREFIXES[genre] || "el");
       const d = CB_GENRES[genre];
@@ -45429,7 +45826,33 @@
         neuf.max = 10;
         neuf.pas = 1;
       }
-      set({ elements: [...p.elements, neuf], variables: variables2 });
+      const visDepart = {
+        objet: { fill: "#E8A33D" },
+        plateforme: { fill: "#6B5B4B" },
+        papier: { fill: "#EFE6D2" },
+        grattage: { fill: "#B8B8C0" },
+        cassable: { fill: "#8FB4D9", border: "#5E7C99" },
+        recipient: {},
+        corde: {},
+        ressort: {},
+        emetteur: {}
+      }[genre];
+      if (visDepart) neuf.etats = neuf.etats.map((s) => ({ ...s, visuel: visDepart }));
+      if (genre === "plateforme") {
+        neuf.x = 40;
+        neuf.y = Math.max(0, p.board.h - 50);
+      }
+      if (genre === "corde" || genre === "ressort") {
+        const libre = p.elements.filter((x) => x.genre === "objet" && !p.elements.some((c) => (c.genre === "corde" || c.genre === "ressort") && c.porte === x.id)).pop();
+        if (libre) {
+          neuf.porte = libre.id;
+          neuf.x = Math.round(libre.x + libre.w / 2 - neuf.w / 2);
+          neuf.y = Math.max(0, libre.y - neuf.h);
+        }
+      }
+      if (genre === "grattage") neuf.label = "Grattez ici";
+      if (genre === "emetteur") neuf.effet = "feu";
+      set({ elements: [...p.elements, cbNormElement(neuf, 0, {})], variables: variables2 });
       setOuvert(id);
     };
     const coche = { display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontFamily: sans, fontSize: 12, color: C.textDim };
@@ -45447,7 +45870,7 @@
       fontSize: 11,
       lineHeight: 1.45,
       color: statut.statut === "solution" ? "#6FCF73" : statut.statut === "impossible" ? C.danger : C.textDim
-    }, "data-cb-statut": statut.statut }, statut.statut === "solution" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "\u2713 Se r\xE9sout en ", statut.chemin.length, " geste", statut.chemin.length > 1 ? "s" : "", " ", statut.chemin.length > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, fontSize: 10.5, padding: "1px 6px" }, onClick: () => setVoirSol(!voirSol), "data-cb-voir-sol": true }, voirSol ? "cacher" : "voir comment"), voirSol && /* @__PURE__ */ import_react.default.createElement("ol", { style: { margin: "4px 0 0 18px", padding: 0, color: C.text } }, statut.chemin.map((x, i) => /* @__PURE__ */ import_react.default.createElement("li", { key: i }, x)))), statut.statut === "impossible" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "\u26A0 Aucune suite de gestes ne m\xE8ne \xE0 la victoire."), statut.statut === "inconnu" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "? Trop de possibilit\xE9s pour v\xE9rifier qu'elle se r\xE9sout."), cbLitLeJeu(p) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim } }, "(en supposant un sac vide et les variables du jeu vides ; r\xE9glez-les dans \xAB \u{1F41E} Tester \xBB de l'\xE9diteur de n\u0153uds)")), souci.length > 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, fontFamily: sans, fontSize: 11, color: C.danger, lineHeight: 1.45 }, "data-cb-warn-panel": true }, souci.map((s, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i }, "\u26A0 ", s))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Le plateau"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, "Largeur", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: p.board.w, onChange: (e) => set({ board: { ...p.board, w: parseInt(e.target.value, 10) || 160 } }), style: { ...input, marginTop: 2 }, "data-cb-board-w": true })), /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, "Hauteur", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: p.board.h, onChange: (e) => set({ board: { ...p.board, h: parseInt(e.target.value, 10) || 120 } }), style: { ...input, marginTop: 2 }, "data-cb-board-h": true }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 11 } }, p.board.image ? "Changer le fond" : "Image de fond", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && image(e.target.files[0], (u) => set({ board: { ...p.board, image: u } })) })), p.board.image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => set({ board: { ...p.board, image: "" } }), title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: p.board.color || "#15171f", onChange: (e) => set({ board: { ...p.board, color: e.target.value } }), title: "Couleur de fond", "data-cb-board-color": true })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Les \xE9l\xE9ments (", p.elements.length, ")"), /* @__PURE__ */ import_react.default.createElement("select", { value: "", onChange: (e) => e.target.value && ajouteEl(e.target.value), style: { ...select, marginTop: 0 }, "data-cb-add-el": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "+ Ajouter un \xE9l\xE9ment\u2026"), Object.keys(CB_GENRES).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_GENRES[k].nom))), p.elements.map((el) => /* @__PURE__ */ import_react.default.createElement("div", { key: el.id, "data-cb-row": el.id, style: { border: `1px solid ${C.line}`, borderRadius: 7, marginTop: 6, padding: "6px 8px" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 12, height: 12, borderRadius: 3, background: (el.etats.find((s) => s.id === el.initial) || el.etats[0]).visuel.fill || C.line } }), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, cursor: "pointer" }, onClick: () => setOuvert(ouvert === el.id ? "" : el.id), "data-cb-toggle": el.id }, el.label || CB_GENRES[el.genre].nom, " ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim, fontSize: 10.5 } }, "\xB7 ", CB_GENRES[el.genre].nom.toLowerCase(), " \xB7 ", el.id)), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer", onClick: () => set({ elements: p.elements.filter((x) => x.id !== el.id) }), "data-cb-del-el": el.id }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 13, color: C.danger }))), ouvert === el.id && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, el.genre === "compteur" ? "Pr\xE9fixe" : el.genre === "molette" ? "Nom (lu par les lecteurs d'\xE9cran)" : el.genre === "curseur" ? "Texte au-dessus (ex. \xAB {r\xE9glage} \xBB)" : "Texte affich\xE9"), /* @__PURE__ */ import_react.default.createElement("input", { value: el.label, maxLength: 60, onChange: (e) => majEl(el.id, { label: e.target.value }), style: { ...input, marginTop: 0 }, "data-cb-label": el.id }), el.genre === "compteur" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Affiche la variable"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.variable, onChange: (e) => majEl(el.id, { variable: e.target.value }), style: { ...select, marginTop: 0 }, "data-cb-el-var": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom)))), el.genre === "curseur" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "R\xE8gle la variable"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.variable, onChange: (e) => majEl(el.id, { variable: e.target.value }), style: { ...select, marginTop: 0 }, "data-cb-el-var": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.variables.filter((v) => v.type === "nombre").map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["min", "Minimum"], ["max", "Maximum"], ["pas", "Pas"]].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("label", { key: k, style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, l, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: el[k], step: "any", onChange: (e) => majEl(el.id, { [k]: parseFloat(e.target.value) || 0 }), style: { ...input, marginTop: 2 }, "data-cb-el-num": el.id + "." + k })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Plus haut que large : il se r\xE8gle de bas en haut.")), el.genre === "deplacable" && /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.retour, onChange: (e) => majEl(el.id, { retour: e.target.checked }), "data-cb-retour": el.id }), "Pos\xE9 hors d'une zone, il revient \xE0 sa place"), el.genre === "zone" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Accepte"), /* @__PURE__ */ import_react.default.createElement("select", { value: String(el.capacite), onChange: (e) => majEl(el.id, { capacite: parseInt(e.target.value, 10) }), style: { ...select, marginTop: 0 }, "data-cb-capacite": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "1" }, "Un seul \xE9l\xE9ment"), [2, 3, 4, 5, 6].map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: String(k) }, k, " \xE9l\xE9ments")), /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Autant qu'on veut"))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, el.genre === "molette" ? "Crans (dans l'ordre du tour)" : "\xC9tats"), el.etats.map((s) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, { key: s.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 }, "data-cb-etat-row": el.id + "." + s.id }, /* @__PURE__ */ import_react.default.createElement("input", { type: "radio", name: "ini_" + el.id, checked: el.initial === s.id, onChange: () => majEl(el.id, { initial: s.id }), title: "\xC9tat de d\xE9part" }), /* @__PURE__ */ import_react.default.createElement("input", { value: s.nom, maxLength: 30, onChange: (e) => majEtat(el, s.id, { nom: e.target.value }), style: { ...input, marginTop: 0, flex: 1, minWidth: 0 }, "data-cb-etat-nom": el.id + "." + s.id }), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: s.visuel.fill || "#3a3f4f", onChange: (e) => majEtat(el, s.id, { visuel: { ...s.visuel, fill: e.target.value } }), title: "Couleur" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...iconBtn, cursor: "pointer" }, title: "Image de cet \xE9tat" }, "\u{1F5BC}", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && image(e.target.files[0], (u) => majEtat(el, s.id, { visuel: { ...s.visuel, image: u } })) })), s.visuel.image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer l'image", onClick: () => majEtat(el, s.id, { visuel: { ...s.visuel, image: "" } }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement(
+    }, "data-cb-statut": statut.statut }, statut.statut === "solution" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "\u2713 Se r\xE9sout en ", statut.chemin.length, " geste", statut.chemin.length > 1 ? "s" : "", " ", statut.chemin.length > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, fontSize: 10.5, padding: "1px 6px" }, onClick: () => setVoirSol(!voirSol), "data-cb-voir-sol": true }, voirSol ? "cacher" : "voir comment"), voirSol && /* @__PURE__ */ import_react.default.createElement("ol", { style: { margin: "4px 0 0 18px", padding: 0, color: C.text } }, statut.chemin.map((x, i) => /* @__PURE__ */ import_react.default.createElement("li", { key: i }, x)))), statut.statut === "impossible" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "\u26A0 Aucune suite de gestes ne m\xE8ne \xE0 la victoire."), statut.statut === "inconnu" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "? Trop de possibilit\xE9s pour v\xE9rifier qu'elle se r\xE9sout."), cbLitLeJeu(p) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim } }, "(en supposant un sac vide et les variables du jeu vides ; r\xE9glez-les dans \xAB \u{1F41E} Tester \xBB de l'\xE9diteur de n\u0153uds)")), souci.length > 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, fontFamily: sans, fontSize: 11, color: C.danger, lineHeight: 1.45 }, "data-cb-warn-panel": true }, souci.map((s, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i }, "\u26A0 ", s))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Le plateau"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, "Largeur", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: p.board.w, onChange: (e) => set({ board: { ...p.board, w: parseInt(e.target.value, 10) || 160 } }), style: { ...input, marginTop: 2 }, "data-cb-board-w": true })), /* @__PURE__ */ import_react.default.createElement("label", { style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, "Hauteur", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: p.board.h, onChange: (e) => set({ board: { ...p.board, h: parseInt(e.target.value, 10) || 120 } }), style: { ...input, marginTop: 2 }, "data-cb-board-h": true }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer", fontSize: 11 } }, p.board.image ? "Changer le fond" : "Image de fond", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && image(e.target.files[0], (u) => set({ board: { ...p.board, image: u } })) })), p.board.image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => set({ board: { ...p.board, image: "" } }), title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: p.board.color || "#15171f", onChange: (e) => set({ board: { ...p.board, color: e.target.value } }), title: "Couleur de fond", "data-cb-board-color": true })), /* @__PURE__ */ import_react.default.createElement(CbPlateauVivant, { p, set }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Les \xE9l\xE9ments (", p.elements.length, ")"), /* @__PURE__ */ import_react.default.createElement("select", { value: "", onChange: (e) => e.target.value && ajouteEl(e.target.value), style: { ...select, marginTop: 0 }, "data-cb-add-el": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "+ Ajouter un \xE9l\xE9ment\u2026"), Object.keys(CB_GENRES).map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: k }, CB_GENRES[k].nom))), p.elements.map((el) => /* @__PURE__ */ import_react.default.createElement("div", { key: el.id, "data-cb-row": el.id, style: { border: `1px solid ${C.line}`, borderRadius: 7, marginTop: 6, padding: "6px 8px" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 12, height: 12, borderRadius: 3, background: (el.etats.find((s) => s.id === el.initial) || el.etats[0]).visuel.fill || C.line } }), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, cursor: "pointer" }, onClick: () => setOuvert(ouvert === el.id ? "" : el.id), "data-cb-toggle": el.id }, el.label || CB_GENRES[el.genre].nom, " ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim, fontSize: 10.5 } }, "\xB7 ", CB_GENRES[el.genre].nom.toLowerCase(), " \xB7 ", el.id)), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer", onClick: () => set({ elements: p.elements.filter((x) => x.id !== el.id) }), "data-cb-del-el": el.id }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 13, color: C.danger }))), ouvert === el.id && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, el.genre === "compteur" ? "Pr\xE9fixe" : el.genre === "molette" ? "Nom (lu par les lecteurs d'\xE9cran)" : el.genre === "curseur" ? "Texte au-dessus (ex. \xAB {r\xE9glage} \xBB)" : "Texte affich\xE9"), /* @__PURE__ */ import_react.default.createElement("input", { value: el.label, maxLength: 60, onChange: (e) => majEl(el.id, { label: e.target.value }), style: { ...input, marginTop: 0 }, "data-cb-label": el.id }), el.genre === "compteur" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Affiche la variable"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.variable, onChange: (e) => majEl(el.id, { variable: e.target.value }), style: { ...select, marginTop: 0 }, "data-cb-el-var": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom)))), el.genre === "curseur" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "R\xE8gle la variable"), /* @__PURE__ */ import_react.default.createElement("select", { value: el.variable, onChange: (e) => majEl(el.id, { variable: e.target.value }), style: { ...select, marginTop: 0 }, "data-cb-el-var": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), p.variables.filter((v) => v.type === "nombre").map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.id, value: v.id }, v.nom))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 4 } }, [["min", "Minimum"], ["max", "Maximum"], ["pas", "Pas"]].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("label", { key: k, style: { flex: 1, fontFamily: sans, fontSize: 11, color: C.textDim } }, l, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", value: el[k], step: "any", onChange: (e) => majEl(el.id, { [k]: parseFloat(e.target.value) || 0 }), style: { ...input, marginTop: 2 }, "data-cb-el-num": el.id + "." + k })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Plus haut que large : il se r\xE8gle de bas en haut.")), el.genre === "deplacable" && /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.retour, onChange: (e) => majEl(el.id, { retour: e.target.checked }), "data-cb-retour": el.id }), "Pos\xE9 hors d'une zone, il revient \xE0 sa place"), el.genre === "zone" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Accepte"), /* @__PURE__ */ import_react.default.createElement("select", { value: String(el.capacite), onChange: (e) => majEl(el.id, { capacite: parseInt(e.target.value, 10) }), style: { ...select, marginTop: 0 }, "data-cb-capacite": el.id }, /* @__PURE__ */ import_react.default.createElement("option", { value: "1" }, "Un seul \xE9l\xE9ment"), [2, 3, 4, 5, 6].map((k) => /* @__PURE__ */ import_react.default.createElement("option", { key: k, value: String(k) }, k, " \xE9l\xE9ments")), /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Autant qu'on veut"))), /* @__PURE__ */ import_react.default.createElement(CbVivant, { el, p, majEl }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, el.genre === "molette" ? "Crans (dans l'ordre du tour)" : "\xC9tats"), el.etats.map((s) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, { key: s.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 }, "data-cb-etat-row": el.id + "." + s.id }, /* @__PURE__ */ import_react.default.createElement("input", { type: "radio", name: "ini_" + el.id, checked: el.initial === s.id, onChange: () => majEl(el.id, { initial: s.id }), title: "\xC9tat de d\xE9part" }), /* @__PURE__ */ import_react.default.createElement("input", { value: s.nom, maxLength: 30, onChange: (e) => majEtat(el, s.id, { nom: e.target.value }), style: { ...input, marginTop: 0, flex: 1, minWidth: 0 }, "data-cb-etat-nom": el.id + "." + s.id }), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: s.visuel.fill || "#3a3f4f", onChange: (e) => majEtat(el, s.id, { visuel: { ...s.visuel, fill: e.target.value } }), title: "Couleur" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...iconBtn, cursor: "pointer" }, title: "Image de cet \xE9tat" }, "\u{1F5BC}", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && image(e.target.files[0], (u) => majEtat(el, s.id, { visuel: { ...s.visuel, image: u } })) })), s.visuel.image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, title: "Retirer l'image", onClick: () => majEtat(el, s.id, { visuel: { ...s.visuel, image: "" } }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 11, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement(
       "button",
       {
         style: { ...iconBtn, color: visuel === el.id + "." + s.id ? C.amber : C.textDim },
@@ -45467,7 +45890,7 @@
         }
       },
       "+ Un \xE9tat"
-    ), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.cycle, onChange: (e) => majEl(el.id, { cycle: e.target.checked }), "data-cb-cycle": el.id }), "Le toucher passe \xE0 l'\xE9tat suivant de lui-m\xEAme"), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.cache, onChange: (e) => majEl(el.id, { cache: e.target.checked }) }), "Cach\xE9 au d\xE9part"), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.verrou, onChange: (e) => majEl(el.id, { verrou: e.target.checked }) }), "Verrouill\xE9 au d\xE9part")))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Placez et redimensionnez les \xE9l\xE9ments sur le plateau, \xE0 gauche."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Variables de l'\xE9nigme (", p.variables.length, ")"), p.variables.map((v) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.id, style: { display: "flex", gap: 4, alignItems: "center", marginTop: 4 }, "data-cb-var-row": v.id }, /* @__PURE__ */ import_react.default.createElement("input", { value: v.nom, maxLength: 30, onChange: (e) => majVar(v.id, { nom: e.target.value }), style: { ...input, marginTop: 0, flex: 1, minWidth: 0 }, "data-cb-var-nom": v.id }), /* @__PURE__ */ import_react.default.createElement("select", { value: v.type, onChange: (e) => majVar(v.id, { type: e.target.value, initiale: e.target.value === "nombre" ? 0 : e.target.value === "bool" ? false : "" }), style: { ...select, marginTop: 0, width: 82 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "nombre" }, "nombre"), /* @__PURE__ */ import_react.default.createElement("option", { value: "bool" }, "oui/non"), /* @__PURE__ */ import_react.default.createElement("option", { value: "texte" }, "texte")), v.type === "bool" ? /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!v.initiale, onChange: (e) => majVar(v.id, { initiale: e.target.checked }), title: "Valeur de d\xE9part" }) : /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.cycle, onChange: (e) => majEl(el.id, { cycle: e.target.checked }), "data-cb-cycle": el.id }), "Le toucher passe \xE0 l'\xE9tat suivant de lui-m\xEAme"), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.cache, onChange: (e) => majEl(el.id, { cache: e.target.checked }) }), "Cach\xE9 au d\xE9part"), /* @__PURE__ */ import_react.default.createElement("label", { style: coche }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: el.verrou, onChange: (e) => majEl(el.id, { verrou: e.target.checked }) }), "Verrouill\xE9 au d\xE9part"), /* @__PURE__ */ import_react.default.createElement(CbAnimations, { el, majEl })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Placez et redimensionnez les \xE9l\xE9ments sur le plateau, \xE0 gauche."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Variables de l'\xE9nigme (", p.variables.length, ")"), p.variables.map((v) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.id, style: { display: "flex", gap: 4, alignItems: "center", marginTop: 4 }, "data-cb-var-row": v.id }, /* @__PURE__ */ import_react.default.createElement("input", { value: v.nom, maxLength: 30, onChange: (e) => majVar(v.id, { nom: e.target.value }), style: { ...input, marginTop: 0, flex: 1, minWidth: 0 }, "data-cb-var-nom": v.id }), /* @__PURE__ */ import_react.default.createElement("select", { value: v.type, onChange: (e) => majVar(v.id, { type: e.target.value, initiale: e.target.value === "nombre" ? 0 : e.target.value === "bool" ? false : "" }), style: { ...select, marginTop: 0, width: 82 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "nombre" }, "nombre"), /* @__PURE__ */ import_react.default.createElement("option", { value: "bool" }, "oui/non"), /* @__PURE__ */ import_react.default.createElement("option", { value: "texte" }, "texte")), v.type === "bool" ? /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!v.initiale, onChange: (e) => majVar(v.id, { initiale: e.target.checked }), title: "Valeur de d\xE9part" }) : /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         value: v.initiale,
@@ -45496,7 +45919,8 @@
     ["jeu", "Jeu", "3-Jeu"],
     ["menus", "Menus", "4-Menus"],
     ["accueil", "Accueil", "5-Accueil"],
-    ["carte", "Carte", "6-Carte"]
+    ["carte", "Carte", "6-Carte"],
+    ["constructeur", "Constructeur", "7-Constructeur"]
   ];
   var DA_PACKS_CLE = "da-packs";
   var DA_FORMAT = "bd360-kit";
@@ -46074,7 +46498,7 @@
     for (let i = 0; i < octets.length; i += 32768) s += String.fromCharCode.apply(null, octets.subarray(i, i + 32768));
     return "data:" + (type || "image/png") + ";base64," + btoa(s);
   }
-  function daLisezMoi() {
+  function daLisezMoi(H) {
     const lignes = [
       "KIT GRAPHIQUE - " + (/* @__PURE__ */ new Date()).toLocaleDateString("fr-FR"),
       "",
@@ -46095,14 +46519,14 @@
     ];
     DA_CATEGORIES.forEach(([k, nom, dossier]) => {
       lignes.push("", "  " + dossier);
-      DA_CADRES.filter((c) => c.cat === k).forEach((c) => lignes.push("    " + c.id + ".png  (" + c.w + "x" + c.h + (c.coins ? ", coins " + c.coins : "") + ")  " + c.nom + " - " + c.aide));
+      daTous(H).filter((c) => c.cat === k).forEach((c) => lignes.push("    " + c.id + ".png  (" + c.w + "x" + c.h + (c.coins ? ", coins " + c.coins : "") + ")  " + c.nom + " - " + c.aide));
     });
     return lignes.join("\r\n") + "\r\n";
   }
   async function daFichiersKit(H) {
     const files = [], manifeste = { format: DA_FORMAT, version: 1, cadres: [] };
     for (const [k, , dossier] of DA_CATEGORIES) {
-      for (const c of DA_CADRES.filter((x) => x.cat === k)) {
+      for (const c of daTous(H).filter((x) => x.cat === k)) {
         const coins = c.coinsDe ? c.coinsDe(H) || c.coins : c.coins;
         manifeste.cadres.push({ id: c.id, categorie: dossier, nom: c.nom, largeur: c.w, hauteur: c.h, coins });
         const r = await daRendu(c, H), g = await daGabarit(c, H);
@@ -46111,7 +46535,7 @@
       }
     }
     files.push({ path: "kit.json", data: JSON.stringify(manifeste, null, 2) });
-    files.push({ path: "LISEZMOI.txt", data: daLisezMoi() });
+    files.push({ path: "LISEZMOI.txt", data: daLisezMoi(H) });
     return files;
   }
   async function daLireZip(octets) {
@@ -46151,7 +46575,7 @@
       try {
         const m = JSON.parse(new TextDecoder().decode(kit.data));
         (m.cadres || []).forEach((c) => {
-          if (daCadre(c.id) && isFinite(c.coins)) coins[c.id] = Math.max(0, Math.min(200, Math.round(c.coins)));
+          if ((daCadre(c.id) || /^cb-/.test(c.id)) && isFinite(c.coins)) coins[c.id] = Math.max(0, Math.min(200, Math.round(c.coins)));
         });
       } catch (e) {
       }
@@ -46164,7 +46588,7 @@
       }
       const id = base.replace(/\.png$/i, "").toLowerCase();
       if (/-guide$/.test(id)) return;
-      if (!daCadre(id)) {
+      if (!daCadre(id) && !/^cb-/.test(id)) {
         ignores.push(base);
         return;
       }
@@ -46178,7 +46602,7 @@
   }
   function daAppliquer(H, da) {
     let out = H;
-    DA_CADRES.forEach((c) => {
+    daTous(H).forEach((c) => {
       if (!da.images[c.id]) return;
       const coins = da.coins && isFinite(da.coins[c.id]) ? da.coins[c.id] : c.coins;
       out = c.ecrire(out, da.images[c.id], coins);
@@ -46187,7 +46611,7 @@
   }
   function daRetirerTout(H) {
     let out = H;
-    DA_CADRES.forEach((c) => {
+    daTous(H).forEach((c) => {
       if (c.lire(out)) out = c.ecrire(out, "", c.coins);
     });
     return out;
@@ -46239,7 +46663,7 @@
     const [occupe, setOccupe] = (0, import_react.useState)(false);
     const [avant, setAvant] = (0, import_react.useState)(null);
     const [recu, setRecu] = (0, import_react.useState)(null);
-    const version = (0, import_react.useMemo)(() => JSON.stringify([H.puzzleTheme, H.dialogTheme, H.ui && H.ui.theme, H.ui && H.ui.panels, H.homeScreen]).length + ":" + Math.random(), [H]);
+    const version = (0, import_react.useMemo)(() => JSON.stringify([H.puzzleTheme, H.dialogTheme, H.ui && H.ui.theme, H.ui && H.ui.panels, H.homeScreen, H.puzzles]).length + ":" + Math.random(), [H]);
     const entree = (0, import_react.useRef)(null), unique = (0, import_react.useRef)(null), cible = (0, import_react.useRef)("");
     (0, import_react.useEffect)(() => {
       let v = true;
@@ -46266,7 +46690,7 @@
         const files = await daFichiersKit(H);
         const nom = "kit-graphique-" + String(H.titre || "jeu").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() + ".zip";
         const ok = daTelecharger(makeZip(files), nom);
-        setMsg(ok ? "Kit \xAB " + nom + " \xBB : " + DA_CADRES.length + " cadres, chacun avec son gabarit, rang\xE9s en " + DA_CATEGORIES.length + " dossiers." : "Le kit n'a pas pu \xEAtre enregistr\xE9.");
+        setMsg(ok ? "Kit \xAB " + nom + " \xBB : " + daTous(H).length + " cadres, chacun avec son gabarit, rang\xE9s en " + DA_CATEGORIES.length + " dossiers." : "Le kit n'a pas pu \xEAtre enregistr\xE9.");
       } catch (e) {
         setMsg("Le kit n'a pas pu \xEAtre fabriqu\xE9 : " + e.message);
       }
@@ -46309,7 +46733,7 @@
       else setMsg("\xAB " + da.nom + " \xBB rang\xE9e parmi vos DA.");
     };
     const remplacerUn = async (f) => {
-      const c = daCadre(cible.current);
+      const c = daTous(H).find((x) => x.id === cible.current);
       if (!c || !f) return;
       const png = daDataUrl(new Uint8Array(await f.arrayBuffer()), f.type || "image/png");
       applique(c.ecrire(H, png, c.coinsDe ? c.coinsDe(H) || c.coins : c.coins), "\xAB " + c.nom + " \xBB : PNG pos\xE9.");
@@ -46327,8 +46751,8 @@
       onAppliquer(avant);
       setAvant(null);
       setMsg("Retour \xE0 l'habillage d'avant.");
-    }, "data-da-annuler": true }, "\u21B6 Revenir \xE0 avant"), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, color: C.danger }, onClick: () => applique(daRetirerTout(H), "Tous les PNG retir\xE9s : chaque cadre reprend le style du th\xE8me."), "data-da-retirer-tout": true }, "Retirer tous les PNG")), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.amber, marginBottom: 8 }, "data-da-msg": true }, msg), recu && /* @__PURE__ */ import_react.default.createElement("div", { style: { border: `1px solid ${C.amber}`, borderRadius: 8, padding: 10, marginBottom: 10 }, "data-da-recu": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text, marginBottom: 6 } }, "Nouvelle DA : ", Object.keys(recu.images).length, " cadre(s)"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: recu.nom, onChange: (e) => setRecu({ ...recu, nom: e.target.value }), style: { ...input, marginTop: 0, width: 220 }, "data-da-recu-nom": true }), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, background: C.amber, color: C.ink }, onClick: () => ranger(true), "data-da-ranger-appliquer": true }, "Ranger et appliquer \xE0 ce jeu"), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => ranger(false), "data-da-ranger": true }, "Ranger seulement"), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setRecu(null), title: "Abandonner" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 } }, Object.keys(recu.images).map((id) => /* @__PURE__ */ import_react.default.createElement("img", { key: id, src: recu.images[id], alt: id, title: daCadre(id).nom, style: { height: 34, maxWidth: 90, objectFit: "contain", background: "#191b22", borderRadius: 4 } })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 12, minHeight: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, overflowY: "auto", minWidth: 0 }, "data-da-cadres": true }, DA_CATEGORIES.map(([k, nom]) => {
-      const liste = DA_CADRES.filter((c) => c.cat === k), poses = liste.filter((c) => c.lire(H)).length;
+    }, "data-da-annuler": true }, "\u21B6 Revenir \xE0 avant"), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, color: C.danger }, onClick: () => applique(daRetirerTout(H), "Tous les PNG retir\xE9s : chaque cadre reprend le style du th\xE8me."), "data-da-retirer-tout": true }, "Retirer tous les PNG")), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.amber, marginBottom: 8 }, "data-da-msg": true }, msg), recu && /* @__PURE__ */ import_react.default.createElement("div", { style: { border: `1px solid ${C.amber}`, borderRadius: 8, padding: 10, marginBottom: 10 }, "data-da-recu": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text, marginBottom: 6 } }, "Nouvelle DA : ", Object.keys(recu.images).length, " cadre(s)"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: recu.nom, onChange: (e) => setRecu({ ...recu, nom: e.target.value }), style: { ...input, marginTop: 0, width: 220 }, "data-da-recu-nom": true }), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, background: C.amber, color: C.ink }, onClick: () => ranger(true), "data-da-ranger-appliquer": true }, "Ranger et appliquer \xE0 ce jeu"), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => ranger(false), "data-da-ranger": true }, "Ranger seulement"), /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setRecu(null), title: "Abandonner" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginTop: 8 } }, Object.keys(recu.images).map((id) => /* @__PURE__ */ import_react.default.createElement("img", { key: id, src: recu.images[id], alt: id, title: (daTous(H).find((x) => x.id === id) || { nom: id }).nom, style: { height: 34, maxWidth: 90, objectFit: "contain", background: "#191b22", borderRadius: 4 } })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 12, minHeight: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, overflowY: "auto", minWidth: 0 }, "data-da-cadres": true }, DA_CATEGORIES.map(([k, nom]) => {
+      const liste = daTous(H).filter((c) => c.cat === k), poses = liste.filter((c) => c.lire(H)).length;
       return /* @__PURE__ */ import_react.default.createElement("div", { key: k, style: { marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement(
         "button",
         {
@@ -46377,6 +46801,8 @@
     const hostRef = (0, import_react.useRef)(null);
     const boxRef = (0, import_react.useRef)(null);
     const instRef = (0, import_react.useRef)(null);
+    const jouerRef = (0, import_react.useRef)(jouer);
+    jouerRef.current = jouer;
     const [etat, setEtat] = (0, import_react.useState)({ attempts: 0, resolu: false });
     (0, import_react.useEffect)(() => {
       const host = hostRef.current;
@@ -46410,6 +46836,7 @@
           jeu: () => essai,
           scene: plat ? plat.ctx : null,
           reduceMotion: false,
+          enEdition: () => !jouerRef.current,
           sound: () => {
           },
           emit: (ev, data) => {
@@ -61629,6 +62056,24 @@
     d_ou: { cat: "logique", nom: "OU", entrees: [["a", "bool"], ["b", "bool"], ["c", "bool"], ["d", "bool"]], sorties: [["oui", "bool"]], props: {} },
     d_non: { cat: "logique", nom: "NON", entrees: [["a", "bool"]], sorties: [["oui", "bool"]], props: {} },
     d_calcul: { cat: "logique", nom: "Calcul", entrees: [["a", "valeur"], ["b", "valeur"]], sorties: [["valeur", "valeur"]], props: { op: "+", b: "" } },
+    ev_choc: { cat: "ev", nom: "Quand un objet heurte", sorties: [["go", "exec"]], props: { element: "", autre: "", force: 200 } },
+    ev_coupe: { cat: "ev", nom: "Quand une corde est coup\xE9e", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_casse: { cat: "ev", nom: "Quand \xE7a se casse", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_dechire: { cat: "ev", nom: "Quand le papier est d\xE9chir\xE9", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_gratte: { cat: "ev", nom: "Quand la surface est gratt\xE9e", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_repos: { cat: "ev", nom: "Quand un objet s\u2019arr\xEAte", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_sortie: { cat: "ev", nom: "Quand un objet tombe du plateau", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_niveau: { cat: "ev", nom: "Quand un niveau atteint\u2026", sorties: [["go", "exec"]], props: { element: "", op: "\u2265", valeur: 50 } },
+    a_animer: { cat: "action", nom: "Animer", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", effet: "secousse", duree: 0, fois: 1 } },
+    a_particules: { cat: "action", nom: "Particules", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", effet: "etincelles", quantite: 30, couleur: "" } },
+    a_impulsion: { cat: "action", nom: "Pousser un objet", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", angle: -90, force: 700 } },
+    a_gravite: { cat: "action", nom: "Changer la gravit\xE9", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { mode: "bas", force: 1 } },
+    a_figer: { cat: "action", nom: "Figer ou lib\xE9rer", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", fige: false } },
+    a_couper: { cat: "action", nom: "Couper une corde", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "" } },
+    a_casser: { cat: "action", nom: "Casser", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "" } },
+    a_remplir: { cat: "action", nom: "Remplir ou vider", entrees: [["in", "exec"], ["valeur", "valeur"]], sorties: [["ensuite", "exec"]], props: { element: "", op: "=", valeur: "100", duree: 1.5 } },
+    d_niveau: { cat: "donnee", nom: "Niveau de\u2026", sorties: [["valeur", "valeur"]], props: { element: "" } },
+    d_fait: { cat: "donnee", nom: "Coup\xE9, cass\xE9, d\xE9chir\xE9 ou gratt\xE9", sorties: [["oui", "bool"]], props: { element: "" } },
     victoire: { cat: "fin", nom: "VICTOIRE", entrees: [["cond", "bool"]], sorties: [], props: {} }
   };
   var CB_GENRES = {
@@ -61642,12 +62087,2116 @@
     molette: { nom: "Molette", etats: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], cycle: true },
     curseur: { nom: "Curseur", etats: ["normal"], cycle: false },
     deplacable: { nom: "D\xE9pla\xE7able", etats: ["normal"], cycle: false },
-    zone: { nom: "Zone de d\xE9p\xF4t", etats: ["vide"], cycle: false }
+    zone: { nom: "Zone de d\xE9p\xF4t", etats: ["vide"], cycle: false },
+    objet: { nom: "Objet (gravit\xE9)", etats: ["normal"], cycle: false },
+    plateforme: { nom: "Plateforme / pente", etats: ["normal"], cycle: false },
+    corde: { nom: "Corde / pendule", etats: ["normal"], cycle: false },
+    ressort: { nom: "Ressort", etats: ["normal"], cycle: false },
+    papier: { nom: "Papier \xE0 d\xE9chirer", etats: ["normal"], cycle: false },
+    grattage: { nom: "Surface \xE0 gratter", etats: ["normal"], cycle: false },
+    cassable: { nom: "Objet cassable", etats: ["intact"], cycle: false },
+    recipient: { nom: "R\xE9cipient (liquide)", etats: ["normal"], cycle: false },
+    emetteur: { nom: "\xC9metteur de particules", etats: ["normal"], cycle: false }
   };
-  var CB_VIDE_PERMIS = { ev_depot: { element: 1, zone: 1 }, d_dans_zone: { element: 1 }, a_renvoyer: { element: 1, zone: 1 } };
+  var CB_VIDE_PERMIS = {
+    ev_depot: { element: 1, zone: 1 },
+    d_dans_zone: { element: 1 },
+    a_renvoyer: { element: 1, zone: 1 },
+    ev_choc: { element: 1 },
+    ev_repos: { element: 1 },
+    ev_sortie: { element: 1 },
+    a_animer: { element: 1 },
+    a_particules: { element: 1 }
+  };
   var CB_COULEURS = ["#3a3f4f", "#E8A33D", "#6FCF73", "#5FD4D4", "#D9636B", "#A98BE8"];
   var CB_BUDGET = 400;
   var CB_CASCADE = 60;
+  var CB_EFFETS = {
+    secousse: { nom: "Secousse", duree: 0.5, fois: 1, courbe: "ease-in-out", cles: [
+      { transform: "translateX(0px)" },
+      { transform: "translateX(-10px)" },
+      { transform: "translateX(9px)" },
+      { transform: "translateX(-7px)" },
+      { transform: "translateX(5px)" },
+      { transform: "translateX(-3px)" },
+      { transform: "translateX(0px)" }
+    ] },
+    vibration: { nom: "Vibration", duree: 0.25, fois: 3, courbe: "linear", cles: [
+      { transform: "translate(0px,0px)" },
+      { transform: "translate(2px,-1px)" },
+      { transform: "translate(-2px,1px)" },
+      { transform: "translate(1px,2px)" },
+      { transform: "translate(-1px,-2px)" },
+      { transform: "translate(0px,0px)" }
+    ] },
+    pulsation: { nom: "Pulsation", duree: 0.8, fois: 1, courbe: "ease-in-out", cles: [
+      { transform: "scale(1)" },
+      { transform: "scale(1.15)" },
+      { transform: "scale(1)" }
+    ] },
+    battement: { nom: "Battement de c\u0153ur", duree: 1.1, fois: 0, courbe: "ease-out", cles: [
+      { transform: "scale(1)", offset: 0 },
+      { transform: "scale(1.18)", offset: 0.14 },
+      { transform: "scale(1)", offset: 0.28 },
+      { transform: "scale(1.12)", offset: 0.42 },
+      { transform: "scale(1)", offset: 0.7 },
+      { transform: "scale(1)", offset: 1 }
+    ] },
+    flottement: { nom: "Flottement", duree: 2.4, fois: 0, courbe: "ease-in-out", cles: [
+      { transform: "translateY(0px)" },
+      { transform: "translateY(-9px)" },
+      { transform: "translateY(0px)" }
+    ] },
+    balancement: { nom: "Balancement", duree: 1.6, fois: 0, courbe: "ease-in-out", cles: [
+      { transform: "rotate(-8deg)" },
+      { transform: "rotate(8deg)" },
+      { transform: "rotate(-8deg)" }
+    ] },
+    rotation: { nom: "Rotation", duree: 2, fois: 0, courbe: "linear", cles: [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(360deg)" }
+    ] },
+    retournement: { nom: "Retournement", duree: 0.9, fois: 1, courbe: "ease-in-out", cles: [
+      { transform: "perspective(400px) rotateY(0deg)" },
+      { transform: "perspective(400px) rotateY(360deg)" }
+    ] },
+    clignotement: { nom: "Clignotement", duree: 0.7, fois: 3, courbe: "linear", cles: [
+      { opacity: 1 },
+      { opacity: 0.15 },
+      { opacity: 1 }
+    ] },
+    lueur: { nom: "Lueur", duree: 1.4, fois: 0, courbe: "ease-in-out", cles: [
+      { filter: "drop-shadow(0px 0px 0px rgba(255,214,110,0))" },
+      { filter: "drop-shadow(0px 0px 16px rgba(255,214,110,0.95))" },
+      { filter: "drop-shadow(0px 0px 0px rgba(255,214,110,0))" }
+    ] },
+    rebond: { nom: "Rebond", duree: 0.9, fois: 1, courbe: "ease-out", cles: [
+      { transform: "translateY(0px) scale(1,1)", offset: 0 },
+      { transform: "translateY(-28px) scale(0.94,1.07)", offset: 0.3 },
+      { transform: "translateY(0px) scale(1.14,0.86)", offset: 0.55 },
+      { transform: "translateY(-10px) scale(0.98,1.02)", offset: 0.75 },
+      { transform: "translateY(0px) scale(1,1)", offset: 1 }
+    ] },
+    saut: { nom: "Saut", duree: 0.6, fois: 1, courbe: "ease-out", cles: [
+      { transform: "translateY(0px) scale(1.1,0.9)", offset: 0 },
+      { transform: "translateY(-40px) scale(0.92,1.1)", offset: 0.45 },
+      { transform: "translateY(0px) scale(1.12,0.88)", offset: 0.85 },
+      { transform: "translateY(0px) scale(1,1)", offset: 1 }
+    ] },
+    zoom: { nom: "Zoom", duree: 0.6, fois: 1, courbe: "ease-in-out", cles: [
+      { transform: "scale(1)" },
+      { transform: "scale(1.45)" },
+      { transform: "scale(1)" }
+    ] },
+    tremblement: { nom: "Tremblement", duree: 1.2, fois: 0, courbe: "linear", cles: [
+      { transform: "rotate(0deg)" },
+      { transform: "rotate(2deg)" },
+      { transform: "rotate(-2deg)" },
+      { transform: "rotate(1deg)" },
+      { transform: "rotate(-1deg)" },
+      { transform: "rotate(0deg)" }
+    ] },
+    apparition: { nom: "Apparition", duree: 0.45, fois: 1, courbe: "cubic-bezier(0.2,0.8,0.3,1.25)", cles: [
+      { opacity: 0, transform: "scale(0.4)" },
+      { opacity: 1, transform: "scale(1)" }
+    ] },
+    disparition: { nom: "Disparition", duree: 0.35, fois: 1, courbe: "ease-in", garde: true, cles: [
+      { opacity: 1, transform: "scale(1)" },
+      { opacity: 0, transform: "scale(0.3)" }
+    ] },
+    chute: { nom: "Chute en place", duree: 0.7, fois: 1, courbe: "ease-out", cles: [
+      { opacity: 0, transform: "translateY(-160px)", offset: 0 },
+      { opacity: 1, transform: "translateY(0px) scale(1.1,0.9)", offset: 0.7 },
+      { transform: "translateY(-12px) scale(0.97,1.03)", offset: 0.85 },
+      { opacity: 1, transform: "translateY(0px) scale(1,1)", offset: 1 }
+    ] },
+    glisseGauche: { nom: "Entr\xE9e par la gauche", duree: 0.5, fois: 1, courbe: "cubic-bezier(0.2,0.8,0.3,1.1)", cles: [
+      { opacity: 0, transform: "translateX(-120px)" },
+      { opacity: 1, transform: "translateX(0px)" }
+    ] },
+    glisseDroite: { nom: "Entr\xE9e par la droite", duree: 0.5, fois: 1, courbe: "cubic-bezier(0.2,0.8,0.3,1.1)", cles: [
+      { opacity: 0, transform: "translateX(120px)" },
+      { opacity: 1, transform: "translateX(0px)" }
+    ] },
+    tournoiement: { nom: "Tournoiement", duree: 0.8, fois: 1, courbe: "ease-in", garde: true, cles: [
+      { opacity: 1, transform: "rotate(0deg) scale(1)" },
+      { opacity: 0, transform: "rotate(540deg) scale(0.1)" }
+    ] }
+  };
+  var CB_COURBES = { lineaire: "linear", douce: "ease-in-out", acceleree: "ease-in", freinee: "ease-out", rebond: "cubic-bezier(0.34,1.56,0.64,1)", elastique: "cubic-bezier(0.68,-0.6,0.32,1.6)" };
+  function cbClesPerso(a) {
+    var cles = (a.cles || []).slice().sort(function(x, y) {
+      return x.t - y.t;
+    });
+    if (!cles.length) cles = [{ t: 0, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 }];
+    if (cles[0].t > 0) cles.unshift({ t: 0, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 });
+    if (cles[cles.length - 1].t < 1) {
+      var d = cles[cles.length - 1];
+      cles.push({ t: 1, x: d.x, y: d.y, rot: d.rot, echelle: d.echelle, opacite: d.opacite });
+    }
+    return cles.map(function(k) {
+      return { offset: k.t, opacity: k.opacite, transform: "translate(" + k.x + "px," + k.y + "px) rotate(" + k.rot + "deg) scale(" + k.echelle + ")" };
+    });
+  }
+  function cbDefAnim(el, effet) {
+    if (!effet) return null;
+    if (effet.indexOf("perso:") === 0) {
+      var id = effet.slice(6), l = el && el.anims ? el.anims : [];
+      for (var i = 0; i < l.length; i++) {
+        if (l[i].id === id) return { duree: l[i].duree, fois: l[i].fois, courbe: CB_COURBES[l[i].courbe] || "ease-in-out", cles: cbClesPerso(l[i]) };
+      }
+      return null;
+    }
+    return CB_EFFETS[effet] || null;
+  }
+  function cbJoueAnim(cible, def, duree, fois, fin) {
+    if (!cible || !def || typeof cible.animate !== "function") {
+      if (fin) fin();
+      return null;
+    }
+    try {
+      var n = fois == null || fois < 0 ? def.fois : fois;
+      var a = cible.animate(def.cles, {
+        duration: Math.max(40, (duree > 0 ? duree : def.duree) * 1e3),
+        iterations: n === 0 ? Infinity : Math.max(1, n || 1),
+        easing: def.courbe || "ease",
+        fill: def.garde ? "forwards" : "none"
+      });
+      if (fin) a.onfinish = fin;
+      return a;
+    } catch (e) {
+      if (fin) fin();
+      return null;
+    }
+  }
+  var CB_PARTICULES = {
+    etincelles: { nom: "\xC9tincelles", additif: true },
+    confettis: { nom: "Confettis" },
+    poussiere: { nom: "Poussi\xE8re" },
+    fumee: { nom: "Fum\xE9e" },
+    feu: { nom: "Feu", additif: true },
+    gouttes: { nom: "Gouttes" },
+    etoiles: { nom: "\xC9toiles", additif: true },
+    bulles: { nom: "Bulles" },
+    coeurs: { nom: "C\u0153urs" },
+    magie: { nom: "Poudre magique", additif: true }
+  };
+  var CB_CONFETTIS = ["#E8A33D", "#6FCF73", "#5FD4D4", "#D9636B", "#A98BE8", "#F5D96B", "#E9E6DD"];
+  function cbAlea(a, b) {
+    return a + Math.random() * (b - a);
+  }
+  function cbParticule(effet, x, y, c) {
+    var a = cbAlea(0, Math.PI * 2), v;
+    var q = {
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      g: 0,
+      frein: 0.99,
+      vie: 0,
+      max: 1,
+      t: 4,
+      dt: 0,
+      rot: 0,
+      vrot: 0,
+      c: c || "#fff",
+      forme: "rond",
+      a0: 1,
+      effet
+    };
+    switch (effet) {
+      case "etincelles":
+        v = cbAlea(120, 520);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v - 80;
+        q.g = 700;
+        q.max = cbAlea(0.35, 0.8);
+        q.t = cbAlea(1.5, 3.2);
+        q.c = c || (Math.random() < 0.5 ? "#FFD36B" : "#FF9A3C");
+        q.forme = "trait";
+        q.frein = 0.97;
+        break;
+      case "confettis":
+        v = cbAlea(220, 620);
+        a = cbAlea(-Math.PI * 0.85, -Math.PI * 0.15);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v;
+        q.g = 520;
+        q.max = cbAlea(1.6, 2.8);
+        q.t = cbAlea(6, 11);
+        q.c = c || CB_CONFETTIS[Math.random() * CB_CONFETTIS.length | 0];
+        q.forme = "rect";
+        q.vrot = cbAlea(-14, 14);
+        q.frein = 0.975;
+        break;
+      case "poussiere":
+        v = cbAlea(10, 80);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v - 10;
+        q.g = -10;
+        q.max = cbAlea(0.8, 1.8);
+        q.t = cbAlea(2, 6);
+        q.dt = 6;
+        q.c = c || "#B9A88C";
+        q.a0 = 0.55;
+        q.frein = 0.96;
+        break;
+      case "fumee":
+        q.vx = cbAlea(-20, 20);
+        q.vy = cbAlea(-90, -40);
+        q.g = -30;
+        q.max = cbAlea(1.4, 2.6);
+        q.t = cbAlea(8, 16);
+        q.dt = 22;
+        q.c = c || "#8C8F99";
+        q.a0 = 0.35;
+        q.frein = 0.985;
+        break;
+      case "feu":
+        q.vx = cbAlea(-30, 30);
+        q.vy = cbAlea(-160, -70);
+        q.g = -60;
+        q.max = cbAlea(0.4, 0.9);
+        q.t = cbAlea(10, 18);
+        q.dt = -14;
+        q.c = c || (Math.random() < 0.5 ? "#FF7A2E" : "#FFC23D");
+        q.a0 = 0.8;
+        break;
+      case "gouttes":
+        v = cbAlea(60, 260);
+        a = cbAlea(-Math.PI * 0.95, -Math.PI * 0.05);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v;
+        q.g = 900;
+        q.max = cbAlea(0.7, 1.3);
+        q.t = cbAlea(3, 6);
+        q.c = c || "#5FB4F0";
+        q.forme = "goutte";
+        break;
+      case "etoiles":
+        v = cbAlea(80, 340);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v;
+        q.g = 120;
+        q.max = cbAlea(0.6, 1.2);
+        q.t = cbAlea(6, 12);
+        q.c = c || "#FFE27A";
+        q.forme = "etoile";
+        q.vrot = cbAlea(-6, 6);
+        q.frein = 0.95;
+        break;
+      case "bulles":
+        q.vx = cbAlea(-25, 25);
+        q.vy = cbAlea(-110, -40);
+        q.g = -40;
+        q.max = cbAlea(1.2, 2.4);
+        q.t = cbAlea(4, 12);
+        q.c = c || "#BFE7FF";
+        q.forme = "bulle";
+        q.frein = 0.99;
+        break;
+      case "coeurs":
+        v = cbAlea(40, 160);
+        a = cbAlea(-Math.PI * 0.8, -Math.PI * 0.2);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v;
+        q.g = -30;
+        q.max = cbAlea(1, 1.8);
+        q.t = cbAlea(8, 14);
+        q.c = c || "#FF6B8B";
+        q.forme = "coeur";
+        q.vrot = cbAlea(-2, 2);
+        break;
+      case "magie":
+        v = cbAlea(20, 140);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v - 30;
+        q.g = -20;
+        q.max = cbAlea(0.8, 1.6);
+        q.t = cbAlea(2, 5);
+        q.c = c || (Math.random() < 0.5 ? "#C7A6FF" : "#7FE3FF");
+        q.forme = "etoile";
+        q.vrot = cbAlea(-4, 4);
+        q.frein = 0.96;
+        break;
+      default:
+        v = cbAlea(50, 200);
+        q.vx = Math.cos(a) * v;
+        q.vy = Math.sin(a) * v;
+        q.max = 1;
+        break;
+    }
+    return q;
+  }
+  function cbAire(poly) {
+    var s = 0;
+    for (var i = 0, n = poly.length; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n];
+      s += a.x * b.y - b.x * a.y;
+    }
+    return Math.abs(s) / 2;
+  }
+  function cbDedans(poly, x, y) {
+    var c = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var a = poly[i], b = poly[j];
+      if (a.y > y !== b.y > y && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) c = !c;
+    }
+    return c;
+  }
+  function cbCroise(a, b, c, d) {
+    var rx = b.x - a.x, ry = b.y - a.y, sx = d.x - c.x, sy = d.y - c.y, den = rx * sy - ry * sx;
+    if (Math.abs(den) < 1e-9) return null;
+    var t = ((c.x - a.x) * sy - (c.y - a.y) * sx) / den, u = ((c.x - a.x) * ry - (c.y - a.y) * rx) / den;
+    if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+    return { t, u, x: a.x + rx * t, y: a.y + ry * t };
+  }
+  function cbDechire(poly, trace) {
+    if (trace.length < 2 || poly.length < 3) return null;
+    var pts = trace.slice();
+    var dehors = function(p) {
+      return !cbDedans(poly, p.x, p.y);
+    };
+    var prolonge = function(a, b) {
+      var dx = a.x - b.x, dy = a.y - b.y, l = Math.sqrt(dx * dx + dy * dy) || 1;
+      return { x: a.x + dx / l * 4e3, y: a.y + dy / l * 4e3 };
+    };
+    if (!dehors(pts[0])) pts.unshift(prolonge(pts[0], pts[1]));
+    if (!dehors(pts[pts.length - 1])) pts.push(prolonge(pts[pts.length - 1], pts[pts.length - 2]));
+    var coupes = [];
+    for (var i = 0; i < pts.length - 1; i++) {
+      for (var k = 0, n = poly.length; k < n; k++) {
+        var r = cbCroise(pts[i], pts[i + 1], poly[k], poly[(k + 1) % n]);
+        if (r) coupes.push({ i, t: r.t, bord: k, u: r.u, x: r.x, y: r.y });
+      }
+    }
+    coupes.sort(function(a, b) {
+      return a.i - b.i || a.t - b.t;
+    });
+    if (coupes.length < 2) return null;
+    var E = coupes[0], X2 = coupes[1];
+    var chemin = [], ajoute = function(a, b) {
+      var dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy), m = Math.max(1, Math.round(l / 9));
+      for (var s = 1; s <= m; s++) {
+        var f = s / m, j = s === m ? 0 : cbAlea(-3.5, 3.5);
+        chemin.push({ x: a.x + dx * f - dy / (l || 1) * j, y: a.y + dy * f + dx / (l || 1) * j, fibre: true });
+      }
+    };
+    var prec = { x: E.x, y: E.y };
+    for (var q = E.i + 1; q <= X2.i; q++) {
+      ajoute(prec, pts[q]);
+      prec = pts[q];
+    }
+    ajoute(prec, { x: X2.x, y: X2.y });
+    chemin.pop();
+    var n2 = poly.length, a1 = [{ x: E.x, y: E.y, fibre: true }], k2;
+    if (E.bord === X2.bord && X2.u > E.u) a1.push({ x: X2.x, y: X2.y, fibre: true });
+    else {
+      k2 = (E.bord + 1) % n2;
+      var garde = 0;
+      while (garde++ < n2 + 1) {
+        a1.push(poly[k2]);
+        if (k2 === X2.bord) break;
+        k2 = (k2 + 1) % n2;
+      }
+      a1.push({ x: X2.x, y: X2.y, fibre: true });
+    }
+    for (var r1 = chemin.length - 1; r1 >= 0; r1--) a1.push(chemin[r1]);
+    var a2 = [{ x: X2.x, y: X2.y, fibre: true }];
+    if (E.bord === X2.bord && X2.u < E.u) a2.push({ x: E.x, y: E.y, fibre: true });
+    else {
+      k2 = (X2.bord + 1) % n2;
+      var garde2 = 0;
+      while (garde2++ < n2 + 1) {
+        a2.push(poly[k2]);
+        if (k2 === E.bord) break;
+        k2 = (k2 + 1) % n2;
+      }
+      a2.push({ x: E.x, y: E.y, fibre: true });
+    }
+    for (var r2 = 0; r2 < chemin.length; r2++) a2.push(chemin[r2]);
+    if (a1.length < 3 || a2.length < 3) return null;
+    return cbAire(a1) >= cbAire(a2) ? { garde: a1, tombe: a2 } : { garde: a2, tombe: a1 };
+  }
+  function cbCoupeDemiPlan(poly, nx, ny, s) {
+    var out = [];
+    for (var i = 0, n = poly.length; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n], da = a.x * nx + a.y * ny - s, db = b.x * nx + b.y * ny - s;
+      if (da >= 0) out.push(a);
+      if (da >= 0 !== db >= 0) {
+        var f = da / (da - db);
+        out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, surface: true });
+      }
+    }
+    return out;
+  }
+  function cbEclats(w, h, ix, iy, nb) {
+    var bord = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+    for (var i = 0; i < nb; i++) {
+      var c = Math.random() * 4 | 0, f = Math.random();
+      bord.push(c === 0 ? { x: w * f, y: 0 } : c === 1 ? { x: w, y: h * f } : c === 2 ? { x: w * f, y: h } : { x: 0, y: h * f });
+    }
+    bord.sort(function(a2, b2) {
+      return Math.atan2(a2.y - iy, a2.x - ix) - Math.atan2(b2.y - iy, b2.x - ix);
+    });
+    var out = [];
+    for (var k = 0; k < bord.length; k++) {
+      var a = bord[k], b = bord[(k + 1) % bord.length];
+      out.push([{ x: ix, y: iy }, a, b]);
+    }
+    return out;
+  }
+  function cbMonde(o) {
+    var PAS = 1 / 120;
+    var fond = null, fx = null, gF = null, gX = null, raf = 0, dernier = 0, reste = 0;
+    var corps = {}, cordes = [], ressorts = [], statiques = [], papiers = {}, grattages = {}, cassables = {}, recipients = {}, emetteurs = [];
+    var parts = [], debris = [], lame = null, boucles = [], images = {}, gravite = { x: 0, y: 1 }, force = 1, horloge = 0, eteint = false;
+    var p = o.p();
+    function img(src) {
+      if (!src) return null;
+      if (images[src]) return images[src].complete ? images[src] : null;
+      try {
+        var im = new Image();
+        im.src = src;
+        images[src] = im;
+      } catch (e) {
+        return null;
+      }
+      return null;
+    }
+    function visuel(el) {
+      var et = o.etat(), id = et.etats[el.id], v = el.etats[0].visuel;
+      for (var i = 0; i < el.etats.length; i++) if (el.etats[i].id === id) v = el.etats[i].visuel;
+      return v;
+    }
+    function couleur(el, def) {
+      var v = visuel(el);
+      return el.couleur || v.fill || def;
+    }
+    function cache(el) {
+      var et = o.etat();
+      return !!et.caches[el.id];
+    }
+    function toile(cls) {
+      var c = document.createElement("canvas");
+      c.className = cls;
+      c.width = Math.max(1, Math.round(p.board.w * 2));
+      c.height = Math.max(1, Math.round(p.board.h * 2));
+      c.style.width = p.board.w + "px";
+      c.style.height = p.board.h + "px";
+      return c;
+    }
+    function construit() {
+      p = o.p();
+      corps = {};
+      cordes = [];
+      ressorts = [];
+      statiques = [];
+      papiers = {};
+      grattages = {};
+      cassables = {};
+      recipients = {};
+      emetteurs = [];
+      parts = [];
+      debris = [];
+      lame = null;
+      var g = p.board.gravite == null ? 1 : p.board.gravite, ga = (p.board.gangle == null ? 90 : p.board.gangle) * Math.PI / 180;
+      force = g;
+      gravite = { x: Math.cos(ga), y: Math.sin(ga) };
+      var et = o.etat();
+      if (et.gravite) {
+        force = et.gravite.force;
+        gravite = { x: et.gravite.x, y: et.gravite.y };
+      }
+      for (var i = 0; i < p.elements.length; i++) {
+        var el = p.elements[i];
+        if (el.genre === "objet") {
+          var r = Math.min(el.w, el.h) / 2;
+          corps[el.id] = {
+            el,
+            rond: el.forme !== "boite",
+            r,
+            w: el.w,
+            h: el.h,
+            x: el.x + el.w / 2,
+            y: el.y + el.h / 2,
+            px: el.x + el.w / 2,
+            py: el.y + el.h / 2,
+            inv: 1 / el.masse,
+            rebond: el.rebond,
+            frot: el.frottement,
+            fige: !!(et.figes && et.figes[el.id] != null ? et.figes[el.id] : el.fige),
+            tenu: null,
+            rot: 0,
+            calme: 0,
+            repos: false,
+            zone: "",
+            sorti: false
+          };
+        } else if (el.genre === "plateforme") {
+          statiques.push({ el, cx: el.x + el.w / 2, cy: el.y + el.h / 2, w: el.w, h: el.h, a: (el.angle || 0) * Math.PI / 180, rebond: el.rebond == null ? 0.2 : el.rebond });
+        } else if (el.genre === "cassable") {
+          cassables[el.id] = { el, coups: 0, casse: !!(et.faits && et.faits[el.id]), fissures: [] };
+        } else if (el.genre === "papier") {
+          papiers[el.id] = { el, poly: et.faits && et.faits[el.id] ? [] : [{ x: 0, y: 0 }, { x: el.w, y: 0 }, { x: el.w, y: el.h }, { x: 0, y: el.h }], aire0: el.w * el.h, fait: !!(et.faits && et.faits[el.id]), toile: null };
+        } else if (el.genre === "grattage") {
+          grattages[el.id] = { el, grille: {}, compte: 0, fait: !!(et.faits && et.faits[el.id]), toile: null, fond: 1 };
+        } else if (el.genre === "recipient") {
+          var nv = et.niveaux && et.niveaux[el.id] != null ? et.niveaux[el.id] : el.niveau;
+          recipients[el.id] = { el, niveau: nv / 100, vise: nv / 100, angle: 0, va: 0, tenu: null, onde: 0, envoye: Math.round(nv), dernierEnvoi: 0, remplit: null, toile: null };
+        } else if (el.genre === "emetteur") {
+          emetteurs.push({ el, reste: 0 });
+        }
+      }
+      for (var j = 0; j < p.elements.length; j++) {
+        var e2 = p.elements[j];
+        if (e2.genre === "corde") cordes.push(nouvelleCorde(e2, et));
+        if (e2.genre === "ressort") ressorts.push({ el: e2, ax: e2.x + e2.w / 2, ay: e2.y, corps: corps[e2.porte] || null, l: e2.h });
+      }
+    }
+    function nouvelleCorde(el, et) {
+      var ax = el.x + el.w / 2, ay = el.y, b = corps[el.porte] || null;
+      var bx = b ? b.x : ax, by = b ? b.y : ay + el.h;
+      var dist = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+      var total = Math.max(el.h, dist, 10), n = el.segments, pts = [];
+      for (var i = 0; i <= n; i++) {
+        var f = i / n;
+        pts.push({ x: ax + (bx - ax) * f, y: ay + (by - ay) * f, px: ax + (bx - ax) * f, py: ay + (by - ay) * f });
+      }
+      var c = { el, pts, l: total / n, corps: b, coupe: {}, faite: !!(et.faits && et.faits[el.id]) };
+      if (c.faite) c.coupe[Math.floor(n / 2)] = true;
+      return c;
+    }
+    function apercu(el, w, h) {
+      var c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(w));
+      c.height = Math.max(1, Math.round(h));
+      var x = c.getContext("2d"), v = visuel(el), im = img(v.image);
+      x.fillStyle = v.fill || "#C9B79C";
+      x.fillRect(0, 0, w, h);
+      if (im) {
+        try {
+          x.drawImage(im, 0, 0, w, h);
+        } catch (e) {
+        }
+      }
+      if (v.border) {
+        x.strokeStyle = v.border;
+        x.lineWidth = 3;
+        x.strokeRect(1.5, 1.5, w - 3, h - 3);
+      }
+      return c;
+    }
+    function monte(el, n, ani) {
+      var mk = function() {
+        var c = document.createElement("canvas");
+        c.className = "pz-cb-toile";
+        c.width = Math.max(1, Math.round(el.w * 2));
+        c.height = Math.max(1, Math.round(el.h * 2));
+        ani.appendChild(c);
+        return c;
+      };
+      if (el.genre === "papier" && papiers[el.id]) papiers[el.id].toile = mk();
+      if (el.genre === "grattage" && grattages[el.id]) {
+        var gr = grattages[el.id];
+        gr.toile = mk();
+        peintGrattage(gr);
+      }
+      if (el.genre === "recipient" && recipients[el.id]) {
+        recipients[el.id].toile = mk();
+        recipients[el.id].n = n;
+      }
+      if (el.genre === "objet" && corps[el.id]) {
+        corps[el.id].n = n;
+        n.setAttribute("data-cb-forme", el.forme);
+      }
+      if (el.genre === "cassable" && cassables[el.id]) cassables[el.id].n = n;
+      if (el.genre === "objet" || el.genre === "recipient" && el.inclinable) {
+        n.addEventListener("pointerdown", function(e) {
+          saisit(el, n, e);
+        });
+        n.addEventListener("pointermove", bouge);
+        n.addEventListener("pointerup", lache);
+        n.addEventListener("pointercancel", lache);
+      }
+    }
+    function canevas() {
+      fond = toile("pz-cb-fond");
+      fx = toile("pz-cb-fx");
+      o.plateau.insertBefore(fond, o.plateau.firstChild);
+      o.plateau.appendChild(fx);
+      gF = fond.getContext("2d");
+      gX = fx.getContext("2d");
+      gF.setTransform(2, 0, 0, 2, 0, 0);
+      gX.setTransform(2, 0, 0, 2, 0, 0);
+    }
+    function installe() {
+      o.plateau.addEventListener("pointerdown", lameDebut, true);
+      o.plateau.addEventListener("pointermove", lameBouge, true);
+      o.plateau.addEventListener("pointerup", lameFin, true);
+      o.plateau.addEventListener("pointercancel", lameFin, true);
+      o.plateau.addEventListener("click", bloqueClic, true);
+    }
+    function point(e) {
+      var q = imgPoint(o.plateau, e, o.echelle());
+      return q;
+    }
+    function saisit(el, n, e) {
+      if (o.edition() || o.fini() || cache(el) || o.etat().verrous[el.id]) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        n.setPointerCapture(e.pointerId);
+      } catch (err) {
+      }
+      var q = point(e);
+      if (el.genre === "objet") {
+        var b = corps[el.id];
+        if (!b || b.fige || b.sorti) return;
+        b.tenu = { id: e.pointerId, dx: b.x - q.x, dy: b.y - q.y, x: q.x, y: q.y, t0: Date.now(), x0: q.x, y0: q.y };
+      } else {
+        var r = recipients[el.id];
+        if (r) r.tenu = { id: e.pointerId, x0: q.x, a0: r.angle };
+      }
+      demarre();
+    }
+    function bouge(e) {
+      var q = null;
+      for (var k in corps) {
+        var b = corps[k];
+        if (b.tenu && b.tenu.id === e.pointerId) {
+          q = q || point(e);
+          b.tenu.x = q.x;
+          b.tenu.y = q.y;
+        }
+      }
+      for (var k2 in recipients) {
+        var r = recipients[k2];
+        if (r.tenu && r.tenu.id === e.pointerId) {
+          q = q || point(e);
+          r.angle = Math.max(-115, Math.min(115, r.tenu.a0 + (q.x - r.tenu.x0) * 0.9));
+        }
+      }
+    }
+    function lache(e) {
+      for (var k in corps) {
+        var b = corps[k];
+        if (!b.tenu || b.tenu.id !== e.pointerId) continue;
+        var tap = Math.abs(b.tenu.x - b.tenu.x0) + Math.abs(b.tenu.y - b.tenu.y0) < 6 && Date.now() - b.tenu.t0 < 300;
+        if (!b.el.lancer) {
+          b.px = b.x;
+          b.py = b.y;
+        }
+        b.tenu = null;
+        if (!tap) o.sansClic();
+      }
+      for (var k2 in recipients) {
+        var r = recipients[k2];
+        if (r.tenu && r.tenu.id === e.pointerId) r.tenu = null;
+      }
+    }
+    function sousPapier(q) {
+      for (var k in papiers) {
+        var pa = papiers[k], el = pa.el;
+        if (pa.fait && !pa.poly.length) continue;
+        if (cache(el)) continue;
+        if (cbDedans(pa.poly, q.x - el.x, q.y - el.y)) return pa;
+      }
+      return null;
+    }
+    function sousGrattage(q) {
+      for (var k in grattages) {
+        var gr = grattages[k], el = gr.el;
+        if (gr.fond <= 0 || cache(el)) continue;
+        if (q.x >= el.x && q.x <= el.x + el.w && q.y >= el.y && q.y <= el.y + el.h) return gr;
+      }
+      return null;
+    }
+    function bloqueClic(e) {
+      if (o.edition()) return;
+      var q = point(e);
+      if (sousPapier(q) || sousGrattage(q)) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }
+    function lameDebut(e) {
+      if (o.edition() || o.fini()) return;
+      var q = point(e), gr = sousGrattage(q), pa = sousPapier(q);
+      var cible = e.target, vide = cible === o.plateau || cible === fx || cible === fond;
+      if (!gr && !pa && !vide) return;
+      if (gr || pa) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      try {
+        o.plateau.setPointerCapture(e.pointerId);
+      } catch (err) {
+      }
+      lame = { id: e.pointerId, pts: [{ x: q.x, y: q.y, t: horloge }], gratte: gr, debut: 0 };
+      if (gr) gratte(gr, q, q);
+      demarre();
+    }
+    function lameBouge(e) {
+      if (!lame || e.pointerId !== lame.id) return;
+      var q = point(e), der = lame.pts[lame.pts.length - 1];
+      if (Math.abs(q.x - der.x) + Math.abs(q.y - der.y) < 2) return;
+      lame.pts.push({ x: q.x, y: q.y, t: horloge });
+      if (lame.gratte) {
+        gratte(lame.gratte, der, q);
+        return;
+      }
+      coupeCordes(der, q);
+      dechireEnCours();
+    }
+    function lameFin(e) {
+      if (!lame || e.pointerId !== lame.id) return;
+      if (e.type === "pointerup") lameBouge(e);
+      if (!lame.gratte) dechireEnCours(true);
+      lame.fin = horloge;
+      var l = lame;
+      lame = null;
+      if (!l.gratte) traces.push({ pts: l.pts, fin: horloge });
+    }
+    var traces = [];
+    function coupeCordes(a, b) {
+      for (var i = 0; i < cordes.length; i++) {
+        var c = cordes[i];
+        if (!c.el.coupable || cache(c.el)) continue;
+        for (var k = 0; k < c.pts.length - 1; k++) {
+          if (c.coupe[k]) continue;
+          if (cbCroise(a, b, c.pts[k], c.pts[k + 1])) {
+            c.coupe[k] = true;
+            particules("etincelles", (c.pts[k].x + c.pts[k + 1].x) / 2, (c.pts[k].y + c.pts[k + 1].y) / 2, 6, "#E9E6DD");
+            if (!c.faite) {
+              c.faite = true;
+              o.envoie({ type: "coupe", element: c.el.id });
+            }
+            break;
+          }
+        }
+      }
+    }
+    function dechireEnCours(fin) {
+      if (!lame) return;
+      var pts = lame.pts.slice(lame.debut);
+      if (pts.length < 2) return;
+      for (var k in papiers) {
+        var pa = papiers[k], el = pa.el;
+        if (!pa.poly.length || cache(el)) continue;
+        var loc = pts.map(function(q) {
+          return { x: q.x - el.x, y: q.y - el.y };
+        });
+        var dernierDehors = !cbDedans(pa.poly, loc[loc.length - 1].x, loc[loc.length - 1].y);
+        if (!dernierDehors && !fin) continue;
+        var touche = loc.some(function(q) {
+          return cbDedans(pa.poly, q.x, q.y);
+        });
+        if (!touche && !fin) continue;
+        var r = cbDechire(pa.poly, loc);
+        if (!r) continue;
+        pa.poly = r.garde;
+        chute(r.tombe, el, pa);
+        particules("poussiere", pts[pts.length - 1].x, pts[pts.length - 1].y, 8, "#E9E1CF");
+        lame.debut = lame.pts.length - 1;
+        if (o.son) o.son("interact");
+        var arrache = 1 - cbAire(pa.poly) / pa.aire0;
+        if (arrache >= 0.97) {
+          chute(pa.poly, el, pa);
+          pa.poly = [];
+        }
+        if (!pa.fait && arrache * 100 >= el.seuil) {
+          pa.fait = true;
+          o.envoie({ type: "dechire", element: el.id });
+        }
+      }
+    }
+    function chute(poly, el, pa) {
+      if (!poly || poly.length < 3) return;
+      var cx = 0, cy = 0;
+      for (var i = 0; i < poly.length; i++) {
+        cx += poly[i].x;
+        cy += poly[i].y;
+      }
+      cx /= poly.length;
+      cy /= poly.length;
+      debris.push({
+        poly: poly.map(function(q) {
+          return { x: q.x - cx, y: q.y - cy, fibre: q.fibre };
+        }),
+        x: el.x + cx,
+        y: el.y + cy,
+        vx: cbAlea(-60, 60),
+        vy: cbAlea(-140, -40),
+        rot: 0,
+        vrot: cbAlea(-3, 3),
+        vie: 0,
+        max: 2.2,
+        tex: apercu(el, el.w, el.h),
+        ox: cx,
+        oy: cy,
+        papier: true
+      });
+    }
+    function gratte(gr, a, b) {
+      var el = gr.el, x = gr.toile && gr.toile.getContext("2d");
+      if (!x || gr.fond < 1) return;
+      var r = el.pinceau, dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy), m = Math.max(1, Math.ceil(l / (r * 0.4)));
+      x.save();
+      x.setTransform(2, 0, 0, 2, 0, 0);
+      x.globalCompositeOperation = "destination-out";
+      for (var s = 0; s <= m; s++) {
+        var cx = a.x + dx * s / m - el.x, cy = a.y + dy * s / m - el.y;
+        x.beginPath();
+        for (var k = 0; k < 9; k++) {
+          var an = k / 9 * Math.PI * 2, rr = r * cbAlea(0.75, 1.05);
+          if (k === 0) x.moveTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
+          else x.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
+        }
+        x.closePath();
+        x.fill();
+        for (var gx = Math.floor((cx - r) / 10); gx <= Math.floor((cx + r) / 10); gx++) {
+          for (var gy = Math.floor((cy - r) / 10); gy <= Math.floor((cy + r) / 10); gy++) {
+            var mx = gx * 10 + 5 - cx, my = gy * 10 + 5 - cy;
+            if (gx < 0 || gy < 0 || gx * 10 >= el.w || gy * 10 >= el.h || mx * mx + my * my > r * r) continue;
+            var cle = gx + ":" + gy;
+            if (!gr.grille[cle]) {
+              gr.grille[cle] = 1;
+              gr.compte++;
+            }
+          }
+        }
+      }
+      x.restore();
+      if (Math.random() < 0.5) particules("poussiere", b.x, b.y, 2, couleur(el, "#B8B8C0"));
+      var total = Math.ceil(el.w / 10) * Math.ceil(el.h / 10);
+      if (!gr.fait && gr.compte / total * 100 >= el.seuil) {
+        gr.fait = true;
+        gr.efface = true;
+        particules("poussiere", el.x + el.w / 2, el.y + el.h / 2, 24, couleur(el, "#B8B8C0"));
+        o.envoie({ type: "gratte", element: el.id });
+      }
+    }
+    function peintGrattage(gr) {
+      var el = gr.el, x = gr.toile.getContext("2d"), v = visuel(el), im = img(v.image);
+      x.setTransform(2, 0, 0, 2, 0, 0);
+      x.clearRect(0, 0, el.w, el.h);
+      if (gr.fait) {
+        gr.fond = 0;
+        return;
+      }
+      var dg = x.createLinearGradient(0, 0, el.w, el.h);
+      dg.addColorStop(0, v.fill || "#B8B8C0");
+      dg.addColorStop(0.5, "#E4E4EA");
+      dg.addColorStop(1, v.fill || "#9C9CA6");
+      x.fillStyle = dg;
+      x.fillRect(0, 0, el.w, el.h);
+      if (im) {
+        try {
+          x.drawImage(im, 0, 0, el.w, el.h);
+        } catch (e) {
+        }
+      } else {
+        x.fillStyle = "rgba(255,255,255,0.35)";
+        for (var i = 0; i < el.w * el.h / 90; i++) x.fillRect(Math.random() * el.w, Math.random() * el.h, 1.2, 1.2);
+      }
+      if (el.label) {
+        x.fillStyle = v.ink || "rgba(40,40,48,0.7)";
+        x.font = "600 " + Math.max(11, Math.round(Math.min(el.h * 0.22, 22))) + "px system-ui, sans-serif";
+        x.textAlign = "center";
+        x.textBaseline = "middle";
+        x.fillText(el.label, el.w / 2, el.h / 2);
+      }
+    }
+    function particules(effet, x, y, nb, c) {
+      if (o.calme()) nb = Math.min(nb, 6);
+      for (var i = 0; i < nb && parts.length < 1600; i++) parts.push(cbParticule(effet, x + cbAlea(-4, 4), y + cbAlea(-4, 4), c));
+      demarre();
+    }
+    function dessineParticule(g, q) {
+      var f = q.vie / q.max, al = q.a0 * (f < 0.7 ? 1 : 1 - (f - 0.7) / 0.3), t = Math.max(0.3, q.t + q.dt * q.vie);
+      var im = p.fx && p.fx.images ? img(p.fx.images[q.effet]) : null;
+      g.globalAlpha = Math.max(0, Math.min(1, al));
+      if (im) {
+        g.save();
+        g.translate(q.x, q.y);
+        g.rotate(q.rot);
+        var s = t * 3;
+        try {
+          g.drawImage(im, -s / 2, -s / 2, s, s);
+        } catch (e) {
+        }
+        g.restore();
+        return;
+      }
+      g.fillStyle = q.c;
+      g.strokeStyle = q.c;
+      switch (q.forme) {
+        case "trait":
+          g.lineWidth = Math.max(1, t * 0.6);
+          g.beginPath();
+          g.moveTo(q.x, q.y);
+          g.lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03);
+          g.stroke();
+          break;
+        case "rect":
+          g.save();
+          g.translate(q.x, q.y);
+          g.rotate(q.rot);
+          g.scale(1, Math.abs(Math.cos(q.rot * 1.7)) + 0.15);
+          g.fillRect(-t / 2, -t * 0.3, t, t * 0.6);
+          g.restore();
+          break;
+        case "goutte":
+          g.beginPath();
+          g.ellipse(q.x, q.y, t * 0.45, t * 0.7, Math.atan2(q.vy, q.vx) + Math.PI / 2, 0, Math.PI * 2);
+          g.fill();
+          break;
+        case "bulle":
+          g.lineWidth = 1.2;
+          g.beginPath();
+          g.arc(q.x, q.y, t, 0, Math.PI * 2);
+          g.stroke();
+          g.globalAlpha *= 0.5;
+          g.beginPath();
+          g.arc(q.x - t * 0.35, q.y - t * 0.35, t * 0.25, 0, Math.PI * 2);
+          g.fill();
+          break;
+        case "etoile":
+          g.save();
+          g.translate(q.x, q.y);
+          g.rotate(q.rot);
+          g.beginPath();
+          for (var k = 0; k < 10; k++) {
+            var rr = k % 2 ? t * 0.42 : t, an = k * Math.PI / 5 - Math.PI / 2;
+            g.lineTo(Math.cos(an) * rr, Math.sin(an) * rr);
+          }
+          g.closePath();
+          g.fill();
+          g.restore();
+          break;
+        case "coeur":
+          g.save();
+          g.translate(q.x, q.y);
+          g.rotate(q.rot);
+          g.scale(t / 10, t / 10);
+          g.beginPath();
+          g.moveTo(0, 3);
+          g.bezierCurveTo(-10, -4, -5, -11, 0, -6);
+          g.bezierCurveTo(5, -11, 10, -4, 0, 3);
+          g.fill();
+          g.restore();
+          break;
+        default:
+          g.beginPath();
+          g.arc(q.x, q.y, t, 0, Math.PI * 2);
+          g.fill();
+      }
+    }
+    function cibleAnim(id) {
+      if (!id) return o.racine;
+      var nd = o.noeuds()[id];
+      return nd ? nd.ani : null;
+    }
+    function animer(id, effet, duree, fois, fin) {
+      if (o.calme() && effet !== "apparition" && effet !== "disparition") {
+        if (fin) fin();
+        return null;
+      }
+      var el = id ? cbElement(p, id) : null;
+      return cbJoueAnim(cibleAnim(id), cbDefAnim(el, effet), duree, fois, fin);
+    }
+    function lanceBoucles() {
+      for (var i = 0; i < boucles.length; i++) {
+        try {
+          boucles[i].cancel();
+        } catch (e) {
+        }
+      }
+      boucles = [];
+      if (o.edition() || o.calme()) return;
+      for (var k = 0; k < p.elements.length; k++) {
+        var el = p.elements[k];
+        if (el.boucle) {
+          var a = animer(el.id, el.boucle, 0, 0);
+          if (a) boucles.push(a);
+        }
+        (el.anims || []).forEach(function(an) {
+          if (an.auDebut) {
+            var b = animer(el.id, "perso:" + an.id, 0, -1);
+            if (b) boucles.push(b);
+          }
+        });
+      }
+    }
+    function visibilite(el, n, cachee) {
+      var avant = n.getAttribute("data-cb-cache") === "1";
+      if (avant === cachee) {
+        if (!n.__cbAnim) n.style.display = cachee ? "none" : "";
+        return;
+      }
+      n.setAttribute("data-cb-cache", cachee ? "1" : "0");
+      var tr = el.transition, nd = o.noeuds()[el.id];
+      if (!tr || o.calme() || !nd || n.__cbPremier !== true) {
+        n.__cbPremier = true;
+        n.style.display = cachee ? "none" : "";
+        return;
+      }
+      var eff = cachee ? { fondu: "disparition", zoom: "disparition", glisse: "disparition", chute: "disparition", tournoie: "tournoiement" }[tr] : { fondu: "apparition", zoom: "apparition", glisse: "glisseGauche", chute: "chute", tournoie: "apparition" }[tr];
+      if (!cachee) n.style.display = "";
+      n.__cbAnim = true;
+      animer(el.id, eff, 0, 1, function() {
+        n.__cbAnim = false;
+        if (n.getAttribute("data-cb-cache") === "1") n.style.display = "none";
+        try {
+          if (nd.ani.getAnimations) nd.ani.getAnimations().forEach(function(a) {
+            if (a.effect && a.effect.getComputedTiming && a.playState === "finished") a.cancel();
+          });
+        } catch (e) {
+        }
+      });
+    }
+    function effets(liste) {
+      for (var i = 0; i < liste.length; i++) {
+        var f = liste[i], b = f.element ? corps[f.element] : null, el = f.element ? cbElement(p, f.element) : null;
+        switch (f.type) {
+          case "animer":
+            animer(f.element, f.effet, f.duree, f.fois);
+            break;
+          case "particules": {
+            var x = p.board.w / 2, y = p.board.h / 2;
+            if (b) {
+              x = b.x;
+              y = b.y;
+            } else if (el) {
+              x = el.x + el.w / 2;
+              y = el.y + el.h / 2;
+            }
+            particules(f.effet, x, y, f.quantite, f.couleur);
+            break;
+          }
+          case "impulsion":
+            if (b && !b.fige) {
+              var an = f.angle * Math.PI / 180, v = f.force * PAS;
+              b.px = b.x - (b.x - b.px) - Math.cos(an) * v;
+              b.py = b.y - (b.y - b.py) - Math.sin(an) * v;
+              b.calme = 0;
+              b.repos = false;
+              demarre();
+            }
+            break;
+          case "gravite": {
+            var dirs = { bas: [0, 1], haut: [0, -1], gauche: [-1, 0], droite: [1, 0], aucune: [0, 0] }, dv = dirs[f.mode] || [0, 1];
+            gravite = { x: dv[0], y: dv[1] };
+            force = f.force;
+            for (var k in corps) {
+              corps[k].calme = 0;
+              corps[k].repos = false;
+            }
+            demarre();
+            break;
+          }
+          case "figer":
+            if (b) {
+              b.fige = f.fige;
+              if (!f.fige) {
+                b.px = b.x;
+                b.py = b.y;
+                b.calme = 0;
+                b.repos = false;
+              }
+              demarre();
+            }
+            break;
+          case "couper":
+            for (var c = 0; c < cordes.length; c++) if (cordes[c].el.id === f.element) {
+              cordes[c].coupe[Math.floor(cordes[c].pts.length / 2)] = true;
+              cordes[c].faite = true;
+            }
+            demarre();
+            break;
+          case "casser":
+            if (cassables[f.element]) casse(cassables[f.element], null);
+            break;
+          case "remplir": {
+            var r = recipients[f.element];
+            if (r) {
+              r.remplit = { de: r.niveau, a: f.niveau / 100, t: 0, duree: Math.max(0.05, f.duree) };
+              r.vise = f.niveau / 100;
+              r.envoye = Math.round(f.niveau);
+              demarre();
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+    }
+    function casse(ca, impact) {
+      if (ca.casse) return;
+      ca.casse = true;
+      var el = ca.el, ix = impact ? Math.max(4, Math.min(el.w - 4, impact.x - el.x)) : el.w / 2, iy = impact ? Math.max(4, Math.min(el.h - 4, impact.y - el.y)) : el.h / 2;
+      var tex = apercu(el, el.w, el.h), morceaux = cbEclats(el.w, el.h, ix, iy, el.eclats);
+      for (var i = 0; i < morceaux.length; i++) {
+        var m = morceaux[i], cx = (m[0].x + m[1].x + m[2].x) / 3, cy = (m[0].y + m[1].y + m[2].y) / 3;
+        var dx = cx - ix, dy = cy - iy, l = Math.sqrt(dx * dx + dy * dy) || 1, v = cbAlea(120, 380);
+        debris.push({
+          poly: m.map(function(q) {
+            return { x: q.x - cx, y: q.y - cy };
+          }),
+          x: el.x + cx,
+          y: el.y + cy,
+          vx: dx / l * v,
+          vy: dy / l * v - 160,
+          rot: 0,
+          vrot: cbAlea(-9, 9),
+          vie: 0,
+          max: 1.6,
+          tex,
+          ox: cx,
+          oy: cy
+        });
+      }
+      particules("poussiere", el.x + ix, el.y + iy, 14, el.etats[0].visuel.fill || "#C9B79C");
+      if (ca.n) ca.n.style.visibility = "hidden";
+      o.envoie({ type: "casse", element: el.id });
+      demarre();
+    }
+    function toucheCassable(el, e) {
+      var ca = cassables[el.id];
+      if (!ca || ca.casse || o.edition() || o.fini()) return;
+      ca.coups++;
+      var q = point(e);
+      if (ca.coups >= el.resistance) casse(ca, q);
+      else {
+        ca.fissures.push({ x: q.x - el.x, y: q.y - el.y, seed: Math.random() });
+        animer(el.id, "vibration", 0, 1);
+        particules("poussiere", q.x, q.y, 5, el.etats[0].visuel.fill || "#C9B79C");
+      }
+    }
+    function bords() {
+      return p.board.bords || "tous";
+    }
+    function contact(b, nx, ny, prof, autre, rebond) {
+      b.x += nx * prof;
+      b.y += ny * prof;
+      var vx = b.x - b.px, vy = b.y - b.py, vn = vx * nx + vy * ny;
+      if (vn < 0) {
+        var e = Math.max(b.rebond, rebond || 0), frot = b.frot;
+        var tx = vx - vn * nx, ty = vy - vn * ny;
+        vx = tx * (1 - frot * 0.35) - vn * e * nx;
+        vy = ty * (1 - frot * 0.35) - vn * e * ny;
+        b.px = b.x - vx;
+        b.py = b.y - vy;
+        var vitesse = -vn / PAS;
+        if (vitesse > 140) choc(b, autre, vitesse);
+      }
+    }
+    var chocsRecents = {};
+    function choc(b, autre, vitesse) {
+      var cle = b.el.id + ">" + (autre || "");
+      if (chocsRecents[cle] && horloge - chocsRecents[cle] < 0.25) return;
+      chocsRecents[cle] = horloge;
+      if (vitesse > 380 && o.son) o.son("interact");
+      if (autre && cassables[autre]) {
+        var ca = cassables[autre];
+        if (!ca.casse && ca.el.impact > 0 && vitesse >= ca.el.impact) casse(ca, { x: b.x, y: b.y });
+      }
+      o.envoie({ type: "choc", element: b.el.id, autre: autre || "", force: Math.round(vitesse) });
+    }
+    function collisionObb(b, s) {
+      var ca = Math.cos(s.a), sa = Math.sin(s.a), dx = b.x - s.cx, dy = b.y - s.cy;
+      var lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca, hw = s.w / 2, hh = s.h / 2;
+      if (b.rond) {
+        var qx = Math.max(-hw, Math.min(hw, lx)), qy = Math.max(-hh, Math.min(hh, ly)), ex = lx - qx, ey = ly - qy, d2 = ex * ex + ey * ey;
+        if (d2 > b.r * b.r) return;
+        var nlx, nly, prof;
+        if (d2 > 1e-6) {
+          var d = Math.sqrt(d2);
+          nlx = ex / d;
+          nly = ey / d;
+          prof = b.r - d;
+        } else {
+          var ox = hw - Math.abs(lx), oy = hh - Math.abs(ly);
+          if (ox < oy) {
+            nlx = lx < 0 ? -1 : 1;
+            nly = 0;
+            prof = ox + b.r;
+          } else {
+            nlx = 0;
+            nly = ly < 0 ? -1 : 1;
+            prof = oy + b.r;
+          }
+        }
+        contact(b, nlx * ca - nly * sa, nlx * sa + nly * ca, prof, s.el.id, s.rebond);
+        return;
+      }
+      var axes = [[1, 0], [0, 1], [ca, sa], [-sa, ca]], best = 1e9, bn = null;
+      var coinsB = [[b.x - b.w / 2, b.y - b.h / 2], [b.x + b.w / 2, b.y - b.h / 2], [b.x + b.w / 2, b.y + b.h / 2], [b.x - b.w / 2, b.y + b.h / 2]];
+      var coinsS = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(function(c) {
+        return [s.cx + c[0] * ca - c[1] * sa, s.cy + c[0] * sa + c[1] * ca];
+      });
+      for (var i = 0; i < 4; i++) {
+        var ax = axes[i], a1 = 1e9, a2 = -1e9, b1 = 1e9, b2 = -1e9;
+        for (var k = 0; k < 4; k++) {
+          var pa = coinsB[k][0] * ax[0] + coinsB[k][1] * ax[1], pb = coinsS[k][0] * ax[0] + coinsS[k][1] * ax[1];
+          a1 = Math.min(a1, pa);
+          a2 = Math.max(a2, pa);
+          b1 = Math.min(b1, pb);
+          b2 = Math.max(b2, pb);
+        }
+        var o1 = a2 - b1, o2 = b2 - a1;
+        if (o1 <= 0 || o2 <= 0) return;
+        if (o1 < best) {
+          best = o1;
+          bn = [-ax[0], -ax[1]];
+        }
+        if (o2 < best) {
+          best = o2;
+          bn = [ax[0], ax[1]];
+        }
+      }
+      if (bn) contact(b, bn[0], bn[1], best, s.el.id, s.rebond);
+    }
+    function collisionCorps(a, b) {
+      var nx, ny, prof;
+      if (a.rond && b.rond) {
+        var dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, r = a.r + b.r;
+        if (d2 >= r * r || d2 < 1e-9) return;
+        var d = Math.sqrt(d2);
+        nx = dx / d;
+        ny = dy / d;
+        prof = r - d;
+      } else {
+        var aw = a.rond ? a.r : a.w / 2, ah = a.rond ? a.r : a.h / 2, bw = b.rond ? b.r : b.w / 2, bh = b.rond ? b.r : b.h / 2;
+        var ox = aw + bw - Math.abs(b.x - a.x), oy = ah + bh - Math.abs(b.y - a.y);
+        if (ox <= 0 || oy <= 0) return;
+        if (ox < oy) {
+          nx = b.x > a.x ? 1 : -1;
+          ny = 0;
+          prof = ox;
+        } else {
+          nx = 0;
+          ny = b.y > a.y ? 1 : -1;
+          prof = oy;
+        }
+      }
+      var ia = a.fige || a.tenu ? 0 : a.inv, ib = b.fige || b.tenu ? 0 : b.inv, somme = ia + ib;
+      if (!somme) return;
+      var va = { x: a.x - a.px, y: a.y - a.py }, vb = { x: b.x - b.px, y: b.y - b.py };
+      a.x -= nx * prof * ia / somme;
+      a.y -= ny * prof * ia / somme;
+      b.x += nx * prof * ib / somme;
+      b.y += ny * prof * ib / somme;
+      var rel = (vb.x - va.x) * nx + (vb.y - va.y) * ny;
+      if (rel < 0) {
+        var e = Math.max(a.rebond, b.rebond), j = -(1 + e) * rel / somme;
+        a.px = a.x - (va.x - j * ia * nx);
+        a.py = a.y - (va.y - j * ia * ny);
+        b.px = b.x - (vb.x + j * ib * nx);
+        b.py = b.y - (vb.y + j * ib * ny);
+        if (-rel / PAS > 140) {
+          choc(a, b.el.id, -rel / PAS);
+          choc(b, a.el.id, -rel / PAS);
+        }
+      }
+    }
+    function pas(dt) {
+      horloge += dt;
+      var gx = gravite.x * force * 1400 * dt * dt, gy = gravite.y * force * 1400 * dt * dt, et = o.etat(), k, b;
+      var W = p.board.w, H = p.board.h, bd = bords();
+      for (k in corps) {
+        b = corps[k];
+        if (b.sorti || cache(b.el)) continue;
+        if (b.tenu) {
+          var tx = b.tenu.x + b.tenu.dx, ty = b.tenu.y + b.tenu.dy;
+          b.px = b.x;
+          b.py = b.y;
+          b.x += (tx - b.x) * 0.45;
+          b.y += (ty - b.y) * 0.45;
+          continue;
+        }
+        if (b.fige) {
+          b.px = b.x;
+          b.py = b.y;
+          continue;
+        }
+        var vx = (b.x - b.px) * 0.999, vy = (b.y - b.py) * 0.999;
+        b.px = b.x;
+        b.py = b.y;
+        b.x += vx + gx;
+        b.y += vy + gy;
+        if (b.rond) b.rot += vx / Math.max(4, b.r);
+      }
+      for (var c = 0; c < cordes.length; c++) {
+        var pts = cordes[c].pts;
+        for (var i = 1; i < pts.length; i++) {
+          var q = pts[i], qvx = (q.x - q.px) * 0.985, qvy = (q.y - q.py) * 0.985;
+          q.px = q.x;
+          q.py = q.y;
+          q.x += qvx + gx;
+          q.y += qvy + gy;
+        }
+      }
+      for (var it = 0; it < 8; it++) {
+        for (c = 0; c < cordes.length; c++) contraintCorde(cordes[c]);
+        for (var r = 0; r < ressorts.length; r++) contraintRessort(ressorts[r], it);
+        var liste = [];
+        for (k in corps) {
+          b = corps[k];
+          if (!b.sorti && !cache(b.el)) liste.push(b);
+        }
+        for (var a = 0; a < liste.length; a++) {
+          b = liste[a];
+          if (b.fige || b.tenu) continue;
+          for (var s = 0; s < statiques.length; s++) if (!cache(statiques[s].el)) collisionObb(b, statiques[s]);
+          for (var cs in cassables) {
+            var ca = cassables[cs];
+            if (ca.casse || cache(ca.el)) continue;
+            collisionObb(b, { el: ca.el, cx: ca.el.x + ca.el.w / 2, cy: ca.el.y + ca.el.h / 2, w: ca.el.w, h: ca.el.h, a: 0, rebond: 0.15 });
+          }
+          var rx = b.rond ? b.r : b.w / 2, ry = b.rond ? b.r : b.h / 2;
+          if (bd !== "aucun") {
+            if (b.y + ry > H) contact(b, 0, -1, b.y + ry - H, "", 0);
+            if (bd === "tous") {
+              if (b.x - rx < 0) contact(b, 1, 0, rx - b.x, "", 0);
+              if (b.x + rx > W) contact(b, -1, 0, b.x + rx - W, "", 0);
+              if (b.y - ry < 0) contact(b, 0, 1, ry - b.y, "", 0);
+            }
+          }
+        }
+        for (var u = 0; u < liste.length; u++) for (var v2 = u + 1; v2 < liste.length; v2++) collisionCorps(liste[u], liste[v2]);
+      }
+      for (k in corps) {
+        b = corps[k];
+        if (b.sorti || cache(b.el)) continue;
+        var vit = Math.sqrt((b.x - b.px) * (b.x - b.px) + (b.y - b.py) * (b.y - b.py)) / dt;
+        if (b.y > H + 200 || b.y < -400 || b.x < -300 || b.x > W + 300) {
+          b.sorti = true;
+          if (b.n) b.n.style.visibility = "hidden";
+          o.envoie({ type: "sortie", element: b.el.id });
+          continue;
+        }
+        if (vit < 10 && !b.tenu) {
+          b.calme += dt;
+          if (b.calme > 0.5 && !b.repos) {
+            b.repos = true;
+            o.envoie({ type: "repos", element: b.el.id });
+          }
+        } else if (vit > 40) {
+          b.calme = 0;
+          b.repos = false;
+        }
+        var z = "";
+        for (var e2 = 0; e2 < p.elements.length; e2++) {
+          var zz = p.elements[e2];
+          if (zz.genre !== "zone" || et.caches[zz.id]) continue;
+          if (b.x >= zz.x && b.x <= zz.x + zz.w && b.y >= zz.y && b.y <= zz.y + zz.h) z = zz.id;
+        }
+        if (z !== b.zone && !b.tenu && (z === "" || vit < 160)) {
+          b.zone = z;
+          o.envoie({ type: "depot", element: b.el.id, zone: z });
+        }
+      }
+      pasRecipients(dt);
+      pasEmetteurs(dt);
+    }
+    function contraintCorde(c) {
+      var pts = c.pts, n = pts.length, b = c.corps;
+      pts[0].x = c.el.x + c.el.w / 2;
+      pts[0].y = c.el.y;
+      for (var i = 0; i < n - 1; i++) {
+        if (c.coupe[i]) continue;
+        var a = pts[i], q = pts[i + 1], dx = q.x - a.x, dy = q.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 1e-3, diff = (d - c.l) / d;
+        if (d < c.l) continue;
+        var wa = i === 0 ? 0 : 1, wb = 1, s = wa + wb;
+        a.x += dx * diff * wa / s;
+        a.y += dy * diff * wa / s;
+        q.x -= dx * diff * wb / s;
+        q.y -= dy * diff * wb / s;
+      }
+      if (b && !b.sorti) {
+        var der = pts[n - 1], relie = true;
+        for (var k = 0; k < n - 1; k++) if (c.coupe[k]) relie = false;
+        var lien = c.coupe[n - 1] ? false : true;
+        if (lien) {
+          var ib = b.fige || b.tenu ? 0 : b.inv * 0.25, ip = 1, sm = ib + ip;
+          var ex = b.x - der.x, ey = b.y - der.y;
+          der.x += ex * ip / sm;
+          der.y += ey * ip / sm;
+          b.x -= ex * ib / sm;
+          b.y -= ey * ib / sm;
+        }
+        c.relie = relie;
+      }
+    }
+    function contraintRessort(r, it) {
+      var b = r.corps;
+      if (!b || b.sorti || b.fige || b.tenu) return;
+      var dx = b.x - r.ax, dy = b.y - r.ay, d = Math.sqrt(dx * dx + dy * dy) || 1e-3, k = r.el.raideur / 100;
+      var diff = (d - r.l) / d * k * 0.5;
+      b.x -= dx * diff;
+      b.y -= dy * diff;
+      if (it === 0 && r.el.amortissement > 0) {
+        var vx = b.x - b.px, vy = b.y - b.py, f = 1 - r.el.amortissement * 0.08;
+        b.px = b.x - vx * f;
+        b.py = b.y - vy * f;
+      }
+    }
+    function surfaceLiquide(r) {
+      var el = r.el, a = r.angle * Math.PI / 180, gx = Math.sin(a), gy = Math.cos(a);
+      var rect = [{ x: 0, y: 0 }, { x: el.w, y: 0 }, { x: el.w, y: el.h }, { x: 0, y: el.h }];
+      var projs = rect.map(function(q) {
+        return q.x * gx + q.y * gy;
+      });
+      var lo = Math.min.apply(null, projs), hi = Math.max.apply(null, projs), cible = r.niveau * el.w * el.h;
+      for (var i = 0; i < 26; i++) {
+        var mid = (lo + hi) / 2, ai = cbAire(cbCoupeDemiPlan(rect, gx, gy, mid));
+        if (ai > cible) lo = mid;
+        else hi = mid;
+      }
+      var bord = Math.max(0 * gx + 0 * gy, el.w * gx + 0 * gy);
+      return { gx, gy, s: (lo + hi) / 2, rect, bord, maxAire: cbAire(cbCoupeDemiPlan(rect, gx, gy, bord)) };
+    }
+    function pasRecipients(dt) {
+      for (var k in recipients) {
+        var r = recipients[k], el = r.el;
+        if (cache(el)) continue;
+        if (!r.tenu) r.angle += (0 - r.angle) * Math.min(1, dt * 5);
+        if (r.remplit) {
+          r.remplit.t += dt;
+          var f = Math.min(1, r.remplit.t / r.remplit.duree);
+          r.niveau = r.remplit.de + (r.remplit.a - r.remplit.de) * f;
+          r.onde = Math.max(r.onde, 3);
+          if (f >= 1) r.remplit = null;
+          if (Math.random() < 0.6 && r.remplit) parts.push(goutte(el.x + el.w / 2 + cbAlea(-3, 3), el.y - 30, couleurLiquide(el), null, 0, 260));
+        }
+        r.onde = Math.max(0, r.onde * (1 - dt * 1.4) + Math.abs(r.va) * 0.02);
+        if (Math.abs(r.angle) > 8 && r.niveau > 0) {
+          var sf = surfaceLiquide(r), aire = r.niveau * el.w * el.h;
+          if (aire > sf.maxAire + 1) {
+            var fuite = Math.min(aire - sf.maxAire, el.w * el.h * dt * 0.6);
+            r.niveau = Math.max(0, (aire - fuite) / (el.w * el.h));
+            var nbG = Math.max(1, Math.round(fuite / 40));
+            var lip = monde2plateau(r, r.angle > 0 ? el.w : 0, 0);
+            for (var g = 0; g < nbG; g++) parts.push(goutte(lip.x, lip.y, couleurLiquide(el), k, fuite / nbG, 0, r.angle > 0 ? 1 : -1));
+            r.onde = Math.max(r.onde, 2);
+          }
+        }
+        var pc = Math.round(r.niveau * 100);
+        if (!r.remplit && pc !== r.envoye && (horloge - r.dernierEnvoi > 0.12 || !r.tenu)) {
+          r.envoye = pc;
+          r.dernierEnvoi = horloge;
+          o.envoie({ type: "niveau", element: el.id, niveau: pc });
+        }
+      }
+    }
+    function couleurLiquide(el) {
+      return el.couleur || "#5FB4F0";
+    }
+    function goutte(x, y, c, source, volume, vy, sens) {
+      var q = cbParticule("gouttes", x, y, c);
+      q.vx = (sens || 0) * cbAlea(30, 90) + cbAlea(-15, 15);
+      q.vy = vy || cbAlea(0, 40);
+      q.max = 3;
+      q.source = source;
+      q.volume = volume || 0;
+      q.liquide = true;
+      return q;
+    }
+    function monde2plateau(r, lx, ly) {
+      var el = r.el, a = r.angle * Math.PI / 180, ox = el.w / 2, oy = el.h;
+      var dx = lx - ox, dy = ly - oy;
+      return { x: el.x + ox + dx * Math.cos(a) - dy * Math.sin(a), y: el.y + oy + dx * Math.sin(a) + dy * Math.cos(a) };
+    }
+    function recoit(q) {
+      for (var k in recipients) {
+        var r = recipients[k], el = r.el;
+        if (k === q.source || cache(el) || Math.abs(r.angle) > 30) continue;
+        if (q.x >= el.x && q.x <= el.x + el.w && q.y >= el.y - 4 && q.y <= el.y + el.h * 0.5) {
+          r.niveau = Math.min(1, r.niveau + q.volume / (el.w * el.h));
+          r.onde = Math.max(r.onde, 1.5);
+          return true;
+        }
+      }
+      return false;
+    }
+    function pasEmetteurs(dt) {
+      for (var i = 0; i < emetteurs.length; i++) {
+        var em = emetteurs[i], el = em.el;
+        if (cache(el) || !el.debit) continue;
+        em.reste += el.debit * dt;
+        while (em.reste >= 1) {
+          em.reste -= 1;
+          if (parts.length < 1600) parts.push(cbParticule(el.effet, el.x + el.w / 2 + cbAlea(-el.w / 3, el.w / 3), el.y + el.h / 2 + cbAlea(-el.h / 4, el.h / 4), el.couleur || ""));
+        }
+      }
+    }
+    function dessineCorde(g, c) {
+      var pts = c.pts, el = c.el, style = el.style || "corde", col = el.couleur || (style === "chaine" ? "#9AA0AA" : style === "liane" ? "#4E8A3A" : style === "fil" ? "#E9E6DD" : "#A97C50");
+      if (cache(el)) return;
+      var morceaux = [], cur = [pts[0]];
+      for (var i = 0; i < pts.length - 1; i++) {
+        if (c.coupe[i]) {
+          morceaux.push(cur);
+          cur = [pts[i + 1]];
+        } else cur.push(pts[i + 1]);
+      }
+      morceaux.push(cur);
+      var tex = img(el.texture);
+      for (var m = 0; m < morceaux.length; m++) {
+        var l = morceaux[m];
+        if (l.length < 2) continue;
+        if (style === "chaine") {
+          for (var k = 0; k < l.length - 1; k++) {
+            var a = l[k], b = l[k + 1], an = Math.atan2(b.y - a.y, b.x - a.x), d = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+            g.save();
+            g.translate((a.x + b.x) / 2, (a.y + b.y) / 2);
+            g.rotate(an);
+            g.strokeStyle = col;
+            g.lineWidth = 2.5;
+            g.beginPath();
+            g.ellipse(0, 0, d / 2 + 2, k % 2 ? 1.6 : 4, 0, 0, Math.PI * 2);
+            g.stroke();
+            g.restore();
+          }
+          continue;
+        }
+        g.lineCap = "round";
+        g.lineJoin = "round";
+        var trace = function() {
+          g.beginPath();
+          g.moveTo(l[0].x, l[0].y);
+          for (var k2 = 1; k2 < l.length - 1; k2++) g.quadraticCurveTo(l[k2].x, l[k2].y, (l[k2].x + l[k2 + 1].x) / 2, (l[k2].y + l[k2 + 1].y) / 2);
+          g.lineTo(l[l.length - 1].x, l[l.length - 1].y);
+        };
+        var ep = style === "fil" ? 1.5 : style === "liane" ? 6 : 4.5;
+        g.strokeStyle = "rgba(0,0,0,0.35)";
+        g.lineWidth = ep + 2;
+        trace();
+        g.stroke();
+        g.strokeStyle = tex ? g.createPattern(tex, "repeat") : col;
+        g.lineWidth = ep;
+        trace();
+        g.stroke();
+        if (style === "corde" && !tex) {
+          g.strokeStyle = "rgba(255,255,255,0.18)";
+          g.lineWidth = 1.2;
+          g.setLineDash([3, 4]);
+          trace();
+          g.stroke();
+          g.setLineDash([]);
+        }
+        if (style === "liane") {
+          g.fillStyle = "#6FB05A";
+          for (var f = 2; f < l.length; f += 3) {
+            g.beginPath();
+            g.ellipse(l[f].x + 5, l[f].y, 5, 2.5, 0.6, 0, Math.PI * 2);
+            g.fill();
+          }
+        }
+      }
+      g.fillStyle = "#585E6B";
+      g.beginPath();
+      g.arc(pts[0].x, pts[0].y, 4, 0, Math.PI * 2);
+      g.fill();
+    }
+    function dessineRessort(g, r) {
+      if (cache(r.el)) return;
+      var bx = r.corps && !r.corps.sorti ? r.corps.x : r.ax, by = r.corps && !r.corps.sorti ? r.corps.y : r.ay + r.l;
+      var dx = bx - r.ax, dy = by - r.ay, d = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / d, ny = dx / d, tours = 12, larg = Math.min(14, r.el.w / 2);
+      g.strokeStyle = r.el.couleur || "#C9CCD6";
+      g.lineWidth = 2.5;
+      g.lineJoin = "round";
+      g.beginPath();
+      g.moveTo(r.ax, r.ay);
+      for (var i = 1; i < tours * 2; i++) {
+        var f = i / (tours * 2), s = i % 2 ? 1 : -1;
+        g.lineTo(r.ax + dx * f + nx * larg * s, r.ay + dy * f + ny * larg * s);
+      }
+      g.lineTo(bx, by);
+      g.stroke();
+      g.fillStyle = "#585E6B";
+      g.beginPath();
+      g.arc(r.ax, r.ay, 4, 0, Math.PI * 2);
+      g.fill();
+    }
+    function dessinePapier(pa) {
+      var el = pa.el, c = pa.toile;
+      if (!c) return;
+      var g = c.getContext("2d"), v = visuel(el), im = img(v.image);
+      g.setTransform(2, 0, 0, 2, 0, 0);
+      g.clearRect(0, 0, el.w, el.h);
+      if (!pa.poly.length) return;
+      var trace = function() {
+        g.beginPath();
+        g.moveTo(pa.poly[0].x, pa.poly[0].y);
+        for (var i = 1; i < pa.poly.length; i++) g.lineTo(pa.poly[i].x, pa.poly[i].y);
+        g.closePath();
+      };
+      g.save();
+      g.shadowColor = "rgba(0,0,0,0.35)";
+      g.shadowBlur = 6;
+      g.shadowOffsetY = 2;
+      trace();
+      g.fillStyle = v.fill || "#EFE6D2";
+      g.fill();
+      g.restore();
+      g.save();
+      trace();
+      g.clip();
+      if (im) {
+        try {
+          g.drawImage(im, 0, 0, el.w, el.h);
+        } catch (e) {
+        }
+      } else {
+        g.fillStyle = "rgba(120,100,70,0.06)";
+        for (var y = 6; y < el.h; y += 12) g.fillRect(0, y, el.w, 1);
+      }
+      if (el.label) {
+        g.fillStyle = v.ink || "rgba(60,50,40,0.75)";
+        g.font = "600 " + Math.max(11, Math.round(Math.min(el.h * 0.2, 22))) + "px Georgia, serif";
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText(el.label, el.w / 2, el.h / 2);
+      }
+      g.restore();
+      g.strokeStyle = "rgba(255,255,255,0.85)";
+      g.lineWidth = 1.6;
+      for (var k = 0; k < pa.poly.length; k++) {
+        var a = pa.poly[k], b = pa.poly[(k + 1) % pa.poly.length];
+        if (!(a.fibre && b.fibre)) continue;
+        g.beginPath();
+        g.moveTo(a.x, a.y);
+        g.lineTo(b.x, b.y);
+        g.stroke();
+      }
+    }
+    function dessineRecipient(r) {
+      var el = r.el, c = r.toile;
+      if (!c) return;
+      var g = c.getContext("2d");
+      g.setTransform(2, 0, 0, 2, 0, 0);
+      g.clearRect(0, 0, el.w, el.h);
+      var sf = surfaceLiquide(r), poly = cbCoupeDemiPlan(sf.rect, sf.gx, sf.gy, sf.s);
+      if (r.n) {
+        r.n.style.transformOrigin = "50% 100%";
+      }
+      if (poly.length >= 3 && r.niveau > 2e-3) {
+        var amp = Math.min(6, 0.8 + r.onde), out = [];
+        for (var i = 0; i < poly.length; i++) {
+          var a = poly[i], b = poly[(i + 1) % poly.length];
+          out.push(a);
+          if (a.surface && b.surface) {
+            for (var s = 1; s < 12; s++) {
+              var f = s / 12, x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, w = Math.sin(x * 0.09 + horloge * 3.2) * amp * 0.6 + Math.sin(x * 0.17 - horloge * 4.1) * amp * 0.4;
+              out.push({ x: x - sf.gx * w, y: y - sf.gy * w });
+            }
+          }
+        }
+        var col = couleurLiquide(el), dg = g.createLinearGradient(0, 0, 0, el.h);
+        dg.addColorStop(0, col);
+        dg.addColorStop(1, "rgba(0,0,0,0.35)");
+        g.beginPath();
+        g.moveTo(out[0].x, out[0].y);
+        for (var k = 1; k < out.length; k++) g.lineTo(out[k].x, out[k].y);
+        g.closePath();
+        g.globalAlpha = 0.85;
+        g.fillStyle = col;
+        g.fill();
+        g.globalAlpha = 0.5;
+        g.fillStyle = dg;
+        g.fill();
+        g.globalAlpha = 1;
+      }
+      if (!visuel(el).image) {
+        g.strokeStyle = "rgba(230,240,255,0.75)";
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(1.5, 0);
+        g.lineTo(1.5, el.h - 1.5);
+        g.lineTo(el.w - 1.5, el.h - 1.5);
+        g.lineTo(el.w - 1.5, 0);
+        g.stroke();
+        g.fillStyle = "rgba(255,255,255,0.12)";
+        g.fillRect(6, 4, Math.max(3, el.w * 0.08), el.h - 12);
+      }
+    }
+    function dessineCassable(ca) {
+      if (!ca.n || ca.casse || !ca.fissures.length) return;
+      var c = ca.c;
+      if (!c) {
+        c = document.createElement("canvas");
+        c.className = "pz-cb-toile";
+        c.width = ca.el.w * 2;
+        c.height = ca.el.h * 2;
+        var nd = o.noeuds()[ca.el.id];
+        if (nd) nd.ani.appendChild(c);
+        ca.c = c;
+      }
+      if (ca.nbF === ca.fissures.length) return;
+      ca.nbF = ca.fissures.length;
+      var g = c.getContext("2d");
+      g.setTransform(2, 0, 0, 2, 0, 0);
+      g.clearRect(0, 0, ca.el.w, ca.el.h);
+      g.strokeStyle = "rgba(20,16,12,0.75)";
+      g.lineWidth = 1.4;
+      for (var i = 0; i < ca.fissures.length; i++) {
+        var f = ca.fissures[i];
+        for (var b = 0; b < 5; b++) {
+          var an = (b / 5 + f.seed) * Math.PI * 2, x = f.x, y = f.y;
+          g.beginPath();
+          g.moveTo(x, y);
+          for (var s = 0; s < 4; s++) {
+            an += cbAlea(-0.5, 0.5);
+            x += Math.cos(an) * cbAlea(5, 13);
+            y += Math.sin(an) * cbAlea(5, 13);
+            g.lineTo(x, y);
+          }
+          g.stroke();
+        }
+      }
+    }
+    function dessineDebris(g, d) {
+      var f = d.vie / d.max;
+      g.save();
+      g.globalAlpha = f > 0.6 ? 1 - (f - 0.6) / 0.4 : 1;
+      g.translate(d.x, d.y);
+      g.rotate(d.rot);
+      g.beginPath();
+      g.moveTo(d.poly[0].x, d.poly[0].y);
+      for (var i = 1; i < d.poly.length; i++) g.lineTo(d.poly[i].x, d.poly[i].y);
+      g.closePath();
+      g.save();
+      g.clip();
+      try {
+        g.drawImage(d.tex, -d.ox, -d.oy);
+      } catch (e) {
+      }
+      g.restore();
+      g.strokeStyle = d.papier ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.35)";
+      g.lineWidth = 1;
+      g.stroke();
+      g.restore();
+    }
+    function dessine() {
+      gF.clearRect(0, 0, p.board.w, p.board.h);
+      for (var r = 0; r < ressorts.length; r++) dessineRessort(gF, ressorts[r]);
+      for (var c = 0; c < cordes.length; c++) dessineCorde(gF, cordes[c]);
+      gX.clearRect(0, 0, p.board.w, p.board.h);
+      for (var d = 0; d < debris.length; d++) dessineDebris(gX, debris[d]);
+      gX.save();
+      for (var i = 0; i < parts.length; i++) {
+        var q = parts[i];
+        gX.globalCompositeOperation = CB_PARTICULES[q.effet] && CB_PARTICULES[q.effet].additif ? "lighter" : "source-over";
+        dessineParticule(gX, q);
+      }
+      gX.restore();
+      gX.globalAlpha = 1;
+      gX.globalCompositeOperation = "source-over";
+      var toutes = lame ? traces.concat([{ pts: lame.pts, fin: horloge }]) : traces;
+      for (var t = 0; t < toutes.length; t++) {
+        var tr = toutes[t], pts = tr.pts.filter(function(q2) {
+          return horloge - q2.t < 0.25;
+        });
+        if (pts.length < 2) continue;
+        gX.lineCap = "round";
+        for (var s = 1; s < pts.length; s++) {
+          var vie = 1 - (horloge - pts[s].t) / 0.25;
+          gX.strokeStyle = "rgba(255,255,255," + (vie * 0.9).toFixed(2) + ")";
+          gX.lineWidth = 1 + vie * 4;
+          gX.beginPath();
+          gX.moveTo(pts[s - 1].x, pts[s - 1].y);
+          gX.lineTo(pts[s].x, pts[s].y);
+          gX.stroke();
+        }
+      }
+      for (var k in papiers) dessinePapier(papiers[k]);
+      for (var k2 in recipients) dessineRecipient(recipients[k2]);
+      for (var k3 in cassables) dessineCassable(cassables[k3]);
+      for (var k4 in grattages) {
+        var gr = grattages[k4];
+        if (gr.efface && gr.toile) {
+          gr.fond = Math.max(0, gr.fond - 0.04);
+          gr.toile.style.opacity = String(gr.fond);
+        }
+      }
+      for (var b in corps) {
+        var cp = corps[b];
+        if (!cp.n) continue;
+        cp.n.style.transform = "translate(" + (cp.x - cp.w / 2).toFixed(1) + "px," + (cp.y - cp.h / 2).toFixed(1) + "px)" + (cp.rond ? " rotate(" + (cp.rot * 57.3).toFixed(1) + "deg)" : "");
+        cp.n.classList.toggle("is-tenu", !!cp.tenu);
+      }
+      for (var rr in recipients) {
+        var rc = recipients[rr];
+        if (rc.n) rc.n.style.transform = "translate(" + rc.el.x + "px," + rc.el.y + "px) rotate(" + rc.angle.toFixed(1) + "deg)";
+      }
+    }
+    function avanceEffets(dt) {
+      var g2 = 900 * dt;
+      for (var i = parts.length - 1; i >= 0; i--) {
+        var q = parts[i];
+        q.vie += dt;
+        if (q.vie >= q.max) {
+          parts.splice(i, 1);
+          continue;
+        }
+        q.vx *= q.frein;
+        q.vy = q.vy * q.frein + q.g * dt;
+        q.x += q.vx * dt;
+        q.y += q.vy * dt;
+        q.rot += q.vrot * dt;
+        if (q.liquide && q.volume && recoit(q)) {
+          parts.splice(i, 1);
+          continue;
+        }
+        if (q.liquide && q.y > p.board.h + 20) {
+          parts.splice(i, 1);
+          continue;
+        }
+      }
+      for (var d = debris.length - 1; d >= 0; d--) {
+        var de = debris[d];
+        de.vie += dt;
+        if (de.vie >= de.max) {
+          debris.splice(d, 1);
+          continue;
+        }
+        de.vy += g2;
+        de.x += de.vx * dt;
+        de.y += de.vy * dt;
+        de.rot += de.vrot * dt;
+        if (de.papier) {
+          de.vx *= 0.98;
+          de.vy *= 0.97;
+        }
+      }
+      for (var t = traces.length - 1; t >= 0; t--) if (horloge - traces[t].fin > 0.3) traces.splice(t, 1);
+    }
+    function vivant() {
+      if (parts.length || debris.length || lame || traces.length) return true;
+      if (o.edition()) {
+        for (var k0 in corps) return true;
+        return cordes.length > 0 || ressorts.length > 0 || emetteurs.length > 0;
+      }
+      for (var k in corps) if (!corps[k].sorti && (!corps[k].repos || corps[k].tenu) && !corps[k].fige) return true;
+      if (cordes.length || ressorts.length || emetteurs.length) return true;
+      for (var r in recipients) return true;
+      for (var g in grattages) if (grattages[g].efface && grattages[g].fond > 0) return true;
+      return false;
+    }
+    function boucle(t) {
+      raf = 0;
+      if (eteint || !o.plateau.isConnected) return;
+      var dt = dernier ? Math.min(0.05, (t - dernier) / 1e3) : PAS;
+      dernier = t;
+      var ed = !!o.edition();
+      if (ed !== edition) {
+        edition = ed;
+        o.refait();
+        return;
+      }
+      if (!ed) {
+        reste += dt;
+        var n = 0;
+        while (reste >= PAS && n < 8) {
+          pas(PAS);
+          reste -= PAS;
+          n++;
+        }
+        if (n >= 8) reste = 0;
+      } else horloge += dt;
+      avanceEffets(dt);
+      dessine();
+      if (vivant()) raf = requestAnimationFrame(boucle);
+      else dernier = 0;
+    }
+    function demarre() {
+      if (!raf && !eteint && typeof requestAnimationFrame !== "undefined") {
+        dernier = 0;
+        raf = requestAnimationFrame(boucle);
+      }
+    }
+    var edition = !!o.edition();
+    installe();
+    return {
+      /*  Au début de chaque dessin de l'énigme (le plateau vient d'être
+          vidé) : les canevas, et chaque chose à sa place de départ.     */
+      reinit: function() {
+        edition = !!o.edition();
+        canevas();
+        construit();
+      },
+      /*  Pour chaque élément dessiné : ses canevas, ses gestes.          */
+      branche: function(el, n, ani) {
+        monte(el, n, ani);
+        if (el.genre === "cassable") {
+          n.addEventListener("click", function(e) {
+            toucheCassable(el, e);
+          });
+          if (cassables[el.id] && cassables[el.id].casse) n.style.visibility = "hidden";
+        }
+      },
+      pret: function() {
+        lanceBoucles();
+        for (var k in papiers) dessinePapier(papiers[k]);
+        dessine();
+        demarre();
+      },
+      /*  Les éléments que le monde place lui-même.                        */
+      pilote: function(el) {
+        return el.genre === "objet" || el.genre === "recipient";
+      },
+      visibilite,
+      effets: function(l) {
+        effets(l || []);
+        demarre();
+      },
+      particules,
+      animer,
+      victoire: function() {
+        var e = p.fx && p.fx.victoire;
+        if (e && e !== "aucun") {
+          for (var i = 0; i < 4; i++) particules(e, p.board.w * (0.2 + i * 0.2), p.board.h * 0.75, 30);
+        }
+      },
+      echec: function() {
+        var e = p.fx && p.fx.echec;
+        if (e && e !== "aucun") animer("", e, 0, 1);
+      },
+      destroy: function() {
+        eteint = true;
+        if (raf && typeof cancelAnimationFrame !== "undefined") cancelAnimationFrame(raf);
+        for (var i = 0; i < boucles.length; i++) {
+          try {
+            boucles[i].cancel();
+          } catch (e) {
+          }
+        }
+      },
+      secoue: function() {
+        demarre();
+      }
+    };
+  }
+  var CB_TRANSITIONS = ["", "fondu", "zoom", "glisse", "chute", "tournoie"];
+  var CB_COURBES_IDS = ["lineaire", "douce", "acceleree", "freinee", "rebond", "elastique"];
+  function cbUn(v, liste, d) {
+    return liste.indexOf(v) >= 0 ? v : d;
+  }
+  function cbNormAnim(a, i, pris) {
+    var s = a && typeof a === "object" ? a : {};
+    var id = typeof s.id === "string" && s.id ? s.id.slice(0, 16) : "a" + (i + 1);
+    while (pris[id]) id = id + "_";
+    pris[id] = 1;
+    return {
+      id,
+      nom: puzStr(s.nom, "Animation " + (i + 1)).slice(0, 30),
+      duree: puzNum(s.duree, 1, 0.05, 60),
+      fois: Math.round(puzNum(s.fois, 1, 0, 50)),
+      courbe: cbUn(s.courbe, CB_COURBES_IDS, "douce"),
+      auDebut: !!s.auDebut,
+      cles: (Array.isArray(s.cles) ? s.cles : []).slice(0, 16).map(function(k) {
+        var c = k && typeof k === "object" ? k : {};
+        return {
+          t: puzNum(c.t, 0, 0, 1),
+          x: Math.round(puzNum(c.x, 0, -3e3, 3e3)),
+          y: Math.round(puzNum(c.y, 0, -3e3, 3e3)),
+          rot: puzNum(c.rot, 0, -7200, 7200),
+          echelle: puzNum(c.echelle, 1, 0, 20),
+          opacite: puzNum(c.opacite, 1, 0, 1)
+        };
+      })
+    };
+  }
+  function cbNormVivant(o, s) {
+    var g = o.genre, pris = {};
+    o.anims = (Array.isArray(s.anims) ? s.anims : []).slice(0, 8).map(function(a, i) {
+      return cbNormAnim(a, i, pris);
+    });
+    var b = s.boucle;
+    o.boucle = typeof b === "string" && (CB_EFFETS[b] || b.indexOf("perso:") === 0 && pris[b.slice(6)]) ? b : "";
+    o.transition = cbUn(s.transition, CB_TRANSITIONS, "");
+    if (g === "objet") {
+      o.forme = cbUn(s.forme, ["rond", "boite"], "rond");
+      o.masse = puzNum(s.masse, 1, 0.1, 20);
+      o.rebond = puzNum(s.rebond, 0.35, 0, 0.98);
+      o.frottement = puzNum(s.frottement, 0.3, 0, 1);
+      o.lancer = typeof s.lancer === "boolean" ? s.lancer : true;
+      o.fige = !!s.fige;
+    }
+    if (g === "plateforme") {
+      o.angle = puzNum(s.angle, 0, -85, 85);
+      o.rebond = puzNum(s.rebond, 0.2, 0, 0.98);
+    }
+    if (g === "corde" || g === "ressort") {
+      o.porte = typeof s.porte === "string" ? s.porte.slice(0, 24) : "";
+      o.couleur = puzColor(s.couleur, "");
+    }
+    if (g === "corde") {
+      o.segments = Math.round(puzNum(s.segments, 14, 3, 40));
+      o.coupable = typeof s.coupable === "boolean" ? s.coupable : true;
+      o.style = cbUn(s.style, ["corde", "chaine", "fil", "liane"], "corde");
+      o.texture = typeof s.texture === "string" ? s.texture : "";
+    }
+    if (g === "ressort") {
+      o.raideur = puzNum(s.raideur, 30, 1, 100);
+      o.amortissement = puzNum(s.amortissement, 0.15, 0, 1);
+    }
+    if (g === "papier" || g === "grattage") o.seuil = puzNum(s.seuil, g === "papier" ? 50 : 60, 5, 100);
+    if (g === "grattage") o.pinceau = puzNum(s.pinceau, 18, 6, 60);
+    if (g === "cassable") {
+      o.resistance = Math.round(puzNum(s.resistance, 1, 1, 20));
+      o.impact = puzNum(s.impact, 500, 0, 5e3);
+      o.eclats = Math.round(puzNum(s.eclats, 10, 3, 30));
+    }
+    if (g === "recipient") {
+      o.niveau = puzNum(s.niveau, 0, 0, 100);
+      o.inclinable = !!s.inclinable;
+      o.couleur = puzColor(s.couleur, "");
+    }
+    if (g === "emetteur") {
+      o.effet = cbUn(s.effet, Object.keys(CB_PARTICULES), "fumee");
+      o.debit = puzNum(s.debit, 12, 0, 200);
+      o.couleur = puzColor(s.couleur, "");
+    }
+    return o;
+  }
+  function cbNormFx(f) {
+    var s = f && typeof f === "object" ? f : {}, im = s.images && typeof s.images === "object" ? s.images : {}, images = {};
+    for (var k in CB_PARTICULES) if (Object.prototype.hasOwnProperty.call(CB_PARTICULES, k) && typeof im[k] === "string" && im[k]) images[k] = im[k];
+    return {
+      victoire: cbUn(s.victoire, ["aucun"].concat(Object.keys(CB_PARTICULES)), "aucun"),
+      echec: cbUn(s.echec, ["aucun"].concat(Object.keys(CB_EFFETS)), "aucun"),
+      images
+    };
+  }
+  function cbSeuil(v, op, s) {
+    var a = cbNombre(v), b = cbNombre(s);
+    if (isNaN(a) || isNaN(b)) return false;
+    if (op === "\u2264") return a <= b;
+    if (op === "=") return Math.round(a) === Math.round(b);
+    return a >= b;
+  }
+  var CB_GENRE_DE = {
+    ev_choc: "objet",
+    ev_repos: "objet",
+    ev_sortie: "objet",
+    a_impulsion: "objet",
+    a_figer: "objet",
+    ev_coupe: "corde",
+    a_couper: "corde",
+    ev_casse: "cassable",
+    a_casser: "cassable",
+    ev_dechire: "papier",
+    ev_gratte: "grattage",
+    ev_niveau: "recipient",
+    a_remplir: "recipient",
+    d_niveau: "recipient"
+  };
   function cbPort(type, sens, nom) {
     var d = CB_NOEUDS[type];
     var l = d ? sens === "in" ? d.entrees || [] : d.sorties || [] : [];
@@ -61676,7 +64225,7 @@
       return cbNormEtat(x, k, pe, sobre);
     });
     var initial = typeof s.initial === "string" && pe[s.initial] ? s.initial : etats[0].id;
-    return {
+    return cbNormVivant({
       id,
       genre,
       label: puzStr(s.label).slice(0, 60),
@@ -61698,7 +64247,7 @@
       retour: typeof s.retour === "boolean" ? s.retour : true,
       /*  zone : combien d'éléments elle accepte (0 : autant qu'on veut)  */
       capacite: Math.round(puzNum(s.capacite, 1, 0, 60))
-    };
+    }, s);
   }
   function cbNormVariable(v, i, pris) {
     var s = v && typeof v === "object" ? v : {};
@@ -61749,10 +64298,11 @@
     return out;
   }
   function cbEtatInitial(p) {
-    var e = { etats: {}, vars: {}, caches: {}, verrous: {}, places: {}, pos: {}, gagne: false };
+    var e = { etats: {}, vars: {}, caches: {}, verrous: {}, places: {}, pos: {}, gagne: false, niveaux: {}, faits: {}, figes: {}, gravite: null };
     for (var i = 0; i < p.elements.length; i++) {
       var el = p.elements[i];
       e.etats[el.id] = el.initial;
+      if (el.genre === "recipient") e.niveaux[el.id] = el.niveau;
       if (el.cache) e.caches[el.id] = true;
       if (el.verrou) e.verrous[el.id] = true;
     }
@@ -61774,7 +64324,11 @@
       verrous: c(e.verrous || {}),
       places: c(e.places || {}),
       pos,
-      gagne: !!e.gagne
+      gagne: !!e.gagne,
+      niveaux: c(e.niveaux || {}),
+      faits: c(e.faits || {}),
+      figes: c(e.figes || {}),
+      gravite: e.gravite ? { x: e.gravite.x, y: e.gravite.y, force: e.gravite.force } : null
     };
   }
   function cbElement(p, id) {
@@ -61875,6 +64429,12 @@
         }).join(", ");
         break;
       }
+      case "d_niveau":
+        r = etat.niveaux && etat.niveaux[pr.element] != null ? etat.niveaux[pr.element] : 0;
+        break;
+      case "d_fait":
+        r = !!(etat.faits && etat.faits[pr.element]);
+        break;
       case "d_compare":
         r = cbCompare(entree("a", ""), entree("b", pr.b), pr.op);
         break;
@@ -61922,7 +64482,23 @@
   }
   function cbTraite(p, etat0, evenement, externe, index) {
     var etat = cbCopie(etat0), journal = [], idx = index || cbIndex(p);
-    var file = [evenement], cascades = 0, pas = 0, res = { etat, journal, messages: [], sons: [], echec: false, victoire: false, boucle: false, evenement };
+    var file = [evenement], cascades = 0, pas = 0, res = { etat, journal, messages: [], sons: [], effets: [], echec: false, victoire: false, boucle: false, evenement };
+    var marqueFait = function(elId, quoi) {
+      if (!cbElement(p, elId) || etat.faits[elId]) return false;
+      etat.faits[elId] = quoi;
+      file.push({ type: "fait", quoi, element: elId });
+      return true;
+    };
+    var changeNiveau = function(elId, v) {
+      var el = cbElement(p, elId);
+      if (!el || el.genre !== "recipient") return;
+      var nv = Math.max(0, Math.min(100, Math.round(cbNombre(v) || 0))), av = etat.niveaux[elId] == null ? 0 : etat.niveaux[elId];
+      if (nv === av) return;
+      etat.niveaux[elId] = nv;
+      file.push({ type: "niveauchange", element: elId, avant: av, apres: nv });
+      var vl = cbVariable(p, el.variable);
+      if (vl) changeVar(vl.id, nv);
+    };
     var changeEtat = function(elId, nouveau) {
       if (!cbElement(p, elId) || etat.etats[elId] === nouveau) return;
       etat.etats[elId] = nouveau;
@@ -61935,6 +64511,14 @@
     };
     var place = function(elId, zoneId, x, y2) {
       var el = cbElement(p, elId), z2 = zoneId ? cbElement(p, zoneId) : null;
+      if (el && el.genre === "objet") {
+        if (z2 && z2.genre === "zone" && !etat.caches[z2.id]) {
+          etat.places[elId] = z2.id;
+          return z2.id;
+        }
+        delete etat.places[elId];
+        return "";
+      }
       if (!el || el.genre !== "deplacable") return "";
       if (z2 && z2.genre === "zone" && !etat.caches[z2.id] && etat.places[elId] !== z2.id) {
         if (z2.capacite && cbOccupants(p, etat, z2.id).length >= z2.capacite) z2 = null;
@@ -62025,6 +64609,44 @@
             }
           }
           break;
+        case "a_animer":
+          res.effets.push({ type: "animer", element: pr.element, effet: pr.effet, duree: pr.duree, fois: Math.round(pr.fois) });
+          break;
+        case "a_particules":
+          res.effets.push({ type: "particules", element: pr.element, effet: pr.effet, quantite: Math.max(1, Math.min(300, Math.round(pr.quantite))), couleur: pr.couleur });
+          break;
+        case "a_impulsion":
+          res.effets.push({ type: "impulsion", element: pr.element, angle: pr.angle, force: pr.force });
+          break;
+        case "a_gravite": {
+          var dirs = { bas: [0, 1], haut: [0, -1], gauche: [-1, 0], droite: [1, 0], aucune: [0, 0] }, dv = dirs[pr.mode] || [0, 1];
+          etat.gravite = { x: dv[0], y: dv[1], force: Math.max(0, Math.min(3, pr.force)) };
+          res.effets.push({ type: "gravite", mode: pr.mode, force: etat.gravite.force });
+          break;
+        }
+        case "a_figer":
+          if (cbElement(p, pr.element)) {
+            etat.figes[pr.element] = !!pr.fige;
+            res.effets.push({ type: "figer", element: pr.element, fige: !!pr.fige });
+          }
+          break;
+        case "a_couper":
+          if (marqueFait(pr.element, "coupe")) res.effets.push({ type: "couper", element: pr.element });
+          break;
+        case "a_casser":
+          if (marqueFait(pr.element, "casse")) res.effets.push({ type: "casser", element: pr.element });
+          break;
+        case "a_remplir": {
+          var rc = cbElement(p, pr.element);
+          if (rc && rc.genre === "recipient") {
+            var cur2 = etat.niveaux[rc.id] || 0, b2 = cbNombre(donnee("valeur", pr.valeur));
+            if (isNaN(b2)) b2 = 0;
+            var cible2 = Math.max(0, Math.min(100, Math.round(pr.op === "+" ? cur2 + b2 : pr.op === "-" ? cur2 - b2 : b2)));
+            res.effets.push({ type: "remplir", element: rc.id, niveau: cible2, duree: Math.max(0, pr.duree) });
+            changeNiveau(rc.id, cible2);
+          }
+          break;
+        }
         case "a_echec":
           res.echec = true;
           return;
@@ -62041,12 +64663,21 @@
     while (file.length && !res.boucle) {
       var ev = file.shift();
       journal.push({ ev });
-      if (ev.type === "etat" || ev.type === "variable") {
+      if (ev.type === "etat" || ev.type === "variable" || ev.type === "fait" || ev.type === "niveauchange") {
         if (++cascades > CB_CASCADE) {
           res.boucle = true;
           journal.push({ boucle: "cascade" });
           break;
         }
+      }
+      if (ev.type === "coupe" || ev.type === "casse" || ev.type === "dechire" || ev.type === "gratte") {
+        var fe = cbElement(p, ev.element);
+        if (fe && !etat.caches[fe.id]) marqueFait(fe.id, ev.type);
+        continue;
+      }
+      if (ev.type === "niveau") {
+        changeNiveau(ev.element, ev.niveau);
+        continue;
       }
       if (ev.type === "fixe" || ev.type === "valeur" || ev.type === "depot") {
         var g = cbElement(p, ev.element);
@@ -62081,6 +64712,11 @@
         if (ev.type === "debut" && nd.type === "ev_debut") part = true;
         if (ev.type === "delai" && nd.type === "ev_delai" && nd.id === ev.noeud) part = true;
         if (ev.type === "depot" && nd.type === "ev_depot" && (!pp.element || pp.element === ev.element) && (!pp.zone || pp.zone === ev.zone)) part = true;
+        if (ev.type === "fait" && pp.element === ev.element && (nd.type === "ev_coupe" && ev.quoi === "coupe" || nd.type === "ev_casse" && ev.quoi === "casse" || nd.type === "ev_dechire" && ev.quoi === "dechire" || nd.type === "ev_gratte" && ev.quoi === "gratte")) part = true;
+        if (ev.type === "choc" && nd.type === "ev_choc" && (ev.force || 0) >= pp.force && (!pp.element || pp.element === ev.element) && (!pp.autre || pp.autre === ev.autre)) part = true;
+        if (ev.type === "repos" && nd.type === "ev_repos" && (!pp.element || pp.element === ev.element)) part = true;
+        if (ev.type === "sortie" && nd.type === "ev_sortie" && (!pp.element || pp.element === ev.element)) part = true;
+        if (ev.type === "niveauchange" && nd.type === "ev_niveau" && pp.element === ev.element && cbSeuil(ev.apres, pp.op, pp.valeur) && !cbSeuil(ev.avant, pp.op, pp.valeur)) part = true;
         if (!part) continue;
         journal.push({ noeud: nd.id });
         var ls = idx.sorties[nd.id + ".go"] || [];
@@ -62131,6 +64767,7 @@
     var on = { fill: "#E8A33D" }, off = { fill: "#3a3f4f" };
     return {
       board: { w: 520, h: 320, image: "", color: "" },
+      fx: { victoire: "confettis", echec: "secousse" },
       elements: [
         { id: "i1", genre: "interrupteur", label: "1", x: 70, y: 150, w: 70, h: 110, etats: [{ id: "bas", nom: "bas", visuel: off }, { id: "haut", nom: "haut", visuel: on }], initial: "bas" },
         { id: "i2", genre: "interrupteur", label: "2", x: 170, y: 150, w: 70, h: 110, etats: [{ id: "bas", nom: "bas", visuel: off }, { id: "haut", nom: "haut", visuel: on }], initial: "bas" },
@@ -62187,8 +64824,12 @@
           continue;
         }
       }
-      if ((n.type === "ev_depot" || n.type === "a_placer" || n.type === "d_dans_zone") && pr.element && cbElement(p, pr.element).genre !== "deplacable") {
+      if ((n.type === "ev_depot" || n.type === "a_placer" || n.type === "d_dans_zone") && pr.element && ["deplacable", "objet"].indexOf(cbElement(p, pr.element).genre) < 0) {
         out.push(nomN(n) + " vise un \xE9l\xE9ment qui n\u2019est pas d\xE9pla\xE7able");
+        continue;
+      }
+      if (CB_GENRE_DE[n.type] && pr.element && cbElement(p, pr.element).genre !== CB_GENRE_DE[n.type]) {
+        out.push(nomN(n) + " doit viser : " + CB_GENRES[CB_GENRE_DE[n.type]].nom.toLowerCase());
         continue;
       }
       if ("variable" in pr && !cbVariable(p, pr.variable)) {
@@ -62212,6 +64853,7 @@
         else if (el.min === el.max) out.push("le curseur " + nm + " a le m\xEAme minimum et maximum");
       }
       if (el.genre === "compteur" && !cbVariable(p, el.variable)) out.push("le compteur " + nm + " n\u2019affiche aucune variable");
+      if ((el.genre === "corde" || el.genre === "ressort") && el.porte && (!cbElement(p, el.porte) || cbElement(p, el.porte).genre !== "objet")) out.push(nm + " tient un \xE9l\xE9ment qui n\u2019est pas un objet (gravit\xE9)");
       if (el.genre === "deplacable" && !p.elements.some(function(z) {
         return z.genre === "zone";
       })) out.push(nm + " est d\xE9pla\xE7able, mais il n\u2019y a aucune zone de d\xE9p\xF4t");
@@ -62276,6 +64918,22 @@
           out.push({ ev: { type: "valeur", element: el.id, valeur: b }, texte: "r\xE9gler " + nom(el) + " \xE0 " + b });
         }
       }
+      if (el.genre === "corde" && el.coupable) out.push({ ev: { type: "coupe", element: el.id }, texte: "couper " + nom(el) });
+      if (el.genre === "cassable") out.push({ ev: { type: "casse", element: el.id }, texte: "casser " + nom(el) });
+      if (el.genre === "papier") out.push({ ev: { type: "dechire", element: el.id }, texte: "d\xE9chirer " + nom(el) });
+      if (el.genre === "grattage") out.push({ ev: { type: "gratte", element: el.id }, texte: "gratter " + nom(el) });
+      if (el.genre === "recipient") [0, 25, 50, 75, 100].forEach(function(v2) {
+        out.push({ ev: { type: "niveau", element: el.id, niveau: v2 }, texte: "amener " + nom(el) + " \xE0 " + v2 + " %" });
+      });
+      if (el.genre === "objet") {
+        for (var zo = 0; zo < zones.length; zo++) out.push({ ev: { type: "depot", element: el.id, zone: zones[zo].id }, texte: "amener " + nom(el) + " dans " + nom(zones[zo]) });
+        out.push({ ev: { type: "repos", element: el.id }, texte: "laisser " + nom(el) + " s\u2019arr\xEAter" });
+        out.push({ ev: { type: "sortie", element: el.id }, texte: "faire tomber " + nom(el) + " du plateau" });
+        out.push({ ev: { type: "choc", element: el.id, autre: "", force: 99999 }, texte: "faire heurter " + nom(el) });
+        p.elements.forEach(function(x) {
+          if (x.id !== el.id && (x.genre === "objet" || x.genre === "cassable" || x.genre === "plateforme")) out.push({ ev: { type: "choc", element: el.id, autre: x.id, force: 99999 }, texte: "lancer " + nom(el) + " sur " + nom(x) });
+        });
+      }
       if (el.genre === "deplacable") {
         for (var z = 0; z < zones.length; z++) out.push({ ev: { type: "depot", element: el.id, zone: zones[z].id }, texte: "poser " + nom(el) + " dans " + nom(zones[z]) });
         out.push({ ev: { type: "depot", element: el.id, zone: "" }, texte: "reprendre " + nom(el) });
@@ -62289,7 +64947,7 @@
       for (var i = 0; i < k.length; i++) r.push(k[i] + "=" + JSON.stringify(o[k[i]]));
       return r.join(";");
     };
-    return tri(e.etats) + "|" + tri(e.vars) + "|" + tri(e.caches) + "|" + tri(e.verrous) + "|" + tri(e.places);
+    return tri(e.etats) + "|" + tri(e.vars) + "|" + tri(e.caches) + "|" + tri(e.verrous) + "|" + tri(e.places) + "|" + tri(e.niveaux) + "|" + tri(e.faits);
   }
   function cbExplore(p, externe, limite) {
     var max = limite || 4e3, idx = cbIndex(p), gestes = cbGestes(p), ext = externe || {};
@@ -62367,11 +65025,15 @@
           w: Math.round(puzNum(b.w, 520, 160, 2e3)),
           h: Math.round(puzNum(b.h, 320, 120, 2e3)),
           image: typeof b.image === "string" ? b.image : "",
-          color: puzColor(b.color, "")
+          color: puzColor(b.color, ""),
+          gravite: puzNum(b.gravite, 1, 0, 3),
+          gangle: puzNum(b.gangle, 90, -180, 360),
+          bords: cbUn(b.bords, ["tous", "sol", "aucun"], "tous")
         },
         elements,
         variables,
-        graphe: { noeuds, liens: cbNormLiens(g.liens, noeuds) }
+        graphe: { noeuds, liens: cbNormLiens(g.liens, noeuds) },
+        fx: cbNormFx(s.fx)
       };
     },
     check: function(p, state) {
@@ -62435,6 +65097,54 @@
       msg.setAttribute("data-cb-msg", "1");
       msg.setAttribute("role", "status");
       wrap.appendChild(msg);
+      var monde = cbMonde({
+        plateau,
+        racine: cadre,
+        p: function() {
+          return p;
+        },
+        etat: function() {
+          return etat;
+        },
+        noeuds: function() {
+          return noeudsEls;
+        },
+        envoie: function(ev) {
+          envoie(ev);
+        },
+        fini: function() {
+          return fini;
+        },
+        echelle: function() {
+          return echelle;
+        },
+        edition: function() {
+          return !!(ctx.enEdition && ctx.enEdition());
+        },
+        calme: function() {
+          return puzReduceMotion() || !!ctx.reduceMotion;
+        },
+        sansClic: function() {
+          sansClic = true;
+          setTimeout(function() {
+            sansClic = false;
+          }, 400);
+        },
+        son: function(k) {
+          try {
+            ctx.sound(k);
+          } catch (e) {
+          }
+        },
+        refait: function() {
+          etat = cbEtatInitial(p);
+          fini = false;
+          msg.textContent = "";
+          dessine();
+          mesure();
+          applique(cbTraite(p, etat, { type: "debut" }, externe()));
+        }
+      });
       function externe() {
         var j = ctx.jeu ? ctx.jeu() : { inventory: ctx.inventory || {}, vars: ctx.vars || {} };
         return { jeu: j.vars || {}, objets: j.inventory || {} };
@@ -62611,18 +65321,18 @@
         noeudsEls = {};
         choisi = "";
         geste = null;
+        monde.reinit();
         wrap.classList.toggle("is-calme", puzReduceMotion());
         plateau.style.width = p.board.w + "px";
         plateau.style.height = p.board.h + "px";
         plateau.style.backgroundImage = p.board.image ? "url(" + p.board.image + ")" : "";
         if (p.board.color) plateau.style.backgroundColor = p.board.color;
-        var ordre = p.elements.filter(function(e) {
-          return e.genre === "zone";
-        }).concat(p.elements.filter(function(e) {
-          return e.genre !== "zone" && e.genre !== "deplacable";
-        })).concat(p.elements.filter(function(e) {
-          return e.genre === "deplacable";
-        }));
+        var rang = function(g) {
+          var r = { plateforme: 0, corde: 0, ressort: 0, zone: 1, deplacable: 5, objet: 6, papier: 7, grattage: 8, emetteur: 9 }[g];
+          return r == null ? 4 : r;
+        };
+        var ordre = [];
+        for (var rg = 0; rg <= 9; rg++) for (var ie = 0; ie < p.elements.length; ie++) if (rang(p.elements[ie].genre) === rg) ordre.push(p.elements[ie]);
         for (var i = 0; i < ordre.length; i++) {
           (function(el) {
             var n = motEl("div", "pz-el pz-cb-el pz-cb-" + el.genre);
@@ -62630,17 +65340,20 @@
             n.setAttribute("data-pz-el", el.id);
             n.style.width = el.w + "px";
             n.style.height = el.h + "px";
+            var ani = motEl("span", "pz-cb-ani");
+            n.appendChild(ani);
             var corps = motEl("span", "pz-cb-corps");
-            n.appendChild(corps);
+            ani.appendChild(corps);
             var poignee = null;
             if (el.genre === "curseur") {
               n.classList.add(el.h > el.w ? "is-vertical" : "is-horizontal");
               poignee = motEl("span", "pz-cb-poignee");
-              n.appendChild(poignee);
+              ani.appendChild(poignee);
             }
             var lab = motEl("span", "pz-cb-label");
-            n.appendChild(lab);
-            if (el.genre !== "texte" && el.genre !== "compteur" && el.genre !== "image") {
+            ani.appendChild(lab);
+            var inerte = ["texte", "compteur", "image", "plateforme", "corde", "ressort", "papier", "grattage", "emetteur"].indexOf(el.genre) >= 0;
+            if (!inerte) {
               n.setAttribute("role", el.genre === "curseur" ? "slider" : "button");
               n.setAttribute("tabindex", "0");
             }
@@ -62664,10 +65377,12 @@
               surTouche(el, e);
             });
             plateau.appendChild(n);
-            noeudsEls[el.id] = { n, corps, lab, poignee, dernier: null };
+            noeudsEls[el.id] = { n, ani, corps, lab, poignee, dernier: null };
+            monde.branche(el, n, ani);
           })(ordre[i]);
         }
         maj();
+        monde.pret();
       }
       function habille(o, el, v, etatId, rot) {
         var c = o.corps;
@@ -62709,11 +65424,11 @@
           var idxE = indexEtat(el), v = el.etats[idxE].visuel, eid = etat.etats[el.id] || "";
           o.n.setAttribute("data-cb-etat", eid);
           o.n.setAttribute("data-cb-index", String(idxE));
-          o.n.style.display = etat.caches[el.id] ? "none" : "";
+          monde.visibilite(el, o.n, !!etat.caches[el.id]);
           o.n.classList.toggle("is-locked", !!etat.verrous[el.id]);
-          if (!geste || geste.el.id !== el.id || el.genre !== "deplacable") {
+          if (!monde.pilote(el) && (!geste || geste.el.id !== el.id || el.genre !== "deplacable")) {
             var pos = posDe(el);
-            o.n.style.transform = "translate(" + pos.x + "px," + pos.y + "px)";
+            o.n.style.transform = "translate(" + pos.x + "px," + pos.y + "px)" + (el.genre === "plateforme" && el.angle ? " rotate(" + el.angle + "deg)" : "");
           }
           if (el.genre === "deplacable") o.n.setAttribute("data-cb-zone", etat.places[el.id] || "");
           if (el.genre === "zone") o.n.setAttribute("data-cb-occupants", cbOccupants(p, etat, el.id).join(","));
@@ -62749,11 +65464,16 @@
         for (var s = 0; s < res.sons.length; s++) ctx.sound(res.sons[s]);
         if (res.messages.length) msg.textContent = res.messages[res.messages.length - 1];
         maj();
+        if (res.effets && res.effets.length) monde.effets(res.effets);
         ctx.emit("progress");
         if (res.boucle && typeof console !== "undefined") console.warn("Constructeur : un encha\xEEnement de r\xE8gles a \xE9t\xE9 coup\xE9.");
-        if (res.echec) ctx.emit("failed");
+        if (res.echec) {
+          monde.echec();
+          ctx.emit("failed");
+        }
         if (res.victoire && !fini) {
           fini = true;
+          monde.victoire();
           if (msg.textContent) ctx.emit("final", { texte: msg.textContent });
           ctx.emit("submit");
         }
@@ -62861,8 +65581,23 @@
             var vd = p.variables[k];
             if (st.vars && Object.prototype.hasOwnProperty.call(st.vars, vd.id)) e.vars[vd.id] = st.vars[vd.id];
           }
+          var reprend = function(cle, f) {
+            var o2 = st[cle];
+            if (!o2 || typeof o2 !== "object") return;
+            for (var kk in o2) if (Object.prototype.hasOwnProperty.call(o2, kk) && cbElement(p, kk)) e[cle][kk] = f(o2[kk]);
+          };
+          reprend("niveaux", function(v2) {
+            return puzNum(v2, 0, 0, 100);
+          });
+          reprend("faits", function(v2) {
+            return String(v2);
+          });
+          reprend("figes", function(v2) {
+            return !!v2;
+          });
+          if (st.gravite && typeof st.gravite.x === "number") e.gravite = { x: st.gravite.x, y: st.gravite.y, force: puzNum(st.gravite.force, 1, 0, 3) };
           etat = e;
-          maj();
+          dessine();
         },
         solve: function() {
           etat.gagne = true;
@@ -62874,7 +65609,7 @@
           etat = cbEtatInitial(p);
           fini = false;
           msg.textContent = "";
-          maj();
+          dessine();
           arme();
           demarre();
         },
@@ -62882,6 +65617,7 @@
         },
         destroy: function() {
           desarme();
+          monde.destroy();
           try {
             if (obs) obs.disconnect();
           } catch (e) {
@@ -76589,6 +79325,24 @@ d_et:        { cat: 'logique', nom: 'ET', entrees: [['a', 'bool'], ['b', 'bool']
 d_ou:        { cat: 'logique', nom: 'OU', entrees: [['a', 'bool'], ['b', 'bool'], ['c', 'bool'], ['d', 'bool']], sorties: [['oui', 'bool']], props: {} },
 d_non:       { cat: 'logique', nom: 'NON', entrees: [['a', 'bool']], sorties: [['oui', 'bool']], props: {} },
 d_calcul:    { cat: 'logique', nom: 'Calcul', entrees: [['a', 'valeur'], ['b', 'valeur']], sorties: [['valeur', 'valeur']], props: { op: '+', b: '' } },
+ev_choc:      { cat: 'ev', nom: 'Quand un objet heurte', sorties: [['go', 'exec']], props: { element: '', autre: '', force: 200 } },
+ev_coupe:     { cat: 'ev', nom: 'Quand une corde est coup\xE9e', sorties: [['go', 'exec']], props: { element: '' } },
+ev_casse:     { cat: 'ev', nom: 'Quand \xE7a se casse', sorties: [['go', 'exec']], props: { element: '' } },
+ev_dechire:   { cat: 'ev', nom: 'Quand le papier est d\xE9chir\xE9', sorties: [['go', 'exec']], props: { element: '' } },
+ev_gratte:    { cat: 'ev', nom: 'Quand la surface est gratt\xE9e', sorties: [['go', 'exec']], props: { element: '' } },
+ev_repos:     { cat: 'ev', nom: 'Quand un objet s\u2019arr\xEAte', sorties: [['go', 'exec']], props: { element: '' } },
+ev_sortie:    { cat: 'ev', nom: 'Quand un objet tombe du plateau', sorties: [['go', 'exec']], props: { element: '' } },
+ev_niveau:    { cat: 'ev', nom: 'Quand un niveau atteint\u2026', sorties: [['go', 'exec']], props: { element: '', op: '\u2265', valeur: 50 } },
+a_animer:     { cat: 'action', nom: 'Animer', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', effet: 'secousse', duree: 0, fois: 1 } },
+a_particules: { cat: 'action', nom: 'Particules', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', effet: 'etincelles', quantite: 30, couleur: '' } },
+a_impulsion:  { cat: 'action', nom: 'Pousser un objet', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', angle: -90, force: 700 } },
+a_gravite:    { cat: 'action', nom: 'Changer la gravit\xE9', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { mode: 'bas', force: 1 } },
+a_figer:      { cat: 'action', nom: 'Figer ou lib\xE9rer', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', fige: false } },
+a_couper:     { cat: 'action', nom: 'Couper une corde', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '' } },
+a_casser:     { cat: 'action', nom: 'Casser', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '' } },
+a_remplir:    { cat: 'action', nom: 'Remplir ou vider', entrees: [['in', 'exec'], ['valeur', 'valeur']], sorties: [['ensuite', 'exec']], props: { element: '', op: '=', valeur: '100', duree: 1.5 } },
+d_niveau:     { cat: 'donnee', nom: 'Niveau de\u2026', sorties: [['valeur', 'valeur']], props: { element: '' } },
+d_fait:       { cat: 'donnee', nom: 'Coup\xE9, cass\xE9, d\xE9chir\xE9 ou gratt\xE9', sorties: [['oui', 'bool']], props: { element: '' } },
 victoire:    { cat: 'fin', nom: 'VICTOIRE', entrees: [['cond', 'bool']], sorties: [], props: {} },
 };
 var CB_GENRES = {
@@ -76603,11 +79357,1289 @@ molette: { nom: 'Molette', etats: ['0', '1', '2', '3', '4', '5', '6', '7', '8', 
 curseur: { nom: 'Curseur', etats: ['normal'], cycle: false },
 deplacable: { nom: 'D\xE9pla\xE7able', etats: ['normal'], cycle: false },
 zone: { nom: 'Zone de d\xE9p\xF4t', etats: ['vide'], cycle: false },
+objet: { nom: 'Objet (gravit\xE9)', etats: ['normal'], cycle: false },
+plateforme: { nom: 'Plateforme / pente', etats: ['normal'], cycle: false },
+corde: { nom: 'Corde / pendule', etats: ['normal'], cycle: false },
+ressort: { nom: 'Ressort', etats: ['normal'], cycle: false },
+papier: { nom: 'Papier \xE0 d\xE9chirer', etats: ['normal'], cycle: false },
+grattage: { nom: 'Surface \xE0 gratter', etats: ['normal'], cycle: false },
+cassable: { nom: 'Objet cassable', etats: ['intact'], cycle: false },
+recipient: { nom: 'R\xE9cipient (liquide)', etats: ['normal'], cycle: false },
+emetteur: { nom: '\xC9metteur de particules', etats: ['normal'], cycle: false },
 };
-var CB_VIDE_PERMIS = { ev_depot: { element: 1, zone: 1 }, d_dans_zone: { element: 1 }, a_renvoyer: { element: 1, zone: 1 } };
+var CB_VIDE_PERMIS = { ev_depot: { element: 1, zone: 1 }, d_dans_zone: { element: 1 }, a_renvoyer: { element: 1, zone: 1 },
+ev_choc: { element: 1 }, ev_repos: { element: 1 }, ev_sortie: { element: 1 }, a_animer: { element: 1 }, a_particules: { element: 1 } };
 var CB_COULEURS = ['#3a3f4f', '#E8A33D', '#6FCF73', '#5FD4D4', '#D9636B', '#A98BE8'];
 var CB_BUDGET = 400;
 var CB_CASCADE = 60;
+var CB_EFFETS = {
+secousse: { nom: 'Secousse', duree: 0.5, fois: 1, courbe: 'ease-in-out', cles: [
+{ transform: 'translateX(0px)' }, { transform: 'translateX(-10px)' }, { transform: 'translateX(9px)' },
+{ transform: 'translateX(-7px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(0px)' }] },
+vibration: { nom: 'Vibration', duree: 0.25, fois: 3, courbe: 'linear', cles: [
+{ transform: 'translate(0px,0px)' }, { transform: 'translate(2px,-1px)' }, { transform: 'translate(-2px,1px)' },
+{ transform: 'translate(1px,2px)' }, { transform: 'translate(-1px,-2px)' }, { transform: 'translate(0px,0px)' }] },
+pulsation: { nom: 'Pulsation', duree: 0.8, fois: 1, courbe: 'ease-in-out', cles: [
+{ transform: 'scale(1)' }, { transform: 'scale(1.15)' }, { transform: 'scale(1)' }] },
+battement: { nom: 'Battement de c\u0153ur', duree: 1.1, fois: 0, courbe: 'ease-out', cles: [
+{ transform: 'scale(1)', offset: 0 }, { transform: 'scale(1.18)', offset: 0.14 }, { transform: 'scale(1)', offset: 0.28 },
+{ transform: 'scale(1.12)', offset: 0.42 }, { transform: 'scale(1)', offset: 0.7 }, { transform: 'scale(1)', offset: 1 }] },
+flottement: { nom: 'Flottement', duree: 2.4, fois: 0, courbe: 'ease-in-out', cles: [
+{ transform: 'translateY(0px)' }, { transform: 'translateY(-9px)' }, { transform: 'translateY(0px)' }] },
+balancement: { nom: 'Balancement', duree: 1.6, fois: 0, courbe: 'ease-in-out', cles: [
+{ transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(-8deg)' }] },
+rotation: { nom: 'Rotation', duree: 2, fois: 0, courbe: 'linear', cles: [
+{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }] },
+retournement: { nom: 'Retournement', duree: 0.9, fois: 1, courbe: 'ease-in-out', cles: [
+{ transform: 'perspective(400px) rotateY(0deg)' }, { transform: 'perspective(400px) rotateY(360deg)' }] },
+clignotement: { nom: 'Clignotement', duree: 0.7, fois: 3, courbe: 'linear', cles: [
+{ opacity: 1 }, { opacity: 0.15 }, { opacity: 1 }] },
+lueur: { nom: 'Lueur', duree: 1.4, fois: 0, courbe: 'ease-in-out', cles: [
+{ filter: 'drop-shadow(0px 0px 0px rgba(255,214,110,0))' }, { filter: 'drop-shadow(0px 0px 16px rgba(255,214,110,0.95))' },
+{ filter: 'drop-shadow(0px 0px 0px rgba(255,214,110,0))' }] },
+rebond: { nom: 'Rebond', duree: 0.9, fois: 1, courbe: 'ease-out', cles: [
+{ transform: 'translateY(0px) scale(1,1)', offset: 0 }, { transform: 'translateY(-28px) scale(0.94,1.07)', offset: 0.3 },
+{ transform: 'translateY(0px) scale(1.14,0.86)', offset: 0.55 }, { transform: 'translateY(-10px) scale(0.98,1.02)', offset: 0.75 },
+{ transform: 'translateY(0px) scale(1,1)', offset: 1 }] },
+saut: { nom: 'Saut', duree: 0.6, fois: 1, courbe: 'ease-out', cles: [
+{ transform: 'translateY(0px) scale(1.1,0.9)', offset: 0 }, { transform: 'translateY(-40px) scale(0.92,1.1)', offset: 0.45 },
+{ transform: 'translateY(0px) scale(1.12,0.88)', offset: 0.85 }, { transform: 'translateY(0px) scale(1,1)', offset: 1 }] },
+zoom: { nom: 'Zoom', duree: 0.6, fois: 1, courbe: 'ease-in-out', cles: [
+{ transform: 'scale(1)' }, { transform: 'scale(1.45)' }, { transform: 'scale(1)' }] },
+tremblement: { nom: 'Tremblement', duree: 1.2, fois: 0, courbe: 'linear', cles: [
+{ transform: 'rotate(0deg)' }, { transform: 'rotate(2deg)' }, { transform: 'rotate(-2deg)' }, { transform: 'rotate(1deg)' },
+{ transform: 'rotate(-1deg)' }, { transform: 'rotate(0deg)' }] },
+apparition: { nom: 'Apparition', duree: 0.45, fois: 1, courbe: 'cubic-bezier(0.2,0.8,0.3,1.25)', cles: [
+{ opacity: 0, transform: 'scale(0.4)' }, { opacity: 1, transform: 'scale(1)' }] },
+disparition: { nom: 'Disparition', duree: 0.35, fois: 1, courbe: 'ease-in', garde: true, cles: [
+{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.3)' }] },
+chute: { nom: 'Chute en place', duree: 0.7, fois: 1, courbe: 'ease-out', cles: [
+{ opacity: 0, transform: 'translateY(-160px)', offset: 0 }, { opacity: 1, transform: 'translateY(0px) scale(1.1,0.9)', offset: 0.7 },
+{ transform: 'translateY(-12px) scale(0.97,1.03)', offset: 0.85 }, { opacity: 1, transform: 'translateY(0px) scale(1,1)', offset: 1 }] },
+glisseGauche: { nom: 'Entr\xE9e par la gauche', duree: 0.5, fois: 1, courbe: 'cubic-bezier(0.2,0.8,0.3,1.1)', cles: [
+{ opacity: 0, transform: 'translateX(-120px)' }, { opacity: 1, transform: 'translateX(0px)' }] },
+glisseDroite: { nom: 'Entr\xE9e par la droite', duree: 0.5, fois: 1, courbe: 'cubic-bezier(0.2,0.8,0.3,1.1)', cles: [
+{ opacity: 0, transform: 'translateX(120px)' }, { opacity: 1, transform: 'translateX(0px)' }] },
+tournoiement: { nom: 'Tournoiement', duree: 0.8, fois: 1, courbe: 'ease-in', garde: true, cles: [
+{ opacity: 1, transform: 'rotate(0deg) scale(1)' }, { opacity: 0, transform: 'rotate(540deg) scale(0.1)' }] },
+};
+var CB_COURBES = { lineaire: 'linear', douce: 'ease-in-out', acceleree: 'ease-in', freinee: 'ease-out', rebond: 'cubic-bezier(0.34,1.56,0.64,1)', elastique: 'cubic-bezier(0.68,-0.6,0.32,1.6)' };
+function cbClesPerso(a) {
+var cles = (a.cles || []).slice().sort(function (x, y) { return x.t - y.t; });
+if (!cles.length) cles = [{ t: 0, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 }];
+if (cles[0].t > 0) cles.unshift({ t: 0, x: 0, y: 0, rot: 0, echelle: 1, opacite: 1 });
+if (cles[cles.length - 1].t < 1) { var d = cles[cles.length - 1]; cles.push({ t: 1, x: d.x, y: d.y, rot: d.rot, echelle: d.echelle, opacite: d.opacite }); }
+return cles.map(function (k) {
+return { offset: k.t, opacity: k.opacite, transform: 'translate(' + k.x + 'px,' + k.y + 'px) rotate(' + k.rot + 'deg) scale(' + k.echelle + ')' };
+});
+}
+function cbDefAnim(el, effet) {
+if (!effet) return null;
+if (effet.indexOf('perso:') === 0) {
+var id = effet.slice(6), l = el && el.anims ? el.anims : [];
+for (var i = 0; i < l.length; i++) {
+if (l[i].id === id) return { duree: l[i].duree, fois: l[i].fois, courbe: CB_COURBES[l[i].courbe] || 'ease-in-out', cles: cbClesPerso(l[i]) };
+}
+return null;
+}
+return CB_EFFETS[effet] || null;
+}
+function cbJoueAnim(cible, def, duree, fois, fin) {
+if (!cible || !def || typeof cible.animate !== 'function') { if (fin) fin(); return null; }
+try {
+var n = fois == null || fois < 0 ? def.fois : fois;
+var a = cible.animate(def.cles, {
+duration: Math.max(40, (duree > 0 ? duree : def.duree) * 1000),
+iterations: n === 0 ? Infinity : Math.max(1, n || 1),
+easing: def.courbe || 'ease',
+fill: def.garde ? 'forwards' : 'none',
+});
+if (fin) a.onfinish = fin;
+return a;
+} catch (e) { if (fin) fin(); return null; }
+}
+var CB_PARTICULES = {
+etincelles: { nom: '\xC9tincelles', additif: true },
+confettis: { nom: 'Confettis' },
+poussiere: { nom: 'Poussi\xE8re' },
+fumee: { nom: 'Fum\xE9e' },
+feu: { nom: 'Feu', additif: true },
+gouttes: { nom: 'Gouttes' },
+etoiles: { nom: '\xC9toiles', additif: true },
+bulles: { nom: 'Bulles' },
+coeurs: { nom: 'C\u0153urs' },
+magie: { nom: 'Poudre magique', additif: true },
+};
+var CB_CONFETTIS = ['#E8A33D', '#6FCF73', '#5FD4D4', '#D9636B', '#A98BE8', '#F5D96B', '#E9E6DD'];
+function cbAlea(a, b) { return a + Math.random() * (b - a); }
+function cbParticule(effet, x, y, c) {
+var a = cbAlea(0, Math.PI * 2), v;
+var q = { x: x, y: y, vx: 0, vy: 0, g: 0, frein: 0.99, vie: 0, max: 1, t: 4, dt: 0, rot: 0, vrot: 0,
+c: c || '#fff', forme: 'rond', a0: 1, effet: effet };
+switch (effet) {
+case 'etincelles': v = cbAlea(120, 520); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v - 80; q.g = 700; q.max = cbAlea(0.35, 0.8); q.t = cbAlea(1.5, 3.2); q.c = c || (Math.random() < 0.5 ? '#FFD36B' : '#FF9A3C'); q.forme = 'trait'; q.frein = 0.97; break;
+case 'confettis': v = cbAlea(220, 620); a = cbAlea(-Math.PI * 0.85, -Math.PI * 0.15); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v; q.g = 520; q.max = cbAlea(1.6, 2.8); q.t = cbAlea(6, 11); q.c = c || CB_CONFETTIS[(Math.random() * CB_CONFETTIS.length) | 0]; q.forme = 'rect'; q.vrot = cbAlea(-14, 14); q.frein = 0.975; break;
+case 'poussiere': v = cbAlea(10, 80); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v - 10; q.g = -10; q.max = cbAlea(0.8, 1.8); q.t = cbAlea(2, 6); q.dt = 6; q.c = c || '#B9A88C'; q.a0 = 0.55; q.frein = 0.96; break;
+case 'fumee': q.vx = cbAlea(-20, 20); q.vy = cbAlea(-90, -40); q.g = -30; q.max = cbAlea(1.4, 2.6); q.t = cbAlea(8, 16); q.dt = 22; q.c = c || '#8C8F99'; q.a0 = 0.35; q.frein = 0.985; break;
+case 'feu': q.vx = cbAlea(-30, 30); q.vy = cbAlea(-160, -70); q.g = -60; q.max = cbAlea(0.4, 0.9); q.t = cbAlea(10, 18); q.dt = -14; q.c = c || (Math.random() < 0.5 ? '#FF7A2E' : '#FFC23D'); q.a0 = 0.8; break;
+case 'gouttes': v = cbAlea(60, 260); a = cbAlea(-Math.PI * 0.95, -Math.PI * 0.05); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v; q.g = 900; q.max = cbAlea(0.7, 1.3); q.t = cbAlea(3, 6); q.c = c || '#5FB4F0'; q.forme = 'goutte'; break;
+case 'etoiles': v = cbAlea(80, 340); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v; q.g = 120; q.max = cbAlea(0.6, 1.2); q.t = cbAlea(6, 12); q.c = c || '#FFE27A'; q.forme = 'etoile'; q.vrot = cbAlea(-6, 6); q.frein = 0.95; break;
+case 'bulles': q.vx = cbAlea(-25, 25); q.vy = cbAlea(-110, -40); q.g = -40; q.max = cbAlea(1.2, 2.4); q.t = cbAlea(4, 12); q.c = c || '#BFE7FF'; q.forme = 'bulle'; q.frein = 0.99; break;
+case 'coeurs': v = cbAlea(40, 160); a = cbAlea(-Math.PI * 0.8, -Math.PI * 0.2); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v; q.g = -30; q.max = cbAlea(1, 1.8); q.t = cbAlea(8, 14); q.c = c || '#FF6B8B'; q.forme = 'coeur'; q.vrot = cbAlea(-2, 2); break;
+case 'magie': v = cbAlea(20, 140); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v - 30; q.g = -20; q.max = cbAlea(0.8, 1.6); q.t = cbAlea(2, 5); q.c = c || (Math.random() < 0.5 ? '#C7A6FF' : '#7FE3FF'); q.forme = 'etoile'; q.vrot = cbAlea(-4, 4); q.frein = 0.96; break;
+default: v = cbAlea(50, 200); q.vx = Math.cos(a) * v; q.vy = Math.sin(a) * v; q.max = 1; break;
+}
+return q;
+}
+function cbAire(poly) {
+var s = 0;
+for (var i = 0, n = poly.length; i < n; i++) { var a = poly[i], b = poly[(i + 1) % n]; s += a.x * b.y - b.x * a.y; }
+return Math.abs(s) / 2;
+}
+function cbDedans(poly, x, y) {
+var c = false;
+for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+var a = poly[i], b = poly[j];
+if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) c = !c;
+}
+return c;
+}
+function cbCroise(a, b, c, d) {
+var rx = b.x - a.x, ry = b.y - a.y, sx = d.x - c.x, sy = d.y - c.y, den = rx * sy - ry * sx;
+if (Math.abs(den) < 1e-9) return null;
+var t = ((c.x - a.x) * sy - (c.y - a.y) * sx) / den, u = ((c.x - a.x) * ry - (c.y - a.y) * rx) / den;
+if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+return { t: t, u: u, x: a.x + rx * t, y: a.y + ry * t };
+}
+function cbDechire(poly, trace) {
+if (trace.length < 2 || poly.length < 3) return null;
+var pts = trace.slice();
+var dehors = function (p) { return !cbDedans(poly, p.x, p.y); };
+var prolonge = function (a, b) { var dx = a.x - b.x, dy = a.y - b.y, l = Math.sqrt(dx * dx + dy * dy) || 1; return { x: a.x + dx / l * 4000, y: a.y + dy / l * 4000 }; };
+if (!dehors(pts[0])) pts.unshift(prolonge(pts[0], pts[1]));
+if (!dehors(pts[pts.length - 1])) pts.push(prolonge(pts[pts.length - 1], pts[pts.length - 2]));
+var coupes = [];
+for (var i = 0; i < pts.length - 1; i++) {
+for (var k = 0, n = poly.length; k < n; k++) {
+var r = cbCroise(pts[i], pts[i + 1], poly[k], poly[(k + 1) % n]);
+if (r) coupes.push({ i: i, t: r.t, bord: k, u: r.u, x: r.x, y: r.y });
+}
+}
+coupes.sort(function (a, b) { return a.i - b.i || a.t - b.t; });
+if (coupes.length < 2) return null;
+var E = coupes[0], X = coupes[1];
+var chemin = [], ajoute = function (a, b) {
+var dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy), m = Math.max(1, Math.round(l / 9));
+for (var s = 1; s <= m; s++) {
+var f = s / m, j = s === m ? 0 : cbAlea(-3.5, 3.5);
+chemin.push({ x: a.x + dx * f - dy / (l || 1) * j, y: a.y + dy * f + dx / (l || 1) * j, fibre: true });
+}
+};
+var prec = { x: E.x, y: E.y };
+for (var q = E.i + 1; q <= X.i; q++) { ajoute(prec, pts[q]); prec = pts[q]; }
+ajoute(prec, { x: X.x, y: X.y });
+chemin.pop();
+var n2 = poly.length, a1 = [{ x: E.x, y: E.y, fibre: true }], k2;
+if (E.bord === X.bord && X.u > E.u) a1.push({ x: X.x, y: X.y, fibre: true });
+else {
+k2 = (E.bord + 1) % n2;
+var garde = 0;
+while (garde++ < n2 + 1) { a1.push(poly[k2]); if (k2 === X.bord) break; k2 = (k2 + 1) % n2; }
+a1.push({ x: X.x, y: X.y, fibre: true });
+}
+for (var r1 = chemin.length - 1; r1 >= 0; r1--) a1.push(chemin[r1]);
+var a2 = [{ x: X.x, y: X.y, fibre: true }];
+if (E.bord === X.bord && X.u < E.u) a2.push({ x: E.x, y: E.y, fibre: true });
+else {
+k2 = (X.bord + 1) % n2;
+var garde2 = 0;
+while (garde2++ < n2 + 1) { a2.push(poly[k2]); if (k2 === E.bord) break; k2 = (k2 + 1) % n2; }
+a2.push({ x: E.x, y: E.y, fibre: true });
+}
+for (var r2 = 0; r2 < chemin.length; r2++) a2.push(chemin[r2]);
+if (a1.length < 3 || a2.length < 3) return null;
+return cbAire(a1) >= cbAire(a2) ? { garde: a1, tombe: a2 } : { garde: a2, tombe: a1 };
+}
+function cbCoupeDemiPlan(poly, nx, ny, s) {
+var out = [];
+for (var i = 0, n = poly.length; i < n; i++) {
+var a = poly[i], b = poly[(i + 1) % n], da = a.x * nx + a.y * ny - s, db = b.x * nx + b.y * ny - s;
+if (da >= 0) out.push(a);
+if ((da >= 0) !== (db >= 0)) { var f = da / (da - db); out.push({ x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, surface: true }); }
+}
+return out;
+}
+function cbEclats(w, h, ix, iy, nb) {
+var bord = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+for (var i = 0; i < nb; i++) {
+var c = (Math.random() * 4) | 0, f = Math.random();
+bord.push(c === 0 ? { x: w * f, y: 0 } : c === 1 ? { x: w, y: h * f } : c === 2 ? { x: w * f, y: h } : { x: 0, y: h * f });
+}
+bord.sort(function (a, b) { return Math.atan2(a.y - iy, a.x - ix) - Math.atan2(b.y - iy, b.x - ix); });
+var out = [];
+for (var k = 0; k < bord.length; k++) {
+var a = bord[k], b = bord[(k + 1) % bord.length];
+out.push([{ x: ix, y: iy }, a, b]);
+}
+return out;
+}
+function cbMonde(o) {
+var PAS = 1 / 120;
+var fond = null, fx = null, gF = null, gX = null, raf = 0, dernier = 0, reste = 0;
+var corps = {}, cordes = [], ressorts = [], statiques = [], papiers = {}, grattages = {}, cassables = {}, recipients = {}, emetteurs = [];
+var parts = [], debris = [], lame = null, boucles = [], images = {}, gravite = { x: 0, y: 1 }, force = 1, horloge = 0, eteint = false;
+var p = o.p();
+function img(src) {
+if (!src) return null;
+if (images[src]) return images[src].complete ? images[src] : null;
+try { var im = new Image(); im.src = src; images[src] = im; } catch (e) { return null; }
+return null;
+}
+function visuel(el) {
+var et = o.etat(), id = et.etats[el.id], v = el.etats[0].visuel;
+for (var i = 0; i < el.etats.length; i++) if (el.etats[i].id === id) v = el.etats[i].visuel;
+return v;
+}
+function couleur(el, def) { var v = visuel(el); return el.couleur || v.fill || def; }
+function cache(el) { var et = o.etat(); return !!et.caches[el.id]; }
+function toile(cls) {
+var c = document.createElement('canvas');
+c.className = cls;
+c.width = Math.max(1, Math.round(p.board.w * 2));
+c.height = Math.max(1, Math.round(p.board.h * 2));
+c.style.width = p.board.w + 'px';
+c.style.height = p.board.h + 'px';
+return c;
+}
+function construit() {
+p = o.p();
+corps = {}; cordes = []; ressorts = []; statiques = []; papiers = {}; grattages = {}; cassables = {}; recipients = {}; emetteurs = [];
+parts = []; debris = []; lame = null;
+var g = p.board.gravite == null ? 1 : p.board.gravite, ga = (p.board.gangle == null ? 90 : p.board.gangle) * Math.PI / 180;
+force = g; gravite = { x: Math.cos(ga), y: Math.sin(ga) };
+var et = o.etat();
+if (et.gravite) { force = et.gravite.force; gravite = { x: et.gravite.x, y: et.gravite.y }; }
+for (var i = 0; i < p.elements.length; i++) {
+var el = p.elements[i];
+if (el.genre === 'objet') {
+var r = Math.min(el.w, el.h) / 2;
+corps[el.id] = { el: el, rond: el.forme !== 'boite', r: r, w: el.w, h: el.h,
+x: el.x + el.w / 2, y: el.y + el.h / 2, px: el.x + el.w / 2, py: el.y + el.h / 2, inv: 1 / el.masse,
+rebond: el.rebond, frot: el.frottement, fige: !!(et.figes && et.figes[el.id] != null ? et.figes[el.id] : el.fige),
+tenu: null, rot: 0, calme: 0, repos: false, zone: '', sorti: false };
+} else if (el.genre === 'plateforme') {
+statiques.push({ el: el, cx: el.x + el.w / 2, cy: el.y + el.h / 2, w: el.w, h: el.h, a: (el.angle || 0) * Math.PI / 180, rebond: el.rebond == null ? 0.2 : el.rebond });
+} else if (el.genre === 'cassable') {
+cassables[el.id] = { el: el, coups: 0, casse: !!(et.faits && et.faits[el.id]), fissures: [] };
+} else if (el.genre === 'papier') {
+papiers[el.id] = { el: el, poly: et.faits && et.faits[el.id] ? [] : [{ x: 0, y: 0 }, { x: el.w, y: 0 }, { x: el.w, y: el.h }, { x: 0, y: el.h }], aire0: el.w * el.h, fait: !!(et.faits && et.faits[el.id]), toile: null };
+} else if (el.genre === 'grattage') {
+grattages[el.id] = { el: el, grille: {}, compte: 0, fait: !!(et.faits && et.faits[el.id]), toile: null, fond: 1 };
+} else if (el.genre === 'recipient') {
+var nv = et.niveaux && et.niveaux[el.id] != null ? et.niveaux[el.id] : el.niveau;
+recipients[el.id] = { el: el, niveau: nv / 100, vise: nv / 100, angle: 0, va: 0, tenu: null, onde: 0, envoye: Math.round(nv), dernierEnvoi: 0, remplit: null, toile: null };
+} else if (el.genre === 'emetteur') {
+emetteurs.push({ el: el, reste: 0 });
+}
+}
+for (var j = 0; j < p.elements.length; j++) {
+var e2 = p.elements[j];
+if (e2.genre === 'corde') cordes.push(nouvelleCorde(e2, et));
+if (e2.genre === 'ressort') ressorts.push({ el: e2, ax: e2.x + e2.w / 2, ay: e2.y, corps: corps[e2.porte] || null, l: e2.h });
+}
+}
+function nouvelleCorde(el, et) {
+var ax = el.x + el.w / 2, ay = el.y, b = corps[el.porte] || null;
+var bx = b ? b.x : ax, by = b ? b.y : ay + el.h;
+var dist = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
+var total = Math.max(el.h, dist, 10), n = el.segments, pts = [];
+for (var i = 0; i <= n; i++) {
+var f = i / n;
+pts.push({ x: ax + (bx - ax) * f, y: ay + (by - ay) * f, px: ax + (bx - ax) * f, py: ay + (by - ay) * f });
+}
+var c = { el: el, pts: pts, l: total / n, corps: b, coupe: {}, faite: !!(et.faits && et.faits[el.id]) };
+if (c.faite) c.coupe[Math.floor(n / 2)] = true;
+return c;
+}
+function apercu(el, w, h) {
+var c = document.createElement('canvas');
+c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+var x = c.getContext('2d'), v = visuel(el), im = img(v.image);
+x.fillStyle = v.fill || '#C9B79C';
+x.fillRect(0, 0, w, h);
+if (im) { try { x.drawImage(im, 0, 0, w, h); } catch (e) {} }
+if (v.border) { x.strokeStyle = v.border; x.lineWidth = 3; x.strokeRect(1.5, 1.5, w - 3, h - 3); }
+return c;
+}
+function monte(el, n, ani) {
+var mk = function () {
+var c = document.createElement('canvas');
+c.className = 'pz-cb-toile';
+c.width = Math.max(1, Math.round(el.w * 2)); c.height = Math.max(1, Math.round(el.h * 2));
+ani.appendChild(c);
+return c;
+};
+if (el.genre === 'papier' && papiers[el.id]) papiers[el.id].toile = mk();
+if (el.genre === 'grattage' && grattages[el.id]) { var gr = grattages[el.id]; gr.toile = mk(); peintGrattage(gr); }
+if (el.genre === 'recipient' && recipients[el.id]) { recipients[el.id].toile = mk(); recipients[el.id].n = n; }
+if (el.genre === 'objet' && corps[el.id]) { corps[el.id].n = n; n.setAttribute('data-cb-forme', el.forme); }
+if (el.genre === 'cassable' && cassables[el.id]) cassables[el.id].n = n;
+if (el.genre === 'objet' || (el.genre === 'recipient' && el.inclinable)) {
+n.addEventListener('pointerdown', function (e) { saisit(el, n, e); });
+n.addEventListener('pointermove', bouge);
+n.addEventListener('pointerup', lache);
+n.addEventListener('pointercancel', lache);
+}
+}
+function canevas() {
+fond = toile('pz-cb-fond');
+fx = toile('pz-cb-fx');
+o.plateau.insertBefore(fond, o.plateau.firstChild);
+o.plateau.appendChild(fx);
+gF = fond.getContext('2d'); gX = fx.getContext('2d');
+gF.setTransform(2, 0, 0, 2, 0, 0); gX.setTransform(2, 0, 0, 2, 0, 0);
+}
+function installe() {
+o.plateau.addEventListener('pointerdown', lameDebut, true);
+o.plateau.addEventListener('pointermove', lameBouge, true);
+o.plateau.addEventListener('pointerup', lameFin, true);
+o.plateau.addEventListener('pointercancel', lameFin, true);
+o.plateau.addEventListener('click', bloqueClic, true);
+}
+function point(e) { var q = imgPoint(o.plateau, e, o.echelle()); return q; }
+function saisit(el, n, e) {
+if (o.edition() || o.fini() || cache(el) || o.etat().verrous[el.id]) return;
+e.preventDefault(); e.stopPropagation();
+try { n.setPointerCapture(e.pointerId); } catch (err) {}
+var q = point(e);
+if (el.genre === 'objet') {
+var b = corps[el.id];
+if (!b || b.fige || b.sorti) return;
+b.tenu = { id: e.pointerId, dx: b.x - q.x, dy: b.y - q.y, x: q.x, y: q.y, t0: Date.now(), x0: q.x, y0: q.y };
+} else {
+var r = recipients[el.id];
+if (r) r.tenu = { id: e.pointerId, x0: q.x, a0: r.angle };
+}
+demarre();
+}
+function bouge(e) {
+var q = null;
+for (var k in corps) {
+var b = corps[k];
+if (b.tenu && b.tenu.id === e.pointerId) { q = q || point(e); b.tenu.x = q.x; b.tenu.y = q.y; }
+}
+for (var k2 in recipients) {
+var r = recipients[k2];
+if (r.tenu && r.tenu.id === e.pointerId) { q = q || point(e); r.angle = Math.max(-115, Math.min(115, r.tenu.a0 + (q.x - r.tenu.x0) * 0.9)); }
+}
+}
+function lache(e) {
+for (var k in corps) {
+var b = corps[k];
+if (!b.tenu || b.tenu.id !== e.pointerId) continue;
+var tap = Math.abs(b.tenu.x - b.tenu.x0) + Math.abs(b.tenu.y - b.tenu.y0) < 6 && Date.now() - b.tenu.t0 < 300;
+if (!b.el.lancer) { b.px = b.x; b.py = b.y; }
+b.tenu = null;
+if (!tap) o.sansClic();
+}
+for (var k2 in recipients) { var r = recipients[k2]; if (r.tenu && r.tenu.id === e.pointerId) r.tenu = null; }
+}
+function sousPapier(q) {
+for (var k in papiers) {
+var pa = papiers[k], el = pa.el;
+if (pa.fait && !pa.poly.length) continue;
+if (cache(el)) continue;
+if (cbDedans(pa.poly, q.x - el.x, q.y - el.y)) return pa;
+}
+return null;
+}
+function sousGrattage(q) {
+for (var k in grattages) {
+var gr = grattages[k], el = gr.el;
+if (gr.fond <= 0 || cache(el)) continue;
+if (q.x >= el.x && q.x <= el.x + el.w && q.y >= el.y && q.y <= el.y + el.h) return gr;
+}
+return null;
+}
+function bloqueClic(e) {
+if (o.edition()) return;
+var q = point(e);
+if (sousPapier(q) || sousGrattage(q)) { e.stopPropagation(); e.preventDefault(); }
+}
+function lameDebut(e) {
+if (o.edition() || o.fini()) return;
+var q = point(e), gr = sousGrattage(q), pa = sousPapier(q);
+var cible = e.target, vide = cible === o.plateau || cible === fx || cible === fond;
+if (!gr && !pa && !vide) return;
+if (gr || pa) { e.stopPropagation(); e.preventDefault(); }
+try { o.plateau.setPointerCapture(e.pointerId); } catch (err) {}
+lame = { id: e.pointerId, pts: [{ x: q.x, y: q.y, t: horloge }], gratte: gr, debut: 0 };
+if (gr) gratte(gr, q, q);
+demarre();
+}
+function lameBouge(e) {
+if (!lame || e.pointerId !== lame.id) return;
+var q = point(e), der = lame.pts[lame.pts.length - 1];
+if (Math.abs(q.x - der.x) + Math.abs(q.y - der.y) < 2) return;
+lame.pts.push({ x: q.x, y: q.y, t: horloge });
+if (lame.gratte) { gratte(lame.gratte, der, q); return; }
+coupeCordes(der, q);
+dechireEnCours();
+}
+function lameFin(e) {
+if (!lame || e.pointerId !== lame.id) return;
+if (e.type === 'pointerup') lameBouge(e);
+if (!lame.gratte) dechireEnCours(true);
+lame.fin = horloge;
+var l = lame; lame = null;
+if (!l.gratte) traces.push({ pts: l.pts, fin: horloge });
+}
+var traces = [];
+function coupeCordes(a, b) {
+for (var i = 0; i < cordes.length; i++) {
+var c = cordes[i];
+if (!c.el.coupable || cache(c.el)) continue;
+for (var k = 0; k < c.pts.length - 1; k++) {
+if (c.coupe[k]) continue;
+if (cbCroise(a, b, c.pts[k], c.pts[k + 1])) {
+c.coupe[k] = true;
+particules('etincelles', (c.pts[k].x + c.pts[k + 1].x) / 2, (c.pts[k].y + c.pts[k + 1].y) / 2, 6, '#E9E6DD');
+if (!c.faite) { c.faite = true; o.envoie({ type: 'coupe', element: c.el.id }); }
+break;
+}
+}
+}
+}
+function dechireEnCours(fin) {
+if (!lame) return;
+var pts = lame.pts.slice(lame.debut);
+if (pts.length < 2) return;
+for (var k in papiers) {
+var pa = papiers[k], el = pa.el;
+if (!pa.poly.length || cache(el)) continue;
+var loc = pts.map(function (q) { return { x: q.x - el.x, y: q.y - el.y }; });
+var dernierDehors = !cbDedans(pa.poly, loc[loc.length - 1].x, loc[loc.length - 1].y);
+if (!dernierDehors && !fin) continue;
+var touche = loc.some(function (q) { return cbDedans(pa.poly, q.x, q.y); });
+if (!touche && !fin) continue;
+var r = cbDechire(pa.poly, loc);
+if (!r) continue;
+pa.poly = r.garde;
+chute(r.tombe, el, pa);
+particules('poussiere', pts[pts.length - 1].x, pts[pts.length - 1].y, 8, '#E9E1CF');
+lame.debut = lame.pts.length - 1;
+if (o.son) o.son('interact');
+var arrache = 1 - cbAire(pa.poly) / pa.aire0;
+if (arrache >= 0.97) { chute(pa.poly, el, pa); pa.poly = []; }
+if (!pa.fait && arrache * 100 >= el.seuil) { pa.fait = true; o.envoie({ type: 'dechire', element: el.id }); }
+}
+}
+function chute(poly, el, pa) {
+if (!poly || poly.length < 3) return;
+var cx = 0, cy = 0;
+for (var i = 0; i < poly.length; i++) { cx += poly[i].x; cy += poly[i].y; }
+cx /= poly.length; cy /= poly.length;
+debris.push({ poly: poly.map(function (q) { return { x: q.x - cx, y: q.y - cy, fibre: q.fibre }; }), x: el.x + cx, y: el.y + cy,
+vx: cbAlea(-60, 60), vy: cbAlea(-140, -40), rot: 0, vrot: cbAlea(-3, 3), vie: 0, max: 2.2,
+tex: apercu(el, el.w, el.h), ox: cx, oy: cy, papier: true });
+}
+function gratte(gr, a, b) {
+var el = gr.el, x = gr.toile && gr.toile.getContext('2d');
+if (!x || gr.fond < 1) return;
+var r = el.pinceau, dx = b.x - a.x, dy = b.y - a.y, l = Math.sqrt(dx * dx + dy * dy), m = Math.max(1, Math.ceil(l / (r * 0.4)));
+x.save();
+x.setTransform(2, 0, 0, 2, 0, 0);
+x.globalCompositeOperation = 'destination-out';
+for (var s = 0; s <= m; s++) {
+var cx = a.x + dx * s / m - el.x, cy = a.y + dy * s / m - el.y;
+x.beginPath();
+for (var k = 0; k < 9; k++) {
+var an = k / 9 * Math.PI * 2, rr = r * cbAlea(0.75, 1.05);
+if (k === 0) x.moveTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr); else x.lineTo(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr);
+}
+x.closePath(); x.fill();
+for (var gx = Math.floor((cx - r) / 10); gx <= Math.floor((cx + r) / 10); gx++) {
+for (var gy = Math.floor((cy - r) / 10); gy <= Math.floor((cy + r) / 10); gy++) {
+var mx = gx * 10 + 5 - cx, my = gy * 10 + 5 - cy;
+if (gx < 0 || gy < 0 || gx * 10 >= el.w || gy * 10 >= el.h || mx * mx + my * my > r * r) continue;
+var cle = gx + ':' + gy;
+if (!gr.grille[cle]) { gr.grille[cle] = 1; gr.compte++; }
+}
+}
+}
+x.restore();
+if (Math.random() < 0.5) particules('poussiere', b.x, b.y, 2, couleur(el, '#B8B8C0'));
+var total = Math.ceil(el.w / 10) * Math.ceil(el.h / 10);
+if (!gr.fait && gr.compte / total * 100 >= el.seuil) {
+gr.fait = true;
+gr.efface = true;
+particules('poussiere', el.x + el.w / 2, el.y + el.h / 2, 24, couleur(el, '#B8B8C0'));
+o.envoie({ type: 'gratte', element: el.id });
+}
+}
+function peintGrattage(gr) {
+var el = gr.el, x = gr.toile.getContext('2d'), v = visuel(el), im = img(v.image);
+x.setTransform(2, 0, 0, 2, 0, 0);
+x.clearRect(0, 0, el.w, el.h);
+if (gr.fait) { gr.fond = 0; return; }
+var dg = x.createLinearGradient(0, 0, el.w, el.h);
+dg.addColorStop(0, v.fill || '#B8B8C0'); dg.addColorStop(0.5, '#E4E4EA'); dg.addColorStop(1, v.fill || '#9C9CA6');
+x.fillStyle = dg;
+x.fillRect(0, 0, el.w, el.h);
+if (im) { try { x.drawImage(im, 0, 0, el.w, el.h); } catch (e) {} }
+else {
+x.fillStyle = 'rgba(255,255,255,0.35)';
+for (var i = 0; i < el.w * el.h / 90; i++) x.fillRect(Math.random() * el.w, Math.random() * el.h, 1.2, 1.2);
+}
+if (el.label) {
+x.fillStyle = v.ink || 'rgba(40,40,48,0.7)';
+x.font = '600 ' + Math.max(11, Math.round(Math.min(el.h * 0.22, 22))) + 'px system-ui, sans-serif';
+x.textAlign = 'center'; x.textBaseline = 'middle';
+x.fillText(el.label, el.w / 2, el.h / 2);
+}
+}
+function particules(effet, x, y, nb, c) {
+if (o.calme()) nb = Math.min(nb, 6);
+for (var i = 0; i < nb && parts.length < 1600; i++) parts.push(cbParticule(effet, x + cbAlea(-4, 4), y + cbAlea(-4, 4), c));
+demarre();
+}
+function dessineParticule(g, q) {
+var f = q.vie / q.max, al = q.a0 * (f < 0.7 ? 1 : 1 - (f - 0.7) / 0.3), t = Math.max(0.3, q.t + q.dt * q.vie);
+var im = p.fx && p.fx.images ? img(p.fx.images[q.effet]) : null;
+g.globalAlpha = Math.max(0, Math.min(1, al));
+if (im) {
+g.save(); g.translate(q.x, q.y); g.rotate(q.rot);
+var s = t * 3;
+try { g.drawImage(im, -s / 2, -s / 2, s, s); } catch (e) {}
+g.restore(); return;
+}
+g.fillStyle = q.c; g.strokeStyle = q.c;
+switch (q.forme) {
+case 'trait':
+g.lineWidth = Math.max(1, t * 0.6); g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.vx * 0.03, q.y - q.vy * 0.03); g.stroke(); break;
+case 'rect':
+g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.scale(1, Math.abs(Math.cos(q.rot * 1.7)) + 0.15); g.fillRect(-t / 2, -t * 0.3, t, t * 0.6); g.restore(); break;
+case 'goutte':
+g.beginPath(); g.ellipse(q.x, q.y, t * 0.45, t * 0.7, Math.atan2(q.vy, q.vx) + Math.PI / 2, 0, Math.PI * 2); g.fill(); break;
+case 'bulle':
+g.lineWidth = 1.2; g.beginPath(); g.arc(q.x, q.y, t, 0, Math.PI * 2); g.stroke();
+g.globalAlpha *= 0.5; g.beginPath(); g.arc(q.x - t * 0.35, q.y - t * 0.35, t * 0.25, 0, Math.PI * 2); g.fill(); break;
+case 'etoile':
+g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.beginPath();
+for (var k = 0; k < 10; k++) { var rr = k % 2 ? t * 0.42 : t, an = k * Math.PI / 5 - Math.PI / 2; g.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+g.closePath(); g.fill(); g.restore(); break;
+case 'coeur':
+g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.scale(t / 10, t / 10); g.beginPath();
+g.moveTo(0, 3); g.bezierCurveTo(-10, -4, -5, -11, 0, -6); g.bezierCurveTo(5, -11, 10, -4, 0, 3); g.fill(); g.restore(); break;
+default:
+g.beginPath(); g.arc(q.x, q.y, t, 0, Math.PI * 2); g.fill();
+}
+}
+function cibleAnim(id) {
+if (!id) return o.racine;
+var nd = o.noeuds()[id];
+return nd ? nd.ani : null;
+}
+function animer(id, effet, duree, fois, fin) {
+if (o.calme() && effet !== 'apparition' && effet !== 'disparition') { if (fin) fin(); return null; }
+var el = id ? cbElement(p, id) : null;
+return cbJoueAnim(cibleAnim(id), cbDefAnim(el, effet), duree, fois, fin);
+}
+function lanceBoucles() {
+for (var i = 0; i < boucles.length; i++) { try { boucles[i].cancel(); } catch (e) {} }
+boucles = [];
+if (o.edition() || o.calme()) return;
+for (var k = 0; k < p.elements.length; k++) {
+var el = p.elements[k];
+if (el.boucle) { var a = animer(el.id, el.boucle, 0, 0); if (a) boucles.push(a); }
+(el.anims || []).forEach(function (an) {
+if (an.auDebut) { var b = animer(el.id, 'perso:' + an.id, 0, -1); if (b) boucles.push(b); }
+});
+}
+}
+function visibilite(el, n, cachee) {
+var avant = n.getAttribute('data-cb-cache') === '1';
+if (avant === cachee) { if (!n.__cbAnim) n.style.display = cachee ? 'none' : ''; return; }
+n.setAttribute('data-cb-cache', cachee ? '1' : '0');
+var tr = el.transition, nd = o.noeuds()[el.id];
+if (!tr || o.calme() || !nd || n.__cbPremier !== true) { n.__cbPremier = true; n.style.display = cachee ? 'none' : ''; return; }
+var eff = cachee ? { fondu: 'disparition', zoom: 'disparition', glisse: 'disparition', chute: 'disparition', tournoie: 'tournoiement' }[tr]
+: { fondu: 'apparition', zoom: 'apparition', glisse: 'glisseGauche', chute: 'chute', tournoie: 'apparition' }[tr];
+if (!cachee) n.style.display = '';
+n.__cbAnim = true;
+animer(el.id, eff, 0, 1, function () {
+n.__cbAnim = false;
+if (n.getAttribute('data-cb-cache') === '1') n.style.display = 'none';
+try { if (nd.ani.getAnimations) nd.ani.getAnimations().forEach(function (a) { if (a.effect && a.effect.getComputedTiming && a.playState === 'finished') a.cancel(); }); } catch (e) {}
+});
+}
+function effets(liste) {
+for (var i = 0; i < liste.length; i++) {
+var f = liste[i], b = f.element ? corps[f.element] : null, el = f.element ? cbElement(p, f.element) : null;
+switch (f.type) {
+case 'animer': animer(f.element, f.effet, f.duree, f.fois); break;
+case 'particules': {
+var x = p.board.w / 2, y = p.board.h / 2;
+if (b) { x = b.x; y = b.y; } else if (el) { x = el.x + el.w / 2; y = el.y + el.h / 2; }
+particules(f.effet, x, y, f.quantite, f.couleur);
+break;
+}
+case 'impulsion':
+if (b && !b.fige) {
+var an = f.angle * Math.PI / 180, v = f.force * PAS;
+b.px = b.x - (b.x - b.px) - Math.cos(an) * v; b.py = b.y - (b.y - b.py) - Math.sin(an) * v;
+b.calme = 0; b.repos = false; demarre();
+}
+break;
+case 'gravite': {
+var dirs = { bas: [0, 1], haut: [0, -1], gauche: [-1, 0], droite: [1, 0], aucune: [0, 0] }, dv = dirs[f.mode] || [0, 1];
+gravite = { x: dv[0], y: dv[1] }; force = f.force;
+for (var k in corps) { corps[k].calme = 0; corps[k].repos = false; }
+demarre();
+break;
+}
+case 'figer': if (b) { b.fige = f.fige; if (!f.fige) { b.px = b.x; b.py = b.y; b.calme = 0; b.repos = false; } demarre(); } break;
+case 'couper':
+for (var c = 0; c < cordes.length; c++) if (cordes[c].el.id === f.element) { cordes[c].coupe[Math.floor(cordes[c].pts.length / 2)] = true; cordes[c].faite = true; }
+demarre();
+break;
+case 'casser': if (cassables[f.element]) casse(cassables[f.element], null); break;
+case 'remplir': {
+var r = recipients[f.element];
+if (r) { r.remplit = { de: r.niveau, a: f.niveau / 100, t: 0, duree: Math.max(0.05, f.duree) }; r.vise = f.niveau / 100; r.envoye = Math.round(f.niveau); demarre(); }
+break;
+}
+default: break;
+}
+}
+}
+function casse(ca, impact) {
+if (ca.casse) return;
+ca.casse = true;
+var el = ca.el, ix = impact ? Math.max(4, Math.min(el.w - 4, impact.x - el.x)) : el.w / 2, iy = impact ? Math.max(4, Math.min(el.h - 4, impact.y - el.y)) : el.h / 2;
+var tex = apercu(el, el.w, el.h), morceaux = cbEclats(el.w, el.h, ix, iy, el.eclats);
+for (var i = 0; i < morceaux.length; i++) {
+var m = morceaux[i], cx = (m[0].x + m[1].x + m[2].x) / 3, cy = (m[0].y + m[1].y + m[2].y) / 3;
+var dx = cx - ix, dy = cy - iy, l = Math.sqrt(dx * dx + dy * dy) || 1, v = cbAlea(120, 380);
+debris.push({ poly: m.map(function (q) { return { x: q.x - cx, y: q.y - cy }; }), x: el.x + cx, y: el.y + cy,
+vx: dx / l * v, vy: dy / l * v - 160, rot: 0, vrot: cbAlea(-9, 9), vie: 0, max: 1.6, tex: tex, ox: cx, oy: cy });
+}
+particules('poussiere', el.x + ix, el.y + iy, 14, el.etats[0].visuel.fill || '#C9B79C');
+if (ca.n) ca.n.style.visibility = 'hidden';
+o.envoie({ type: 'casse', element: el.id });
+demarre();
+}
+function toucheCassable(el, e) {
+var ca = cassables[el.id];
+if (!ca || ca.casse || o.edition() || o.fini()) return;
+ca.coups++;
+var q = point(e);
+if (ca.coups >= el.resistance) casse(ca, q);
+else {
+ca.fissures.push({ x: q.x - el.x, y: q.y - el.y, seed: Math.random() });
+animer(el.id, 'vibration', 0, 1);
+particules('poussiere', q.x, q.y, 5, el.etats[0].visuel.fill || '#C9B79C');
+}
+}
+function bords() { return p.board.bords || 'tous'; }
+function contact(b, nx, ny, prof, autre, rebond) {
+b.x += nx * prof; b.y += ny * prof;
+var vx = b.x - b.px, vy = b.y - b.py, vn = vx * nx + vy * ny;
+if (vn < 0) {
+var e = Math.max(b.rebond, rebond || 0), frot = b.frot;
+var tx = vx - vn * nx, ty = vy - vn * ny;
+vx = tx * (1 - frot * 0.35) - vn * e * nx; vy = ty * (1 - frot * 0.35) - vn * e * ny;
+b.px = b.x - vx; b.py = b.y - vy;
+var vitesse = -vn / PAS;
+if (vitesse > 140) choc(b, autre, vitesse);
+}
+}
+var chocsRecents = {};
+function choc(b, autre, vitesse) {
+var cle = b.el.id + '>' + (autre || '');
+if (chocsRecents[cle] && horloge - chocsRecents[cle] < 0.25) return;
+chocsRecents[cle] = horloge;
+if (vitesse > 380 && o.son) o.son('interact');
+if (autre && cassables[autre]) {
+var ca = cassables[autre];
+if (!ca.casse && ca.el.impact > 0 && vitesse >= ca.el.impact) casse(ca, { x: b.x, y: b.y });
+}
+o.envoie({ type: 'choc', element: b.el.id, autre: autre || '', force: Math.round(vitesse) });
+}
+function collisionObb(b, s) {
+var ca = Math.cos(s.a), sa = Math.sin(s.a), dx = b.x - s.cx, dy = b.y - s.cy;
+var lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca, hw = s.w / 2, hh = s.h / 2;
+if (b.rond) {
+var qx = Math.max(-hw, Math.min(hw, lx)), qy = Math.max(-hh, Math.min(hh, ly)), ex = lx - qx, ey = ly - qy, d2 = ex * ex + ey * ey;
+if (d2 > b.r * b.r) return;
+var nlx, nly, prof;
+if (d2 > 1e-6) { var d = Math.sqrt(d2); nlx = ex / d; nly = ey / d; prof = b.r - d; }
+else {
+var ox = hw - Math.abs(lx), oy = hh - Math.abs(ly);
+if (ox < oy) { nlx = lx < 0 ? -1 : 1; nly = 0; prof = ox + b.r; } else { nlx = 0; nly = ly < 0 ? -1 : 1; prof = oy + b.r; }
+}
+contact(b, nlx * ca - nly * sa, nlx * sa + nly * ca, prof, s.el.id, s.rebond);
+return;
+}
+var axes = [[1, 0], [0, 1], [ca, sa], [-sa, ca]], best = 1e9, bn = null;
+var coinsB = [[b.x - b.w / 2, b.y - b.h / 2], [b.x + b.w / 2, b.y - b.h / 2], [b.x + b.w / 2, b.y + b.h / 2], [b.x - b.w / 2, b.y + b.h / 2]];
+var coinsS = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(function (c) { return [s.cx + c[0] * ca - c[1] * sa, s.cy + c[0] * sa + c[1] * ca]; });
+for (var i = 0; i < 4; i++) {
+var ax = axes[i], a1 = 1e9, a2 = -1e9, b1 = 1e9, b2 = -1e9;
+for (var k = 0; k < 4; k++) {
+var pa = coinsB[k][0] * ax[0] + coinsB[k][1] * ax[1], pb = coinsS[k][0] * ax[0] + coinsS[k][1] * ax[1];
+a1 = Math.min(a1, pa); a2 = Math.max(a2, pa); b1 = Math.min(b1, pb); b2 = Math.max(b2, pb);
+}
+var o1 = a2 - b1, o2 = b2 - a1;
+if (o1 <= 0 || o2 <= 0) return;
+if (o1 < best) { best = o1; bn = [-ax[0], -ax[1]]; }
+if (o2 < best) { best = o2; bn = [ax[0], ax[1]]; }
+}
+if (bn) contact(b, bn[0], bn[1], best, s.el.id, s.rebond);
+}
+function collisionCorps(a, b) {
+var nx, ny, prof;
+if (a.rond && b.rond) {
+var dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, r = a.r + b.r;
+if (d2 >= r * r || d2 < 1e-9) return;
+var d = Math.sqrt(d2); nx = dx / d; ny = dy / d; prof = r - d;
+} else {
+var aw = a.rond ? a.r : a.w / 2, ah = a.rond ? a.r : a.h / 2, bw = b.rond ? b.r : b.w / 2, bh = b.rond ? b.r : b.h / 2;
+var ox = aw + bw - Math.abs(b.x - a.x), oy = ah + bh - Math.abs(b.y - a.y);
+if (ox <= 0 || oy <= 0) return;
+if (ox < oy) { nx = b.x > a.x ? 1 : -1; ny = 0; prof = ox; } else { nx = 0; ny = b.y > a.y ? 1 : -1; prof = oy; }
+}
+var ia = a.fige || a.tenu ? 0 : a.inv, ib = b.fige || b.tenu ? 0 : b.inv, somme = ia + ib;
+if (!somme) return;
+var va = { x: a.x - a.px, y: a.y - a.py }, vb = { x: b.x - b.px, y: b.y - b.py };
+a.x -= nx * prof * ia / somme; a.y -= ny * prof * ia / somme;
+b.x += nx * prof * ib / somme; b.y += ny * prof * ib / somme;
+var rel = (vb.x - va.x) * nx + (vb.y - va.y) * ny;
+if (rel < 0) {
+var e = Math.max(a.rebond, b.rebond), j = -(1 + e) * rel / somme;
+a.px = a.x - (va.x - j * ia * nx); a.py = a.y - (va.y - j * ia * ny);
+b.px = b.x - (vb.x + j * ib * nx); b.py = b.y - (vb.y + j * ib * ny);
+if (-rel / PAS > 140) { choc(a, b.el.id, -rel / PAS); choc(b, a.el.id, -rel / PAS); }
+}
+}
+function pas(dt) {
+horloge += dt;
+var gx = gravite.x * force * 1400 * dt * dt, gy = gravite.y * force * 1400 * dt * dt, et = o.etat(), k, b;
+var W = p.board.w, H = p.board.h, bd = bords();
+for (k in corps) {
+b = corps[k];
+if (b.sorti || cache(b.el)) continue;
+if (b.tenu) {
+var tx = b.tenu.x + b.tenu.dx, ty = b.tenu.y + b.tenu.dy;
+b.px = b.x; b.py = b.y;
+b.x += (tx - b.x) * 0.45; b.y += (ty - b.y) * 0.45;
+continue;
+}
+if (b.fige) { b.px = b.x; b.py = b.y; continue; }
+var vx = (b.x - b.px) * 0.999, vy = (b.y - b.py) * 0.999;
+b.px = b.x; b.py = b.y;
+b.x += vx + gx; b.y += vy + gy;
+if (b.rond) b.rot += vx / Math.max(4, b.r);
+}
+for (var c = 0; c < cordes.length; c++) {
+var pts = cordes[c].pts;
+for (var i = 1; i < pts.length; i++) {
+var q = pts[i], qvx = (q.x - q.px) * 0.985, qvy = (q.y - q.py) * 0.985;
+q.px = q.x; q.py = q.y; q.x += qvx + gx; q.y += qvy + gy;
+}
+}
+for (var it = 0; it < 8; it++) {
+for (c = 0; c < cordes.length; c++) contraintCorde(cordes[c]);
+for (var r = 0; r < ressorts.length; r++) contraintRessort(ressorts[r], it);
+var liste = [];
+for (k in corps) { b = corps[k]; if (!b.sorti && !cache(b.el)) liste.push(b); }
+for (var a = 0; a < liste.length; a++) {
+b = liste[a];
+if (b.fige || b.tenu) continue;
+for (var s = 0; s < statiques.length; s++) if (!cache(statiques[s].el)) collisionObb(b, statiques[s]);
+for (var cs in cassables) {
+var ca = cassables[cs];
+if (ca.casse || cache(ca.el)) continue;
+collisionObb(b, { el: ca.el, cx: ca.el.x + ca.el.w / 2, cy: ca.el.y + ca.el.h / 2, w: ca.el.w, h: ca.el.h, a: 0, rebond: 0.15 });
+}
+var rx = b.rond ? b.r : b.w / 2, ry = b.rond ? b.r : b.h / 2;
+if (bd !== 'aucun') {
+if (b.y + ry > H) contact(b, 0, -1, b.y + ry - H, '', 0);
+if (bd === 'tous') {
+if (b.x - rx < 0) contact(b, 1, 0, rx - b.x, '', 0);
+if (b.x + rx > W) contact(b, -1, 0, b.x + rx - W, '', 0);
+if (b.y - ry < 0) contact(b, 0, 1, ry - b.y, '', 0);
+}
+}
+}
+for (var u = 0; u < liste.length; u++) for (var v2 = u + 1; v2 < liste.length; v2++) collisionCorps(liste[u], liste[v2]);
+}
+for (k in corps) {
+b = corps[k];
+if (b.sorti || cache(b.el)) continue;
+var vit = Math.sqrt((b.x - b.px) * (b.x - b.px) + (b.y - b.py) * (b.y - b.py)) / dt;
+if (b.y > H + 200 || b.y < -400 || b.x < -300 || b.x > W + 300) {
+b.sorti = true;
+if (b.n) b.n.style.visibility = 'hidden';
+o.envoie({ type: 'sortie', element: b.el.id });
+continue;
+}
+if (vit < 10 && !b.tenu) { b.calme += dt; if (b.calme > 0.5 && !b.repos) { b.repos = true; o.envoie({ type: 'repos', element: b.el.id }); } }
+else if (vit > 40) { b.calme = 0; b.repos = false; }
+var z = '';
+for (var e2 = 0; e2 < p.elements.length; e2++) {
+var zz = p.elements[e2];
+if (zz.genre !== 'zone' || et.caches[zz.id]) continue;
+if (b.x >= zz.x && b.x <= zz.x + zz.w && b.y >= zz.y && b.y <= zz.y + zz.h) z = zz.id;
+}
+if (z !== b.zone && !b.tenu && (z === '' || vit < 160)) { b.zone = z; o.envoie({ type: 'depot', element: b.el.id, zone: z }); }
+}
+pasRecipients(dt);
+pasEmetteurs(dt);
+}
+function contraintCorde(c) {
+var pts = c.pts, n = pts.length, b = c.corps;
+pts[0].x = c.el.x + c.el.w / 2; pts[0].y = c.el.y;
+for (var i = 0; i < n - 1; i++) {
+if (c.coupe[i]) continue;
+var a = pts[i], q = pts[i + 1], dx = q.x - a.x, dy = q.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 0.001, diff = (d - c.l) / d;
+if (d < c.l) continue;
+var wa = i === 0 ? 0 : 1, wb = 1, s = wa + wb;
+a.x += dx * diff * wa / s; a.y += dy * diff * wa / s;
+q.x -= dx * diff * wb / s; q.y -= dy * diff * wb / s;
+}
+if (b && !b.sorti) {
+var der = pts[n - 1], relie = true;
+for (var k = 0; k < n - 1; k++) if (c.coupe[k]) relie = false;
+var lien = c.coupe[n - 1] ? false : true;
+if (lien) {
+var ib = b.fige || b.tenu ? 0 : b.inv * 0.25, ip = 1, sm = ib + ip;
+var ex = b.x - der.x, ey = b.y - der.y;
+der.x += ex * ip / sm; der.y += ey * ip / sm;
+b.x -= ex * ib / sm; b.y -= ey * ib / sm;
+}
+c.relie = relie;
+}
+}
+function contraintRessort(r, it) {
+var b = r.corps;
+if (!b || b.sorti || b.fige || b.tenu) return;
+var dx = b.x - r.ax, dy = b.y - r.ay, d = Math.sqrt(dx * dx + dy * dy) || 0.001, k = r.el.raideur / 100;
+var diff = (d - r.l) / d * k * 0.5;
+b.x -= dx * diff; b.y -= dy * diff;
+if (it === 0 && r.el.amortissement > 0) {
+var vx = b.x - b.px, vy = b.y - b.py, f = 1 - r.el.amortissement * 0.08;
+b.px = b.x - vx * f; b.py = b.y - vy * f;
+}
+}
+function surfaceLiquide(r) {
+var el = r.el, a = r.angle * Math.PI / 180, gx = Math.sin(a), gy = Math.cos(a);
+var rect = [{ x: 0, y: 0 }, { x: el.w, y: 0 }, { x: el.w, y: el.h }, { x: 0, y: el.h }];
+var projs = rect.map(function (q) { return q.x * gx + q.y * gy; });
+var lo = Math.min.apply(null, projs), hi = Math.max.apply(null, projs), cible = r.niveau * el.w * el.h;
+for (var i = 0; i < 26; i++) {
+var mid = (lo + hi) / 2, ai = cbAire(cbCoupeDemiPlan(rect, gx, gy, mid));
+if (ai > cible) lo = mid; else hi = mid;
+}
+var bord = Math.max(0 * gx + 0 * gy, el.w * gx + 0 * gy);
+return { gx: gx, gy: gy, s: (lo + hi) / 2, rect: rect, bord: bord, maxAire: cbAire(cbCoupeDemiPlan(rect, gx, gy, bord)) };
+}
+function pasRecipients(dt) {
+for (var k in recipients) {
+var r = recipients[k], el = r.el;
+if (cache(el)) continue;
+if (!r.tenu) r.angle += (0 - r.angle) * Math.min(1, dt * 5);
+if (r.remplit) {
+r.remplit.t += dt;
+var f = Math.min(1, r.remplit.t / r.remplit.duree);
+r.niveau = r.remplit.de + (r.remplit.a - r.remplit.de) * f;
+r.onde = Math.max(r.onde, 3);
+if (f >= 1) r.remplit = null;
+if (Math.random() < 0.6 && r.remplit) parts.push(goutte(el.x + el.w / 2 + cbAlea(-3, 3), el.y - 30, couleurLiquide(el), null, 0, 260));
+}
+r.onde = Math.max(0, r.onde * (1 - dt * 1.4) + Math.abs(r.va) * 0.02);
+if (Math.abs(r.angle) > 8 && r.niveau > 0) {
+var sf = surfaceLiquide(r), aire = r.niveau * el.w * el.h;
+if (aire > sf.maxAire + 1) {
+var fuite = Math.min(aire - sf.maxAire, el.w * el.h * dt * 0.6);
+r.niveau = Math.max(0, (aire - fuite) / (el.w * el.h));
+var nbG = Math.max(1, Math.round(fuite / 40));
+var lip = monde2plateau(r, r.angle > 0 ? el.w : 0, 0);
+for (var g = 0; g < nbG; g++) parts.push(goutte(lip.x, lip.y, couleurLiquide(el), k, fuite / nbG, 0, r.angle > 0 ? 1 : -1));
+r.onde = Math.max(r.onde, 2);
+}
+}
+var pc = Math.round(r.niveau * 100);
+if (!r.remplit && pc !== r.envoye && (horloge - r.dernierEnvoi > 0.12 || !r.tenu)) {
+r.envoye = pc; r.dernierEnvoi = horloge;
+o.envoie({ type: 'niveau', element: el.id, niveau: pc });
+}
+}
+}
+function couleurLiquide(el) { return el.couleur || '#5FB4F0'; }
+function goutte(x, y, c, source, volume, vy, sens) {
+var q = cbParticule('gouttes', x, y, c);
+q.vx = (sens || 0) * cbAlea(30, 90) + cbAlea(-15, 15); q.vy = vy || cbAlea(0, 40); q.max = 3; q.source = source; q.volume = volume || 0; q.liquide = true;
+return q;
+}
+function monde2plateau(r, lx, ly) {
+var el = r.el, a = r.angle * Math.PI / 180, ox = el.w / 2, oy = el.h;
+var dx = lx - ox, dy = ly - oy;
+return { x: el.x + ox + dx * Math.cos(a) - dy * Math.sin(a), y: el.y + oy + dx * Math.sin(a) + dy * Math.cos(a) };
+}
+function recoit(q) {
+for (var k in recipients) {
+var r = recipients[k], el = r.el;
+if (k === q.source || cache(el) || Math.abs(r.angle) > 30) continue;
+if (q.x >= el.x && q.x <= el.x + el.w && q.y >= el.y - 4 && q.y <= el.y + el.h * 0.5) {
+r.niveau = Math.min(1, r.niveau + q.volume / (el.w * el.h));
+r.onde = Math.max(r.onde, 1.5);
+return true;
+}
+}
+return false;
+}
+function pasEmetteurs(dt) {
+for (var i = 0; i < emetteurs.length; i++) {
+var em = emetteurs[i], el = em.el;
+if (cache(el) || !el.debit) continue;
+em.reste += el.debit * dt;
+while (em.reste >= 1) { em.reste -= 1; if (parts.length < 1600) parts.push(cbParticule(el.effet, el.x + el.w / 2 + cbAlea(-el.w / 3, el.w / 3), el.y + el.h / 2 + cbAlea(-el.h / 4, el.h / 4), el.couleur || '')); }
+}
+}
+function dessineCorde(g, c) {
+var pts = c.pts, el = c.el, style = el.style || 'corde', col = el.couleur || (style === 'chaine' ? '#9AA0AA' : style === 'liane' ? '#4E8A3A' : style === 'fil' ? '#E9E6DD' : '#A97C50');
+if (cache(el)) return;
+var morceaux = [], cur = [pts[0]];
+for (var i = 0; i < pts.length - 1; i++) {
+if (c.coupe[i]) { morceaux.push(cur); cur = [pts[i + 1]]; } else cur.push(pts[i + 1]);
+}
+morceaux.push(cur);
+var tex = img(el.texture);
+for (var m = 0; m < morceaux.length; m++) {
+var l = morceaux[m];
+if (l.length < 2) continue;
+if (style === 'chaine') {
+for (var k = 0; k < l.length - 1; k++) {
+var a = l[k], b = l[k + 1], an = Math.atan2(b.y - a.y, b.x - a.x), d = Math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+g.save(); g.translate((a.x + b.x) / 2, (a.y + b.y) / 2); g.rotate(an);
+g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath(); g.ellipse(0, 0, d / 2 + 2, k % 2 ? 1.6 : 4, 0, 0, Math.PI * 2); g.stroke(); g.restore();
+}
+continue;
+}
+g.lineCap = 'round'; g.lineJoin = 'round';
+var trace = function () {
+g.beginPath(); g.moveTo(l[0].x, l[0].y);
+for (var k2 = 1; k2 < l.length - 1; k2++) g.quadraticCurveTo(l[k2].x, l[k2].y, (l[k2].x + l[k2 + 1].x) / 2, (l[k2].y + l[k2 + 1].y) / 2);
+g.lineTo(l[l.length - 1].x, l[l.length - 1].y);
+};
+var ep = style === 'fil' ? 1.5 : style === 'liane' ? 6 : 4.5;
+g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = ep + 2; trace(); g.stroke();
+g.strokeStyle = tex ? g.createPattern(tex, 'repeat') : col; g.lineWidth = ep; trace(); g.stroke();
+if (style === 'corde' && !tex) { g.strokeStyle = 'rgba(255,255,255,0.18)'; g.lineWidth = 1.2; g.setLineDash([3, 4]); trace(); g.stroke(); g.setLineDash([]); }
+if (style === 'liane') {
+g.fillStyle = '#6FB05A';
+for (var f = 2; f < l.length; f += 3) { g.beginPath(); g.ellipse(l[f].x + 5, l[f].y, 5, 2.5, 0.6, 0, Math.PI * 2); g.fill(); }
+}
+}
+g.fillStyle = '#585E6B'; g.beginPath(); g.arc(pts[0].x, pts[0].y, 4, 0, Math.PI * 2); g.fill();
+}
+function dessineRessort(g, r) {
+if (cache(r.el)) return;
+var bx = r.corps && !r.corps.sorti ? r.corps.x : r.ax, by = r.corps && !r.corps.sorti ? r.corps.y : r.ay + r.l;
+var dx = bx - r.ax, dy = by - r.ay, d = Math.sqrt(dx * dx + dy * dy) || 1, nx = -dy / d, ny = dx / d, tours = 12, larg = Math.min(14, r.el.w / 2);
+g.strokeStyle = r.el.couleur || '#C9CCD6'; g.lineWidth = 2.5; g.lineJoin = 'round'; g.beginPath(); g.moveTo(r.ax, r.ay);
+for (var i = 1; i < tours * 2; i++) {
+var f = i / (tours * 2), s = i % 2 ? 1 : -1;
+g.lineTo(r.ax + dx * f + nx * larg * s, r.ay + dy * f + ny * larg * s);
+}
+g.lineTo(bx, by); g.stroke();
+g.fillStyle = '#585E6B'; g.beginPath(); g.arc(r.ax, r.ay, 4, 0, Math.PI * 2); g.fill();
+}
+function dessinePapier(pa) {
+var el = pa.el, c = pa.toile;
+if (!c) return;
+var g = c.getContext('2d'), v = visuel(el), im = img(v.image);
+g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, el.w, el.h);
+if (!pa.poly.length) return;
+var trace = function () { g.beginPath(); g.moveTo(pa.poly[0].x, pa.poly[0].y); for (var i = 1; i < pa.poly.length; i++) g.lineTo(pa.poly[i].x, pa.poly[i].y); g.closePath(); };
+g.save(); g.shadowColor = 'rgba(0,0,0,0.35)'; g.shadowBlur = 6; g.shadowOffsetY = 2; trace(); g.fillStyle = v.fill || '#EFE6D2'; g.fill(); g.restore();
+g.save(); trace(); g.clip();
+if (im) { try { g.drawImage(im, 0, 0, el.w, el.h); } catch (e) {} }
+else {
+g.fillStyle = 'rgba(120,100,70,0.06)';
+for (var y = 6; y < el.h; y += 12) g.fillRect(0, y, el.w, 1);
+}
+if (el.label) {
+g.fillStyle = v.ink || 'rgba(60,50,40,0.75)'; g.font = '600 ' + Math.max(11, Math.round(Math.min(el.h * 0.2, 22))) + 'px Georgia, serif';
+g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(el.label, el.w / 2, el.h / 2);
+}
+g.restore();
+g.strokeStyle = 'rgba(255,255,255,0.85)'; g.lineWidth = 1.6;
+for (var k = 0; k < pa.poly.length; k++) {
+var a = pa.poly[k], b = pa.poly[(k + 1) % pa.poly.length];
+if (!(a.fibre && b.fibre)) continue;
+g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+}
+}
+function dessineRecipient(r) {
+var el = r.el, c = r.toile;
+if (!c) return;
+var g = c.getContext('2d');
+g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, el.w, el.h);
+var sf = surfaceLiquide(r), poly = cbCoupeDemiPlan(sf.rect, sf.gx, sf.gy, sf.s);
+if (r.n) { r.n.style.transformOrigin = '50% 100%'; }
+if (poly.length >= 3 && r.niveau > 0.002) {
+var amp = Math.min(6, 0.8 + r.onde), out = [];
+for (var i = 0; i < poly.length; i++) {
+var a = poly[i], b = poly[(i + 1) % poly.length];
+out.push(a);
+if (a.surface && b.surface) {
+for (var s = 1; s < 12; s++) {
+var f = s / 12, x = a.x + (b.x - a.x) * f, y = a.y + (b.y - a.y) * f, w = Math.sin(x * 0.09 + horloge * 3.2) * amp * 0.6 + Math.sin(x * 0.17 - horloge * 4.1) * amp * 0.4;
+out.push({ x: x - sf.gx * w, y: y - sf.gy * w });
+}
+}
+}
+var col = couleurLiquide(el), dg = g.createLinearGradient(0, 0, 0, el.h);
+dg.addColorStop(0, col); dg.addColorStop(1, 'rgba(0,0,0,0.35)');
+g.beginPath(); g.moveTo(out[0].x, out[0].y); for (var k = 1; k < out.length; k++) g.lineTo(out[k].x, out[k].y); g.closePath();
+g.globalAlpha = 0.85; g.fillStyle = col; g.fill(); g.globalAlpha = 0.5; g.fillStyle = dg; g.fill(); g.globalAlpha = 1;
+}
+if (!visuel(el).image) {
+g.strokeStyle = 'rgba(230,240,255,0.75)'; g.lineWidth = 3;
+g.beginPath(); g.moveTo(1.5, 0); g.lineTo(1.5, el.h - 1.5); g.lineTo(el.w - 1.5, el.h - 1.5); g.lineTo(el.w - 1.5, 0); g.stroke();
+g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(6, 4, Math.max(3, el.w * 0.08), el.h - 12);
+}
+}
+function dessineCassable(ca) {
+if (!ca.n || ca.casse || !ca.fissures.length) return;
+var c = ca.c;
+if (!c) { c = document.createElement('canvas'); c.className = 'pz-cb-toile'; c.width = ca.el.w * 2; c.height = ca.el.h * 2; var nd = o.noeuds()[ca.el.id]; if (nd) nd.ani.appendChild(c); ca.c = c; }
+if (ca.nbF === ca.fissures.length) return;
+ca.nbF = ca.fissures.length;
+var g = c.getContext('2d');
+g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, ca.el.w, ca.el.h);
+g.strokeStyle = 'rgba(20,16,12,0.75)'; g.lineWidth = 1.4;
+for (var i = 0; i < ca.fissures.length; i++) {
+var f = ca.fissures[i];
+for (var b = 0; b < 5; b++) {
+var an = (b / 5 + f.seed) * Math.PI * 2, x = f.x, y = f.y;
+g.beginPath(); g.moveTo(x, y);
+for (var s = 0; s < 4; s++) { an += cbAlea(-0.5, 0.5); x += Math.cos(an) * cbAlea(5, 13); y += Math.sin(an) * cbAlea(5, 13); g.lineTo(x, y); }
+g.stroke();
+}
+}
+}
+function dessineDebris(g, d) {
+var f = d.vie / d.max;
+g.save(); g.globalAlpha = f > 0.6 ? 1 - (f - 0.6) / 0.4 : 1;
+g.translate(d.x, d.y); g.rotate(d.rot);
+g.beginPath(); g.moveTo(d.poly[0].x, d.poly[0].y); for (var i = 1; i < d.poly.length; i++) g.lineTo(d.poly[i].x, d.poly[i].y); g.closePath();
+g.save(); g.clip();
+try { g.drawImage(d.tex, -d.ox, -d.oy); } catch (e) {}
+g.restore();
+g.strokeStyle = d.papier ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.35)'; g.lineWidth = 1; g.stroke();
+g.restore();
+}
+function dessine() {
+gF.clearRect(0, 0, p.board.w, p.board.h);
+for (var r = 0; r < ressorts.length; r++) dessineRessort(gF, ressorts[r]);
+for (var c = 0; c < cordes.length; c++) dessineCorde(gF, cordes[c]);
+gX.clearRect(0, 0, p.board.w, p.board.h);
+for (var d = 0; d < debris.length; d++) dessineDebris(gX, debris[d]);
+gX.save();
+for (var i = 0; i < parts.length; i++) {
+var q = parts[i];
+gX.globalCompositeOperation = CB_PARTICULES[q.effet] && CB_PARTICULES[q.effet].additif ? 'lighter' : 'source-over';
+dessineParticule(gX, q);
+}
+gX.restore();
+gX.globalAlpha = 1; gX.globalCompositeOperation = 'source-over';
+var toutes = lame ? traces.concat([{ pts: lame.pts, fin: horloge }]) : traces;
+for (var t = 0; t < toutes.length; t++) {
+var tr = toutes[t], pts = tr.pts.filter(function (q2) { return horloge - q2.t < 0.25; });
+if (pts.length < 2) continue;
+gX.lineCap = 'round';
+for (var s = 1; s < pts.length; s++) {
+var vie = 1 - (horloge - pts[s].t) / 0.25;
+gX.strokeStyle = 'rgba(255,255,255,' + (vie * 0.9).toFixed(2) + ')'; gX.lineWidth = 1 + vie * 4;
+gX.beginPath(); gX.moveTo(pts[s - 1].x, pts[s - 1].y); gX.lineTo(pts[s].x, pts[s].y); gX.stroke();
+}
+}
+for (var k in papiers) dessinePapier(papiers[k]);
+for (var k2 in recipients) dessineRecipient(recipients[k2]);
+for (var k3 in cassables) dessineCassable(cassables[k3]);
+for (var k4 in grattages) {
+var gr = grattages[k4];
+if (gr.efface && gr.toile) { gr.fond = Math.max(0, gr.fond - 0.04); gr.toile.style.opacity = String(gr.fond); }
+}
+for (var b in corps) {
+var cp = corps[b];
+if (!cp.n) continue;
+cp.n.style.transform = 'translate(' + (cp.x - cp.w / 2).toFixed(1) + 'px,' + (cp.y - cp.h / 2).toFixed(1) + 'px)' + (cp.rond ? ' rotate(' + (cp.rot * 57.3).toFixed(1) + 'deg)' : '');
+cp.n.classList.toggle('is-tenu', !!cp.tenu);
+}
+for (var rr in recipients) {
+var rc = recipients[rr];
+if (rc.n) rc.n.style.transform = 'translate(' + rc.el.x + 'px,' + rc.el.y + 'px) rotate(' + rc.angle.toFixed(1) + 'deg)';
+}
+}
+function avanceEffets(dt) {
+var g2 = 900 * dt;
+for (var i = parts.length - 1; i >= 0; i--) {
+var q = parts[i];
+q.vie += dt;
+if (q.vie >= q.max) { parts.splice(i, 1); continue; }
+q.vx *= q.frein; q.vy = q.vy * q.frein + q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vrot * dt;
+if (q.liquide && q.volume && recoit(q)) { parts.splice(i, 1); continue; }
+if (q.liquide && q.y > p.board.h + 20) { parts.splice(i, 1); continue; }
+}
+for (var d = debris.length - 1; d >= 0; d--) {
+var de = debris[d];
+de.vie += dt;
+if (de.vie >= de.max) { debris.splice(d, 1); continue; }
+de.vy += g2; de.x += de.vx * dt; de.y += de.vy * dt; de.rot += de.vrot * dt;
+if (de.papier) { de.vx *= 0.98; de.vy *= 0.97; }
+}
+for (var t = traces.length - 1; t >= 0; t--) if (horloge - traces[t].fin > 0.3) traces.splice(t, 1);
+}
+function vivant() {
+if (parts.length || debris.length || lame || traces.length) return true;
+if (o.edition()) { for (var k0 in corps) return true; return cordes.length > 0 || ressorts.length > 0 || emetteurs.length > 0; }
+for (var k in corps) if (!corps[k].sorti && (!corps[k].repos || corps[k].tenu) && !corps[k].fige) return true;
+if (cordes.length || ressorts.length || emetteurs.length) return true;
+for (var r in recipients) return true;
+for (var g in grattages) if (grattages[g].efface && grattages[g].fond > 0) return true;
+return false;
+}
+function boucle(t) {
+raf = 0;
+if (eteint || !o.plateau.isConnected) return;
+var dt = dernier ? Math.min(0.05, (t - dernier) / 1000) : PAS;
+dernier = t;
+var ed = !!o.edition();
+if (ed !== edition) { edition = ed; o.refait(); return; }
+if (!ed) {
+reste += dt;
+var n = 0;
+while (reste >= PAS && n < 8) { pas(PAS); reste -= PAS; n++; }
+if (n >= 8) reste = 0;
+} else horloge += dt;
+avanceEffets(dt);
+dessine();
+if (vivant()) raf = requestAnimationFrame(boucle); else dernier = 0;
+}
+function demarre() {
+if (!raf && !eteint && typeof requestAnimationFrame !== 'undefined') { dernier = 0; raf = requestAnimationFrame(boucle); }
+}
+var edition = !!o.edition();
+installe();
+return {
+reinit: function () { edition = !!o.edition(); canevas(); construit(); },
+branche: function (el, n, ani) {
+monte(el, n, ani);
+if (el.genre === 'cassable') {
+n.addEventListener('click', function (e) { toucheCassable(el, e); });
+if (cassables[el.id] && cassables[el.id].casse) n.style.visibility = 'hidden';
+}
+},
+pret: function () { lanceBoucles(); for (var k in papiers) dessinePapier(papiers[k]); dessine(); demarre(); },
+pilote: function (el) { return el.genre === 'objet' || el.genre === 'recipient'; },
+visibilite: visibilite,
+effets: function (l) { effets(l || []); demarre(); },
+particules: particules,
+animer: animer,
+victoire: function () {
+var e = p.fx && p.fx.victoire;
+if (e && e !== 'aucun') {
+for (var i = 0; i < 4; i++) particules(e, p.board.w * (0.2 + i * 0.2), p.board.h * 0.75, 30);
+}
+},
+echec: function () {
+var e = p.fx && p.fx.echec;
+if (e && e !== 'aucun') animer('', e, 0, 1);
+},
+destroy: function () {
+eteint = true;
+if (raf && typeof cancelAnimationFrame !== 'undefined') cancelAnimationFrame(raf);
+for (var i = 0; i < boucles.length; i++) { try { boucles[i].cancel(); } catch (e) {} }
+},
+secoue: function () { demarre(); },
+};
+}
+var CB_TRANSITIONS = ['', 'fondu', 'zoom', 'glisse', 'chute', 'tournoie'];
+var CB_COURBES_IDS = ['lineaire', 'douce', 'acceleree', 'freinee', 'rebond', 'elastique'];
+function cbUn(v, liste, d) { return liste.indexOf(v) >= 0 ? v : d; }
+function cbNormAnim(a, i, pris) {
+var s = a && typeof a === 'object' ? a : {};
+var id = typeof s.id === 'string' && s.id ? s.id.slice(0, 16) : 'a' + (i + 1);
+while (pris[id]) id = id + '_';
+pris[id] = 1;
+return {
+id: id, nom: puzStr(s.nom, 'Animation ' + (i + 1)).slice(0, 30),
+duree: puzNum(s.duree, 1, 0.05, 60), fois: Math.round(puzNum(s.fois, 1, 0, 50)),
+courbe: cbUn(s.courbe, CB_COURBES_IDS, 'douce'), auDebut: !!s.auDebut,
+cles: (Array.isArray(s.cles) ? s.cles : []).slice(0, 16).map(function (k) {
+var c = k && typeof k === 'object' ? k : {};
+return { t: puzNum(c.t, 0, 0, 1), x: Math.round(puzNum(c.x, 0, -3000, 3000)), y: Math.round(puzNum(c.y, 0, -3000, 3000)),
+rot: puzNum(c.rot, 0, -7200, 7200), echelle: puzNum(c.echelle, 1, 0, 20), opacite: puzNum(c.opacite, 1, 0, 1) };
+}),
+};
+}
+function cbNormVivant(o, s) {
+var g = o.genre, pris = {};
+o.anims = (Array.isArray(s.anims) ? s.anims : []).slice(0, 8).map(function (a, i) { return cbNormAnim(a, i, pris); });
+var b = s.boucle;
+o.boucle = typeof b === 'string' && (CB_EFFETS[b] || (b.indexOf('perso:') === 0 && pris[b.slice(6)])) ? b : '';
+o.transition = cbUn(s.transition, CB_TRANSITIONS, '');
+if (g === 'objet') {
+o.forme = cbUn(s.forme, ['rond', 'boite'], 'rond');
+o.masse = puzNum(s.masse, 1, 0.1, 20);
+o.rebond = puzNum(s.rebond, 0.35, 0, 0.98);
+o.frottement = puzNum(s.frottement, 0.3, 0, 1);
+o.lancer = typeof s.lancer === 'boolean' ? s.lancer : true;
+o.fige = !!s.fige;
+}
+if (g === 'plateforme') { o.angle = puzNum(s.angle, 0, -85, 85); o.rebond = puzNum(s.rebond, 0.2, 0, 0.98); }
+if (g === 'corde' || g === 'ressort') { o.porte = typeof s.porte === 'string' ? s.porte.slice(0, 24) : ''; o.couleur = puzColor(s.couleur, ''); }
+if (g === 'corde') {
+o.segments = Math.round(puzNum(s.segments, 14, 3, 40));
+o.coupable = typeof s.coupable === 'boolean' ? s.coupable : true;
+o.style = cbUn(s.style, ['corde', 'chaine', 'fil', 'liane'], 'corde');
+o.texture = typeof s.texture === 'string' ? s.texture : '';
+}
+if (g === 'ressort') { o.raideur = puzNum(s.raideur, 30, 1, 100); o.amortissement = puzNum(s.amortissement, 0.15, 0, 1); }
+if (g === 'papier' || g === 'grattage') o.seuil = puzNum(s.seuil, g === 'papier' ? 50 : 60, 5, 100);
+if (g === 'grattage') o.pinceau = puzNum(s.pinceau, 18, 6, 60);
+if (g === 'cassable') {
+o.resistance = Math.round(puzNum(s.resistance, 1, 1, 20));
+o.impact = puzNum(s.impact, 500, 0, 5000);
+o.eclats = Math.round(puzNum(s.eclats, 10, 3, 30));
+}
+if (g === 'recipient') { o.niveau = puzNum(s.niveau, 0, 0, 100); o.inclinable = !!s.inclinable; o.couleur = puzColor(s.couleur, ''); }
+if (g === 'emetteur') { o.effet = cbUn(s.effet, Object.keys(CB_PARTICULES), 'fumee'); o.debit = puzNum(s.debit, 12, 0, 200); o.couleur = puzColor(s.couleur, ''); }
+return o;
+}
+function cbNormFx(f) {
+var s = f && typeof f === 'object' ? f : {}, im = s.images && typeof s.images === 'object' ? s.images : {}, images = {};
+for (var k in CB_PARTICULES) if (Object.prototype.hasOwnProperty.call(CB_PARTICULES, k) && typeof im[k] === 'string' && im[k]) images[k] = im[k];
+return {
+victoire: cbUn(s.victoire, ['aucun'].concat(Object.keys(CB_PARTICULES)), 'aucun'),
+echec: cbUn(s.echec, ['aucun'].concat(Object.keys(CB_EFFETS)), 'aucun'),
+images: images,
+};
+}
+function cbSeuil(v, op, s) {
+var a = cbNombre(v), b = cbNombre(s);
+if (isNaN(a) || isNaN(b)) return false;
+if (op === '\u2264') return a <= b;
+if (op === '=') return Math.round(a) === Math.round(b);
+return a >= b;
+}
+var CB_GENRE_DE = { ev_choc: 'objet', ev_repos: 'objet', ev_sortie: 'objet', a_impulsion: 'objet', a_figer: 'objet',
+ev_coupe: 'corde', a_couper: 'corde', ev_casse: 'cassable', a_casser: 'cassable', ev_dechire: 'papier', ev_gratte: 'grattage',
+ev_niveau: 'recipient', a_remplir: 'recipient', d_niveau: 'recipient' };
 function cbPort(type, sens, nom) {
 var d = CB_NOEUDS[type];
 var l = d ? (sens === 'in' ? d.entrees || [] : d.sorties || []) : [];
@@ -76632,7 +80664,7 @@ var sobre = genre === 'texte' || genre === 'compteur' || genre === 'zone';
 if (genre === 'molette' || genre === 'curseur' || genre === 'deplacable') sobre = 'uni';
 var pe = {}, etats = src.slice(0, 12).map(function (x, k) { return cbNormEtat(x, k, pe, sobre); });
 var initial = typeof s.initial === 'string' && pe[s.initial] ? s.initial : etats[0].id;
-return {
+return cbNormVivant({
 id: id, genre: genre,
 label: puzStr(s.label).slice(0, 60),
 x: Math.round(puzNum(s.x, 20, -2000, 4000)), y: Math.round(puzNum(s.y, 20, -2000, 4000)),
@@ -76644,7 +80676,7 @@ variable: typeof s.variable === 'string' ? s.variable : '',
 min: puzNum(s.min, 0, -1e6, 1e6), max: puzNum(s.max, 10, -1e6, 1e6), pas: puzNum(s.pas, 1, 0.001, 1e6),
 retour: typeof s.retour === 'boolean' ? s.retour : true,
 capacite: Math.round(puzNum(s.capacite, 1, 0, 60)),
-};
+}, s);
 }
 function cbNormVariable(v, i, pris) {
 var s = v && typeof v === 'object' ? v : {};
@@ -76694,10 +80726,11 @@ out.push({ de: l.de, sortie: l.sortie, vers: l.vers, entree: l.entree });
 return out;
 }
 function cbEtatInitial(p) {
-var e = { etats: {}, vars: {}, caches: {}, verrous: {}, places: {}, pos: {}, gagne: false };
+var e = { etats: {}, vars: {}, caches: {}, verrous: {}, places: {}, pos: {}, gagne: false, niveaux: {}, faits: {}, figes: {}, gravite: null };
 for (var i = 0; i < p.elements.length; i++) {
 var el = p.elements[i];
 e.etats[el.id] = el.initial;
+if (el.genre === 'recipient') e.niveaux[el.id] = el.niveau;
 if (el.cache) e.caches[el.id] = true;
 if (el.verrou) e.verrous[el.id] = true;
 }
@@ -76709,7 +80742,9 @@ var c = function (o) { var r = {}; for (var k in o) if (Object.prototype.hasOwnP
 var pos = {};
 for (var k in (e.pos || {})) if (Object.prototype.hasOwnProperty.call(e.pos, k)) pos[k] = { x: e.pos[k].x, y: e.pos[k].y };
 return { etats: c(e.etats || {}), vars: c(e.vars || {}), caches: c(e.caches || {}), verrous: c(e.verrous || {}),
-places: c(e.places || {}), pos: pos, gagne: !!e.gagne };
+places: c(e.places || {}), pos: pos, gagne: !!e.gagne,
+niveaux: c(e.niveaux || {}), faits: c(e.faits || {}), figes: c(e.figes || {}),
+gravite: e.gravite ? { x: e.gravite.x, y: e.gravite.y, force: e.gravite.force } : null };
 }
 function cbElement(p, id) { for (var i = 0; i < p.elements.length; i++) if (p.elements[i].id === id) return p.elements[i]; return null; }
 function cbVariable(p, id) { for (var i = 0; i < p.variables.length; i++) if (p.variables[i].id === id) return p.variables[i]; return null; }
@@ -76781,6 +80816,8 @@ var occ = cbOccupants(p, etat, pr.zone);
 r = occ.map(function (id) { var x = cbElement(p, id); return x.label || x.id; }).join(', ');
 break;
 }
+case 'd_niveau': r = etat.niveaux && etat.niveaux[pr.element] != null ? etat.niveaux[pr.element] : 0; break;
+case 'd_fait': r = !!(etat.faits && etat.faits[pr.element]); break;
 case 'd_compare': r = cbCompare(entree('a', ''), entree('b', pr.b), pr.op); break;
 case 'd_et':
 case 'd_ou': {
@@ -76822,7 +80859,23 @@ return idx;
 }
 function cbTraite(p, etat0, evenement, externe, index) {
 var etat = cbCopie(etat0), journal = [], idx = index || cbIndex(p);
-var file = [evenement], cascades = 0, pas = 0, res = { etat: etat, journal: journal, messages: [], sons: [], echec: false, victoire: false, boucle: false, evenement: evenement };
+var file = [evenement], cascades = 0, pas = 0, res = { etat: etat, journal: journal, messages: [], sons: [], effets: [], echec: false, victoire: false, boucle: false, evenement: evenement };
+var marqueFait = function (elId, quoi) {
+if (!cbElement(p, elId) || etat.faits[elId]) return false;
+etat.faits[elId] = quoi;
+file.push({ type: 'fait', quoi: quoi, element: elId });
+return true;
+};
+var changeNiveau = function (elId, v) {
+var el = cbElement(p, elId);
+if (!el || el.genre !== 'recipient') return;
+var nv = Math.max(0, Math.min(100, Math.round(cbNombre(v) || 0))), av = etat.niveaux[elId] == null ? 0 : etat.niveaux[elId];
+if (nv === av) return;
+etat.niveaux[elId] = nv;
+file.push({ type: 'niveauchange', element: elId, avant: av, apres: nv });
+var vl = cbVariable(p, el.variable);
+if (vl) changeVar(vl.id, nv);
+};
 var changeEtat = function (elId, nouveau) {
 if (!cbElement(p, elId) || etat.etats[elId] === nouveau) return;
 etat.etats[elId] = nouveau;
@@ -76835,6 +80888,11 @@ file.push({ type: 'variable', variable: vId });
 };
 var place = function (elId, zoneId, x, y) {
 var el = cbElement(p, elId), z = zoneId ? cbElement(p, zoneId) : null;
+if (el && el.genre === 'objet') {
+if (z && z.genre === 'zone' && !etat.caches[z.id]) { etat.places[elId] = z.id; return z.id; }
+delete etat.places[elId];
+return '';
+}
 if (!el || el.genre !== 'deplacable') return '';
 if (z && z.genre === 'zone' && !etat.caches[z.id] && etat.places[elId] !== z.id) {
 if (z.capacite && cbOccupants(p, etat, z.id).length >= z.capacite) z = null;
@@ -76902,6 +80960,31 @@ if (de.genre !== 'deplacable') continue;
 if (pr.element ? de.id === pr.element : (!pr.zone || etat.places[de.id] === pr.zone)) { delete etat.places[de.id]; delete etat.pos[de.id]; }
 }
 break;
+case 'a_animer': res.effets.push({ type: 'animer', element: pr.element, effet: pr.effet, duree: pr.duree, fois: Math.round(pr.fois) }); break;
+case 'a_particules': res.effets.push({ type: 'particules', element: pr.element, effet: pr.effet, quantite: Math.max(1, Math.min(300, Math.round(pr.quantite))), couleur: pr.couleur }); break;
+case 'a_impulsion': res.effets.push({ type: 'impulsion', element: pr.element, angle: pr.angle, force: pr.force }); break;
+case 'a_gravite': {
+var dirs = { bas: [0, 1], haut: [0, -1], gauche: [-1, 0], droite: [1, 0], aucune: [0, 0] }, dv = dirs[pr.mode] || [0, 1];
+etat.gravite = { x: dv[0], y: dv[1], force: Math.max(0, Math.min(3, pr.force)) };
+res.effets.push({ type: 'gravite', mode: pr.mode, force: etat.gravite.force });
+break;
+}
+case 'a_figer':
+if (cbElement(p, pr.element)) { etat.figes[pr.element] = !!pr.fige; res.effets.push({ type: 'figer', element: pr.element, fige: !!pr.fige }); }
+break;
+case 'a_couper': if (marqueFait(pr.element, 'coupe')) res.effets.push({ type: 'couper', element: pr.element }); break;
+case 'a_casser': if (marqueFait(pr.element, 'casse')) res.effets.push({ type: 'casser', element: pr.element }); break;
+case 'a_remplir': {
+var rc = cbElement(p, pr.element);
+if (rc && rc.genre === 'recipient') {
+var cur2 = etat.niveaux[rc.id] || 0, b2 = cbNombre(donnee('valeur', pr.valeur));
+if (isNaN(b2)) b2 = 0;
+var cible2 = Math.max(0, Math.min(100, Math.round(pr.op === '+' ? cur2 + b2 : pr.op === '-' ? cur2 - b2 : b2)));
+res.effets.push({ type: 'remplir', element: rc.id, niveau: cible2, duree: Math.max(0, pr.duree) });
+changeNiveau(rc.id, cible2);
+}
+break;
+}
 case 'a_echec': res.echec = true; return;
 case 'a_victoire': res.victoire = true; etat.gagne = true; return;
 default: break;
@@ -76912,9 +80995,15 @@ for (var m = 0; m < liens.length; m++) execute(liens[m].vers, profondeur + 1);
 while (file.length && !res.boucle) {
 var ev = file.shift();
 journal.push({ ev: ev });
-if (ev.type === 'etat' || ev.type === 'variable') {
+if (ev.type === 'etat' || ev.type === 'variable' || ev.type === 'fait' || ev.type === 'niveauchange') {
 if (++cascades > CB_CASCADE) { res.boucle = true; journal.push({ boucle: 'cascade' }); break; }
 }
+if (ev.type === 'coupe' || ev.type === 'casse' || ev.type === 'dechire' || ev.type === 'gratte') {
+var fe = cbElement(p, ev.element);
+if (fe && !etat.caches[fe.id]) marqueFait(fe.id, ev.type);
+continue;
+}
+if (ev.type === 'niveau') { changeNiveau(ev.element, ev.niveau); continue; }
 if (ev.type === 'fixe' || ev.type === 'valeur' || ev.type === 'depot') {
 var g = cbElement(p, ev.element);
 if (!g || etat.caches[g.id] || etat.verrous[g.id]) continue;
@@ -76946,6 +81035,12 @@ if (ev.type === 'variable' && nd.type === 'ev_variable' && pp.variable === ev.va
 if (ev.type === 'debut' && nd.type === 'ev_debut') part = true;
 if (ev.type === 'delai' && nd.type === 'ev_delai' && nd.id === ev.noeud) part = true;
 if (ev.type === 'depot' && nd.type === 'ev_depot' && (!pp.element || pp.element === ev.element) && (!pp.zone || pp.zone === ev.zone)) part = true;
+if (ev.type === 'fait' && pp.element === ev.element && ((nd.type === 'ev_coupe' && ev.quoi === 'coupe') || (nd.type === 'ev_casse' && ev.quoi === 'casse')
+|| (nd.type === 'ev_dechire' && ev.quoi === 'dechire') || (nd.type === 'ev_gratte' && ev.quoi === 'gratte'))) part = true;
+if (ev.type === 'choc' && nd.type === 'ev_choc' && (ev.force || 0) >= pp.force && (!pp.element || pp.element === ev.element) && (!pp.autre || pp.autre === ev.autre)) part = true;
+if (ev.type === 'repos' && nd.type === 'ev_repos' && (!pp.element || pp.element === ev.element)) part = true;
+if (ev.type === 'sortie' && nd.type === 'ev_sortie' && (!pp.element || pp.element === ev.element)) part = true;
+if (ev.type === 'niveauchange' && nd.type === 'ev_niveau' && pp.element === ev.element && cbSeuil(ev.apres, pp.op, pp.valeur) && !cbSeuil(ev.avant, pp.op, pp.valeur)) part = true;
 if (!part) continue;
 journal.push({ noeud: nd.id });
 var ls = idx.sorties[nd.id + '.go'] || [];
@@ -76987,6 +81082,7 @@ function cbDefauts() {
 var on = { fill: '#E8A33D' }, off = { fill: '#3a3f4f' };
 return {
 board: { w: 520, h: 320, image: '', color: '' },
+fx: { victoire: 'confettis', echec: 'secousse' },
 elements: [
 { id: 'i1', genre: 'interrupteur', label: '1', x: 70, y: 150, w: 70, h: 110, etats: [{ id: 'bas', nom: 'bas', visuel: off }, { id: 'haut', nom: 'haut', visuel: on }], initial: 'bas' },
 { id: 'i2', genre: 'interrupteur', label: '2', x: 170, y: 150, w: 70, h: 110, etats: [{ id: 'bas', nom: 'bas', visuel: off }, { id: 'haut', nom: 'haut', visuel: on }], initial: 'bas' },
@@ -77033,8 +81129,11 @@ if ('zone' in pr && !(vide.zone && !pr.zone)) {
 var zz = cbElement(p, pr.zone);
 if (!zz || zz.genre !== 'zone') { out.push(nomN(n) + ' ne vise aucune zone de d\xE9p\xF4t'); continue; }
 }
-if ((n.type === 'ev_depot' || n.type === 'a_placer' || n.type === 'd_dans_zone') && pr.element && cbElement(p, pr.element).genre !== 'deplacable') {
+if ((n.type === 'ev_depot' || n.type === 'a_placer' || n.type === 'd_dans_zone') && pr.element && ['deplacable', 'objet'].indexOf(cbElement(p, pr.element).genre) < 0) {
 out.push(nomN(n) + ' vise un \xE9l\xE9ment qui n\u2019est pas d\xE9pla\xE7able'); continue;
+}
+if (CB_GENRE_DE[n.type] && pr.element && cbElement(p, pr.element).genre !== CB_GENRE_DE[n.type]) {
+out.push(nomN(n) + ' doit viser : ' + CB_GENRES[CB_GENRE_DE[n.type]].nom.toLowerCase()); continue;
 }
 if ('variable' in pr && !cbVariable(p, pr.variable)) { out.push(nomN(n) + ' ne vise aucune variable'); continue; }
 if ((n.type === 'd_etat_est' || (n.type === 'a_etat' && pr.mode === 'fixer') || (n.type === 'ev_etat' && pr.etat)) && !cbNomEtat(p, pr.element, pr.etat)) {
@@ -77053,6 +81152,7 @@ if (!vc || vc.type !== 'nombre') out.push('le curseur ' + nm + ' ne r\xE8gle auc
 else if (el.min === el.max) out.push('le curseur ' + nm + ' a le m\xEAme minimum et maximum');
 }
 if (el.genre === 'compteur' && !cbVariable(p, el.variable)) out.push('le compteur ' + nm + ' n\u2019affiche aucune variable');
+if ((el.genre === 'corde' || el.genre === 'ressort') && el.porte && (!cbElement(p, el.porte) || cbElement(p, el.porte).genre !== 'objet')) out.push(nm + ' tient un \xE9l\xE9ment qui n\u2019est pas un objet (gravit\xE9)');
 if (el.genre === 'deplacable' && !p.elements.some(function (z) { return z.genre === 'zone'; })) out.push(nm + ' est d\xE9pla\xE7able, mais il n\u2019y a aucune zone de d\xE9p\xF4t');
 }
 var etatV = {}, cycle = false;
@@ -77108,6 +81208,18 @@ vu[b] = 1;
 out.push({ ev: { type: 'valeur', element: el.id, valeur: b }, texte: 'r\xE9gler ' + nom(el) + ' \xE0 ' + b });
 }
 }
+if (el.genre === 'corde' && el.coupable) out.push({ ev: { type: 'coupe', element: el.id }, texte: 'couper ' + nom(el) });
+if (el.genre === 'cassable') out.push({ ev: { type: 'casse', element: el.id }, texte: 'casser ' + nom(el) });
+if (el.genre === 'papier') out.push({ ev: { type: 'dechire', element: el.id }, texte: 'd\xE9chirer ' + nom(el) });
+if (el.genre === 'grattage') out.push({ ev: { type: 'gratte', element: el.id }, texte: 'gratter ' + nom(el) });
+if (el.genre === 'recipient') [0, 25, 50, 75, 100].forEach(function (v) { out.push({ ev: { type: 'niveau', element: el.id, niveau: v }, texte: 'amener ' + nom(el) + ' \xE0 ' + v + ' %' }); });
+if (el.genre === 'objet') {
+for (var zo = 0; zo < zones.length; zo++) out.push({ ev: { type: 'depot', element: el.id, zone: zones[zo].id }, texte: 'amener ' + nom(el) + ' dans ' + nom(zones[zo]) });
+out.push({ ev: { type: 'repos', element: el.id }, texte: 'laisser ' + nom(el) + ' s\u2019arr\xEAter' });
+out.push({ ev: { type: 'sortie', element: el.id }, texte: 'faire tomber ' + nom(el) + ' du plateau' });
+out.push({ ev: { type: 'choc', element: el.id, autre: '', force: 99999 }, texte: 'faire heurter ' + nom(el) });
+p.elements.forEach(function (x) { if (x.id !== el.id && (x.genre === 'objet' || x.genre === 'cassable' || x.genre === 'plateforme')) out.push({ ev: { type: 'choc', element: el.id, autre: x.id, force: 99999 }, texte: 'lancer ' + nom(el) + ' sur ' + nom(x) }); });
+}
 if (el.genre === 'deplacable') {
 for (var z = 0; z < zones.length; z++) out.push({ ev: { type: 'depot', element: el.id, zone: zones[z].id }, texte: 'poser ' + nom(el) + ' dans ' + nom(zones[z]) });
 out.push({ ev: { type: 'depot', element: el.id, zone: '' }, texte: 'reprendre ' + nom(el) });
@@ -77117,7 +81229,7 @@ return out;
 }
 function cbCle(e) {
 var tri = function (o) { var k = Object.keys(o || {}).sort(), r = []; for (var i = 0; i < k.length; i++) r.push(k[i] + '=' + JSON.stringify(o[k[i]])); return r.join(';'); };
-return tri(e.etats) + '|' + tri(e.vars) + '|' + tri(e.caches) + '|' + tri(e.verrous) + '|' + tri(e.places);
+return tri(e.etats) + '|' + tri(e.vars) + '|' + tri(e.caches) + '|' + tri(e.verrous) + '|' + tri(e.places) + '|' + tri(e.niveaux) + '|' + tri(e.faits);
 }
 function cbExplore(p, externe, limite) {
 var max = limite || 4000, idx = cbIndex(p), gestes = cbGestes(p), ext = externe || {};
@@ -77173,9 +81285,11 @@ return {
 board: {
 w: Math.round(puzNum(b.w, 520, 160, 2000)), h: Math.round(puzNum(b.h, 320, 120, 2000)),
 image: typeof b.image === 'string' ? b.image : '', color: puzColor(b.color, ''),
+gravite: puzNum(b.gravite, 1, 0, 3), gangle: puzNum(b.gangle, 90, -180, 360), bords: cbUn(b.bords, ['tous', 'sol', 'aucun'], 'tous'),
 },
 elements: elements, variables: variables,
 graphe: { noeuds: noeuds, liens: cbNormLiens(g.liens, noeuds) },
+fx: cbNormFx(s.fx),
 };
 },
 check: function (p, state) {
@@ -77225,6 +81339,16 @@ var msg = motEl('div', 'pz-cb-msg');
 msg.setAttribute('data-cb-msg', '1');
 msg.setAttribute('role', 'status');
 wrap.appendChild(msg);
+var monde = cbMonde({
+plateau: plateau, racine: cadre,
+p: function () { return p; }, etat: function () { return etat; }, noeuds: function () { return noeudsEls; },
+envoie: function (ev) { envoie(ev); }, fini: function () { return fini; }, echelle: function () { return echelle; },
+edition: function () { return !!(ctx.enEdition && ctx.enEdition()); },
+calme: function () { return puzReduceMotion() || !!ctx.reduceMotion; },
+sansClic: function () { sansClic = true; setTimeout(function () { sansClic = false; }, 400); },
+son: function (k) { try { ctx.sound(k); } catch (e) {} },
+refait: function () { etat = cbEtatInitial(p); fini = false; msg.textContent = ''; dessine(); mesure(); applique(cbTraite(p, etat, { type: 'debut' }, externe())); },
+});
 function externe() {
 var j = ctx.jeu ? ctx.jeu() : { inventory: ctx.inventory || {}, vars: ctx.vars || {} };
 return { jeu: j.vars || {}, objets: j.inventory || {} };
@@ -77374,31 +81498,35 @@ function dessine() {
 plateau.textContent = '';
 noeudsEls = {};
 choisi = ''; geste = null;
+monde.reinit();
 wrap.classList.toggle('is-calme', puzReduceMotion());
 plateau.style.width = p.board.w + 'px';
 plateau.style.height = p.board.h + 'px';
 plateau.style.backgroundImage = p.board.image ? 'url(' + p.board.image + ')' : '';
 if (p.board.color) plateau.style.backgroundColor = p.board.color;
-var ordre = p.elements.filter(function (e) { return e.genre === 'zone'; })
-.concat(p.elements.filter(function (e) { return e.genre !== 'zone' && e.genre !== 'deplacable'; }))
-.concat(p.elements.filter(function (e) { return e.genre === 'deplacable'; }));
+var rang = function (g) { var r = { plateforme: 0, corde: 0, ressort: 0, zone: 1, deplacable: 5, objet: 6, papier: 7, grattage: 8, emetteur: 9 }[g]; return r == null ? 4 : r; };
+var ordre = [];
+for (var rg = 0; rg <= 9; rg++) for (var ie = 0; ie < p.elements.length; ie++) if (rang(p.elements[ie].genre) === rg) ordre.push(p.elements[ie]);
 for (var i = 0; i < ordre.length; i++) {
 (function (el) {
 var n = motEl('div', 'pz-el pz-cb-el pz-cb-' + el.genre);
 n.setAttribute('data-cb-el', el.id);
 n.setAttribute('data-pz-el', el.id);
 n.style.width = el.w + 'px'; n.style.height = el.h + 'px';
+var ani = motEl('span', 'pz-cb-ani');
+n.appendChild(ani);
 var corps = motEl('span', 'pz-cb-corps');
-n.appendChild(corps);
+ani.appendChild(corps);
 var poignee = null;
 if (el.genre === 'curseur') {
 n.classList.add(el.h > el.w ? 'is-vertical' : 'is-horizontal');
 poignee = motEl('span', 'pz-cb-poignee');
-n.appendChild(poignee);
+ani.appendChild(poignee);
 }
 var lab = motEl('span', 'pz-cb-label');
-n.appendChild(lab);
-if (el.genre !== 'texte' && el.genre !== 'compteur' && el.genre !== 'image') {
+ani.appendChild(lab);
+var inerte = ['texte', 'compteur', 'image', 'plateforme', 'corde', 'ressort', 'papier', 'grattage', 'emetteur'].indexOf(el.genre) >= 0;
+if (!inerte) {
 n.setAttribute('role', el.genre === 'curseur' ? 'slider' : 'button');
 n.setAttribute('tabindex', '0');
 }
@@ -77411,10 +81539,12 @@ n.addEventListener('dragstart', function (e) { e.preventDefault(); });
 n.addEventListener('click', function () { surClic(el); });
 n.addEventListener('keydown', function (e) { surTouche(el, e); });
 plateau.appendChild(n);
-noeudsEls[el.id] = { n: n, corps: corps, lab: lab, poignee: poignee, dernier: null };
+noeudsEls[el.id] = { n: n, ani: ani, corps: corps, lab: lab, poignee: poignee, dernier: null };
+monde.branche(el, n, ani);
 })(ordre[i]);
 }
 maj();
+monde.pret();
 }
 function habille(o, el, v, etatId, rot) {
 var c = o.corps;
@@ -77453,11 +81583,11 @@ if (!o) continue;
 var idxE = indexEtat(el), v = el.etats[idxE].visuel, eid = etat.etats[el.id] || '';
 o.n.setAttribute('data-cb-etat', eid);
 o.n.setAttribute('data-cb-index', String(idxE));
-o.n.style.display = etat.caches[el.id] ? 'none' : '';
+monde.visibilite(el, o.n, !!etat.caches[el.id]);
 o.n.classList.toggle('is-locked', !!etat.verrous[el.id]);
-if (!geste || geste.el.id !== el.id || el.genre !== 'deplacable') {
+if (!monde.pilote(el) && (!geste || geste.el.id !== el.id || el.genre !== 'deplacable')) {
 var pos = posDe(el);
-o.n.style.transform = 'translate(' + pos.x + 'px,' + pos.y + 'px)';
+o.n.style.transform = 'translate(' + pos.x + 'px,' + pos.y + 'px)' + (el.genre === 'plateforme' && el.angle ? ' rotate(' + el.angle + 'deg)' : '');
 }
 if (el.genre === 'deplacable') o.n.setAttribute('data-cb-zone', etat.places[el.id] || '');
 if (el.genre === 'zone') o.n.setAttribute('data-cb-occupants', cbOccupants(p, etat, el.id).join(','));
@@ -77487,11 +81617,13 @@ if (ctx.debug) { try { ctx.debug({ ev: res.evenement, journal: res.journal, etat
 for (var s = 0; s < res.sons.length; s++) ctx.sound(res.sons[s]);
 if (res.messages.length) msg.textContent = res.messages[res.messages.length - 1];
 maj();
+if (res.effets && res.effets.length) monde.effets(res.effets);
 ctx.emit('progress');
 if (res.boucle && typeof console !== 'undefined') console.warn('Constructeur : un encha\xEEnement de r\xE8gles a \xE9t\xE9 coup\xE9.');
-if (res.echec) ctx.emit('failed');
+if (res.echec) { monde.echec(); ctx.emit('failed'); }
 if (res.victoire && !fini) {
 fini = true;
+monde.victoire();
 if (msg.textContent) ctx.emit('final', { texte: msg.textContent });
 ctx.emit('submit');
 }
@@ -77558,14 +81690,24 @@ for (var k = 0; k < p.variables.length; k++) {
 var vd = p.variables[k];
 if (st.vars && Object.prototype.hasOwnProperty.call(st.vars, vd.id)) e.vars[vd.id] = st.vars[vd.id];
 }
+var reprend = function (cle, f) {
+var o2 = st[cle];
+if (!o2 || typeof o2 !== 'object') return;
+for (var kk in o2) if (Object.prototype.hasOwnProperty.call(o2, kk) && cbElement(p, kk)) e[cle][kk] = f(o2[kk]);
+};
+reprend('niveaux', function (v) { return puzNum(v, 0, 0, 100); });
+reprend('faits', function (v) { return String(v); });
+reprend('figes', function (v) { return !!v; });
+if (st.gravite && typeof st.gravite.x === 'number') e.gravite = { x: st.gravite.x, y: st.gravite.y, force: puzNum(st.gravite.force, 1, 0, 3) };
 etat = e;
-maj();
+dessine();
 },
 solve: function () { etat.gagne = true; fini = true; maj(); },
-reset: function () { desarme(); etat = cbEtatInitial(p); fini = false; msg.textContent = ''; maj(); arme(); demarre(); },
+reset: function () { desarme(); etat = cbEtatInitial(p); fini = false; msg.textContent = ''; dessine(); arme(); demarre(); },
 feedback: function () {},
 destroy: function () {
 desarme();
+monde.destroy();
 try { if (obs) obs.disconnect(); } catch (e) {}
 if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('resize', surResize);
 for (var k in noeudsEls) if (Object.prototype.hasOwnProperty.call(noeudsEls, k) && noeudsEls[k].corps.__pzSprite) clearInterval(noeudsEls[k].corps.__pzSprite);
@@ -83559,8 +87701,9 @@ loop();
     ), showDa && /* @__PURE__ */ import_react.default.createElement(
       DaPanel,
       {
-        habillage: { puzzleTheme, dialogTheme, ui, homeScreen, titre: gameMeta.title },
+        habillage: { puzzleTheme, dialogTheme, ui, homeScreen, titre: gameMeta.title, puzzles },
         onAppliquer: (h) => {
+          if (h.puzzles && h.puzzles !== puzzles) setPuzzles(h.puzzles);
           setPuzzleTheme(h.puzzleTheme);
           setDialogTheme(h.dialogTheme);
           if (h.ui !== ui) changeUi(h.ui);
