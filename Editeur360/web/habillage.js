@@ -319,6 +319,68 @@
   // Filet : si la fenêtre n'est jamais venue, on montre l'éditeur quand même.
   setTimeout(function () { if (!accueil.vu) finAccueil(); }, 5000);
 
+  // ---------- Colonne de gauche repliable ----------
+  // Toucher un titre (Scènes, Objets du jeu…) replie ou déplie sa rubrique ; un
+  // bouton dans la barre du haut masque toute la colonne. L'état est gardé sur l'appareil.
+  function lireReglage(cle, defaut) {
+    try { var v = localStorage.getItem(cle); return v === null ? defaut : JSON.parse(v); } catch (e) { return defaut; }
+  }
+  function ecrireReglage(cle, v) {
+    try { localStorage.setItem(cle, JSON.stringify(v)); } catch (e) { /* stockage indisponible : l'état ne sera pas gardé */ }
+  }
+  var replis = lireReglage("e360-replis", {});
+  if (lireReglage("e360-colonne-masquee", false)) document.documentElement.classList.add("e360-colonne-masquee");
+
+  function colonneGauche() {
+    var app = document.querySelector("#root > div");
+    var corps = app && app.children[1];
+    var c = corps && corps.firstElementChild;
+    return c && /width:\s*220px/.test(c.getAttribute("style") || "") ? c : null;
+  }
+
+  function colonne(h) {
+    if (h && !h.querySelector(":scope > .e360-panneau")) {
+      var p = document.createElement("button");
+      p.type = "button";
+      p.className = "e360-panneau";
+      p.setAttribute("aria-label", "Afficher ou masquer la colonne de gauche");
+      p.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<rect x="2.75" y="3.75" width="14.5" height="12.5" rx="2.5"/><line x1="7.5" y1="4" x2="7.5" y2="16"/></svg>';
+      p.addEventListener("click", function () {
+        var masquee = document.documentElement.classList.toggle("e360-colonne-masquee");
+        ecrireReglage("e360-colonne-masquee", masquee);
+      });
+      h.appendChild(p);
+    }
+    var col = colonneGauche();
+    if (!col) return;
+    col.setAttribute("data-e360", "colonne");
+    var cle = null;
+    Array.prototype.forEach.call(col.children, function (el) {
+      var st = el.getAttribute("style") || "";
+      if (el.tagName === "DIV" && st.indexOf("uppercase") >= 0) {
+        cle = (el.textContent || "").replace(/\?\s*$/, "").trim();
+        el.setAttribute("data-e360-titre", cle);
+        if (replis[cle]) el.setAttribute("data-e360-replie", ""); else el.removeAttribute("data-e360-replie");
+        if (!el.hasAttribute("data-e360-titre-ok")) {
+          el.setAttribute("data-e360-titre-ok", "");
+          el.setAttribute("role", "button");
+          el.addEventListener("click", function () {
+            var k = el.getAttribute("data-e360-titre");
+            replis[k] = !replis[k];
+            ecrireReglage("e360-replis", replis);
+            planifier();
+          });
+        }
+        return;
+      }
+      // Le réglage général en bas (« Activer la carte en jeu ») reste toujours visible.
+      var general = el.querySelector && el.querySelector("input[type='checkbox']") && !el.querySelector("button");
+      if (cle && replis[cle] && !general && el.tagName !== "INPUT") el.setAttribute("data-e360-cache", "");
+      else el.removeAttribute("data-e360-cache");
+    });
+  }
+
   var prevu = false;
   function passe() {
     prevu = false;
@@ -328,6 +390,7 @@
     var h = barreDuHaut();
     if (h) reperer(h);
     gererAccueil(h);
+    colonne(h);
     aides(root);
   }
   function planifier() {

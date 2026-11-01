@@ -264,6 +264,30 @@ html { -webkit-font-smoothing: antialiased; }
 #root ::-webkit-scrollbar-track { background: transparent; }
 #root [style*="overflow-y: auto"], #root [style*="overflow: auto"] { overscroll-behavior: contain; }
 
+/* ---------- Colonne de gauche repliable ---------- */
+#root [data-e360-cache] { display: none !important; }
+#root [data-e360-titre] {
+  display: flex; align-items: center; justify-content: space-between; min-height: 36px;
+  cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+#root [data-e360-titre]::after {
+  content: ""; width: 8px; height: 8px; margin: 0 6px 0 10px; flex: none;
+  border-right: 1.5px solid var(--texte-2); border-bottom: 1.5px solid var(--texte-2);
+  transform: rotate(45deg) translate(-2px, -2px); transition: transform .18s ease;
+}
+#root [data-e360-titre][data-e360-replie]::after { transform: rotate(-45deg); }
+#root [data-e360-titre][data-e360-replie] { color: var(--texte-2) !important; }
+#root [data-e360-titre]:active { opacity: .6; }
+
+/* Masquer toute la colonne : bouton à gauche de la barre du haut. */
+#root .e360-panneau {
+  order: 0; width: 40px; min-height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--trait); background: transparent; color: var(--texte-2); cursor: pointer;
+}
+#root .e360-panneau:active { background: var(--bouton-appui); }
+html.e360-colonne-masquee #root .e360-panneau { color: var(--accent); border-color: rgba(232, 163, 61, .45); }
+html.e360-colonne-masquee #root [data-e360="colonne"] { display: none !important; }
+
 /* ---------- Aides : « ? » à côté du libellé, bulle au toucher ---------- */
 #root [data-e360-aide] { display: none !important; }
 #root .e360-q {
