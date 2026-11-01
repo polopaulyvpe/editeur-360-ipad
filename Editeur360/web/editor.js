@@ -6,11 +6,7 @@
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
   var __commonJS = (cb, mod) => function __require() {
-    try {
-      return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-    } catch (e) {
-      throw mod = 0, e;
-    }
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
   var __export = (target, all) => {
     for (var name in all)
@@ -33,21 +29,21 @@
     mod
   ));
 
-  // ../node_modules/react/cjs/react.production.min.js
+  // node_modules/react/cjs/react.production.min.js
   var require_react_production_min = __commonJS({
-    "../node_modules/react/cjs/react.production.min.js"(exports) {
+    "node_modules/react/cjs/react.production.min.js"(exports) {
       "use strict";
-      var l = /* @__PURE__ */ Symbol.for("react.element");
-      var n = /* @__PURE__ */ Symbol.for("react.portal");
-      var p = /* @__PURE__ */ Symbol.for("react.fragment");
-      var q = /* @__PURE__ */ Symbol.for("react.strict_mode");
-      var r = /* @__PURE__ */ Symbol.for("react.profiler");
-      var t = /* @__PURE__ */ Symbol.for("react.provider");
-      var u = /* @__PURE__ */ Symbol.for("react.context");
-      var v = /* @__PURE__ */ Symbol.for("react.forward_ref");
-      var w = /* @__PURE__ */ Symbol.for("react.suspense");
-      var x = /* @__PURE__ */ Symbol.for("react.memo");
-      var y = /* @__PURE__ */ Symbol.for("react.lazy");
+      var l = Symbol.for("react.element");
+      var n = Symbol.for("react.portal");
+      var p = Symbol.for("react.fragment");
+      var q = Symbol.for("react.strict_mode");
+      var r = Symbol.for("react.profiler");
+      var t = Symbol.for("react.provider");
+      var u = Symbol.for("react.context");
+      var v = Symbol.for("react.forward_ref");
+      var w = Symbol.for("react.suspense");
+      var x = Symbol.for("react.memo");
+      var y = Symbol.for("react.lazy");
       var z = Symbol.iterator;
       function A(a) {
         if (null === a || "object" !== typeof a) return null;
@@ -306,9 +302,9 @@
     }
   });
 
-  // ../node_modules/react/index.js
+  // node_modules/react/index.js
   var require_react = __commonJS({
-    "../node_modules/react/index.js"(exports, module) {
+    "node_modules/react/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_react_production_min();
@@ -318,9 +314,9 @@
     }
   });
 
-  // ../node_modules/scheduler/cjs/scheduler.production.min.js
+  // node_modules/scheduler/cjs/scheduler.production.min.js
   var require_scheduler_production_min = __commonJS({
-    "../node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
+    "node_modules/scheduler/cjs/scheduler.production.min.js"(exports) {
       "use strict";
       function f(a, b) {
         var c = a.length;
@@ -571,9 +567,9 @@
     }
   });
 
-  // ../node_modules/scheduler/index.js
+  // node_modules/scheduler/index.js
   var require_scheduler = __commonJS({
-    "../node_modules/scheduler/index.js"(exports, module) {
+    "node_modules/scheduler/index.js"(exports, module) {
       "use strict";
       if (true) {
         module.exports = require_scheduler_production_min();
@@ -583,9 +579,9 @@
     }
   });
 
-  // ../node_modules/react-dom/cjs/react-dom.production.min.js
+  // node_modules/react-dom/cjs/react-dom.production.min.js
   var require_react_dom_production_min = __commonJS({
-    "../node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
+    "node_modules/react-dom/cjs/react-dom.production.min.js"(exports) {
       "use strict";
       var aa = require_react();
       var ca = require_scheduler();
@@ -715,19 +711,24 @@
         if (null !== e ? 0 !== e.type : d || !(2 < b.length) || "o" !== b[0] && "O" !== b[0] || "n" !== b[1] && "N" !== b[1]) qa(b, c, e, d) && (c = null), d || null === e ? oa(b) && (null === c ? a.removeAttribute(b) : a.setAttribute(b, "" + c)) : e.mustUseProperty ? a[e.propertyName] = null === c ? 3 === e.type ? false : "" : c : (b = e.attributeName, d = e.attributeNamespace, null === c ? a.removeAttribute(b) : (e = e.type, c = 3 === e || 4 === e && true === c ? "" : "" + c, d ? a.setAttributeNS(d, b, c) : a.setAttribute(b, c)));
       }
       var ua = aa.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
-      var va = /* @__PURE__ */ Symbol.for("react.element");
-      var wa = /* @__PURE__ */ Symbol.for("react.portal");
-      var ya = /* @__PURE__ */ Symbol.for("react.fragment");
-      var za = /* @__PURE__ */ Symbol.for("react.strict_mode");
-      var Aa = /* @__PURE__ */ Symbol.for("react.profiler");
-      var Ba = /* @__PURE__ */ Symbol.for("react.provider");
-      var Ca = /* @__PURE__ */ Symbol.for("react.context");
-      var Da = /* @__PURE__ */ Symbol.for("react.forward_ref");
-      var Ea = /* @__PURE__ */ Symbol.for("react.suspense");
-      var Fa = /* @__PURE__ */ Symbol.for("react.suspense_list");
-      var Ga = /* @__PURE__ */ Symbol.for("react.memo");
-      var Ha = /* @__PURE__ */ Symbol.for("react.lazy");
-      var Ia = /* @__PURE__ */ Symbol.for("react.offscreen");
+      var va = Symbol.for("react.element");
+      var wa = Symbol.for("react.portal");
+      var ya = Symbol.for("react.fragment");
+      var za = Symbol.for("react.strict_mode");
+      var Aa = Symbol.for("react.profiler");
+      var Ba = Symbol.for("react.provider");
+      var Ca = Symbol.for("react.context");
+      var Da = Symbol.for("react.forward_ref");
+      var Ea = Symbol.for("react.suspense");
+      var Fa = Symbol.for("react.suspense_list");
+      var Ga = Symbol.for("react.memo");
+      var Ha = Symbol.for("react.lazy");
+      Symbol.for("react.scope");
+      Symbol.for("react.debug_trace_mode");
+      var Ia = Symbol.for("react.offscreen");
+      Symbol.for("react.legacy_hidden");
+      Symbol.for("react.cache");
+      Symbol.for("react.tracing_marker");
       var Ja = Symbol.iterator;
       function Ka(a) {
         if (null === a || "object" !== typeof a) return null;
@@ -1080,13 +1081,13 @@
         return null == a || "http://www.w3.org/1999/xhtml" === a ? kb(b) : "http://www.w3.org/2000/svg" === a && "foreignObject" === b ? "http://www.w3.org/1999/xhtml" : a;
       }
       var mb;
-      var nb = (function(a) {
+      var nb = function(a) {
         return "undefined" !== typeof MSApp && MSApp.execUnsafeLocalFunction ? function(b, c, d, e) {
           MSApp.execUnsafeLocalFunction(function() {
             return a(b, c, d, e);
           });
         } : a;
-      })(function(a, b) {
+      }(function(a, b) {
         if ("http://www.w3.org/2000/svg" !== a.namespaceURI || "innerHTML" in a) a.innerHTML = b;
         else {
           mb = mb || document.createElement("div");
@@ -7188,9 +7189,9 @@
     }
   });
 
-  // ../node_modules/react-dom/index.js
+  // node_modules/react-dom/index.js
   var require_react_dom = __commonJS({
-    "../node_modules/react-dom/index.js"(exports, module) {
+    "node_modules/react-dom/index.js"(exports, module) {
       "use strict";
       function checkDCE() {
         if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ === "undefined" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE !== "function") {
@@ -7214,9 +7215,9 @@
     }
   });
 
-  // ../node_modules/react-dom/client.js
+  // node_modules/react-dom/client.js
   var require_client = __commonJS({
-    "../node_modules/react-dom/client.js"(exports) {
+    "node_modules/react-dom/client.js"(exports) {
       "use strict";
       var m = require_react_dom();
       if (true) {
@@ -7245,10 +7246,14 @@
     }
   });
 
-  // ../desk_app.jsx
+  // entree.jsx
+  var import_react2 = __toESM(require_react());
+  var import_client = __toESM(require_client());
+
+  // ../moteur-360.jsx
   var import_react = __toESM(require_react());
 
-  // ../node_modules/three/build/three.module.js
+  // node_modules/three/build/three.module.js
   var three_module_exports = {};
   __export(three_module_exports, {
     ACESFilmicToneMapping: () => ACESFilmicToneMapping,
@@ -35592,8 +35597,7 @@
     }
   }
 
-  // ../desk_app.jsx
-  var import_client = __toESM(require_client());
+  // ../moteur-360.jsx
   try {
     if (typeof window !== "undefined") window.__BD360_THREE = three_module_exports;
   } catch (e) {
@@ -38610,10 +38614,10 @@
         x: Math.round(parts[1] === "right" ? frame.w - at.x - base.w : parts[1] === "center" ? at.x - frame.w / 2 : at.x),
         y: Math.round(parts[0] === "bottom" ? frame.h - at.y - base.h : parts[0] === "middle" ? at.y - frame.h / 2 : at.y),
         unit: "px"
-      } : (function() {
+      } : function() {
         const k2 = Math.min(ui.elements.filter((e) => e.anchor === "top-left" && e.offset.unit === "px").length, 9);
         return { x: 16 + k2 * 14, y: 16 + k2 * 14, unit: "px" };
-      })();
+      }();
       const el = normalizeUiElement({
         id: "el_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
         type,
@@ -50703,10 +50707,10 @@
       gradient: !!s.gradient,
       angle: uiNum(s.angle, 180, 0, 360),
       image: uiStr(s.image),
-      slice: (function(a) {
+      slice: function(a) {
         const x = Array.isArray(a) ? a : [];
         return [uiNum(x[0], 16, 0, 200), uiNum(x[1], 16, 0, 200), uiNum(x[2], 16, 0, 200), uiNum(x[3], 16, 0, 200)];
-      })(s.slice),
+      }(s.slice),
       opacity: uiNum(s.opacity, 1, 0, 1),
       radius: uiNum(s.radius, 12, 0, 999),
       border: { width: uiNum(b.width, 1, 0, 20), color: uiColor(b.color, "#FFFFFF22") },
@@ -50790,12 +50794,12 @@
       }).slice(0, 200);
     };
     return {
-      screens: (function() {
+      screens: function() {
         const s = list(v.screens).filter(function(x) {
           return UI_SCREENS.indexOf(x) >= 0;
         });
         return s.length ? s : ["playing"];
-      })(),
+      }(),
       requirements: normalizeUiRequirements(v.requirements),
       scenes: {
         mode: uiOneOf(sc.mode, ["all", "only", "except"], "all"),
@@ -50969,13 +50973,13 @@
       return {
         style: uiOneOf(p.style, ["needle", "ribbon"], "needle"),
         northLabel: uiStr(p.northLabel, "N").slice(0, 4),
-        labels: (function(a) {
+        labels: function(a) {
           const d = ["N", "E", "S", "O"];
           const x = Array.isArray(a) ? a : [];
           return d.map(function(v, i) {
             return uiStr(x[i], v).slice(0, 4) || v;
           });
-        })(p.labels),
+        }(p.labels),
         span: uiNum(p.span, 160, 40, 360),
         showHotspots: !!p.showHotspots
       };
@@ -51536,6 +51540,11 @@
     var n = typeof v === "number" ? v : parseFloat(v);
     return isFinite(n) ? n : null;
   }
+  function audioFondu(v) {
+    if (v == null || v === "") return null;
+    var n = typeof v === "number" ? v : parseFloat(v);
+    return isFinite(n) ? Math.max(0, Math.min(30, n)) : null;
+  }
   function normalizeAmbience(list) {
     var out = [];
     var src = Array.isArray(list) ? list : [];
@@ -51546,7 +51555,14 @@
       if (!s || vus[s]) continue;
       vus[s] = true;
       var y = audioAngle(a.yaw);
-      out.push({ src: s, volume: audioNum(a.volume, 1, 0, 1), yaw: y, pitch: y == null ? null : audioNum(a.pitch, 0, -1.5, 1.5) });
+      out.push({
+        src: s,
+        volume: audioNum(a.volume, 1, 0, 1),
+        yaw: y,
+        pitch: y == null ? null : audioNum(a.pitch, 0, -1.5, 1.5),
+        fadeIn: audioFondu(a.fadeIn),
+        fadeOut: audioFondu(a.fadeOut)
+      });
     }
     return out;
   }
@@ -58080,7 +58096,7 @@
     var l = motLettre(e.key);
     return l.length === 1 && MOT_AZ.indexOf(l) >= 0 ? l : "";
   }
-  var DEC_PIGPEN = (function() {
+  var DEC_PIGPEN = function() {
     var H = "02", B = "68", G = "06", D = "28";
     var cases = [[D, B], [G, D, B], [G, B], [H, D, B], [H, D, B, G], [H, G, B], [H, D], [G, H, D], [G, H]];
     var croix = [["04", "24"], ["04", "46"], ["24", "48"], ["46", "48"]];
@@ -58091,7 +58107,7 @@
     for (i = 0; i < 4; i++) out.push("g:" + croix[i].join(","));
     for (i = 0; i < 4; i++) out.push("g:" + croix[i].join(",") + "." + rond[i]);
     return out;
-  })();
+  }();
   function decVoisins(p) {
     var x = p % 3, y = (p - x) / 3, out = [];
     for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
@@ -63511,7 +63527,7 @@
     const u = String(c.layer.actionParam || "");
     if (u.indexOf("https://") === 0) window.open(u, "_blank", "noopener,noreferrer");
   });
-  var HomeScreen = /* @__PURE__ */ (function() {
+  var HomeScreen = /* @__PURE__ */ function() {
     function hmk(tag, st) {
       const n = document.createElement(tag);
       if (st) Object.assign(n.style, st);
@@ -64232,7 +64248,7 @@
       }, ms + 30);
     }
     return { mount, runTransition };
-  })();
+  }();
   var MOBILE_FILES = {
     prepare: `// Copie Three.js (version \xE9pingl\xE9e dans package.json) dans www/player/ : le jeu n'utilise aucun CDN.
 const fs = require("fs");
@@ -65823,7 +65839,24 @@ function loadScene(id){
   hudSync();
   saveGame();
   runSceneEnter(current);
+  syncBruitages(current);
   setTimeout(sceneAutoOuvre, 0);
+}
+/* Bruitages de la scene (timeline des sons) : joues une fois a l'arrivee,
+   chacun apres son delai. Quitter la scene annule ceux qui attendent. */
+let bruitagesEnAttente = [];
+function syncBruitages(scene){
+  bruitagesEnAttente.forEach(function(t){ clearTimeout(t); });
+  bruitagesEnAttente = [];
+  const liste = scene && Array.isArray(scene.sfx) ? scene.sfx : [];
+  liste.forEach(function(b){
+    if(!b || !b.soundId) return;
+    const d = Math.max(0, Math.min(600, parseFloat(b.delay) || 0));
+    bruitagesEnAttente.push(setTimeout(function(){
+      if(playerScreen !== 'playing' || current !== scene) return;
+      playSoundEffects([{ kind: 'sound', soundId: b.soundId, volume: b.volume == null ? 1 : b.volume }]);
+    }, Math.round(d * 1000)));
+  });
 }
 /* Actions jouees a l'arrivee dans une scene. La profondeur est bornee pour qu'une
    scene qui renvoie vers une autre ne parte pas en boucle. */
@@ -66032,16 +66065,36 @@ function syncMusic(){
   aSetMix(st);
   try{ syncAmbience(); }catch(e){}
   aSetDuck(isPausedScreen(), aGameAudio && aGameAudio.ducking ? aGameAudio.ducking.pause : 0.4);
-  if(!m){ aStopStream('scene'); return; }
+  if(!m){ aStopStream('scene', musiqueFonduSortie()); return; }
   const src = aSrc(m.src);
-  if(!src){ aStopStream('scene'); return; }
-  aStream('scene', src, {
+  if(!src){ aStopStream('scene', musiqueFonduSortie()); return; }
+  musiqueCroise(src);
+  const fIn = audioFondu(m.fadeIn);
+  const ms = aStream('scene', src, {
     bus: 'music',
     loop: m.loop !== false,
     volume: m.volume == null ? 0.6 : m.volume,
     play: !(!st.music || st.mute),
-    fade: aGameAudio && aGameAudio.fade ? aGameAudio.fade.music : 0,
+    fade: fIn != null ? fIn : (aGameAudio && aGameAudio.fade ? aGameAudio.fade.music : 0),
   });
+  if(ms) ms.fadeOut = audioFondu(m.fadeOut);
+}
+/* Fondu de sortie de la musique en place (reglage de la timeline des sons). */
+function musiqueFonduSortie(){
+  const s = aSlots['scene'];
+  return s && s.fadeOut > 0 ? s.fadeOut : 0;
+}
+/* Une musique qui en remplace une autre : l'ancienne quitte sa place et
+   s'eteint dans son fondu de sortie pendant que la nouvelle arrive. */
+let musiqueSortantes = 0;
+function musiqueCroise(src){
+  const s = aSlots['scene'];
+  if(!s || s.src === src || !(s.fadeOut > 0)) return;
+  const k = 'scene-sortie-' + (++musiqueSortantes);
+  delete aSlots['scene'];
+  aSlots[k] = s;
+  s.key = k;
+  aStopStream(k, s.fadeOut);
 }
 /*  Les ambiances de la sc\xE8ne : des boucles superposables, qui se
     croisent d'une sc\xE8ne \xE0 l'autre. Celle qui est pr\xE9sente des deux
@@ -67869,6 +67922,11 @@ function audioAngle(v) {
 var n = typeof v === 'number' ? v : parseFloat(v);
 return isFinite(n) ? n : null;
 }
+function audioFondu(v) {
+if (v == null || v === '') return null;
+var n = typeof v === 'number' ? v : parseFloat(v);
+return isFinite(n) ? Math.max(0, Math.min(30, n)) : null;
+}
 function normalizeAmbience(list) {
 var out = [];
 var src = Array.isArray(list) ? list : [];
@@ -67879,7 +67937,8 @@ var s = typeof a.src === 'string' ? a.src : '';
 if (!s || vus[s]) continue;
 vus[s] = true;
 var y = audioAngle(a.yaw);
-out.push({ src: s, volume: audioNum(a.volume, 1, 0, 1), yaw: y, pitch: y == null ? null : audioNum(a.pitch, 0, -1.5, 1.5) });
+out.push({ src: s, volume: audioNum(a.volume, 1, 0, 1), yaw: y, pitch: y == null ? null : audioNum(a.pitch, 0, -1.5, 1.5),
+fadeIn: audioFondu(a.fadeIn), fadeOut: audioFondu(a.fadeOut) });
 }
 return out;
 }
@@ -67893,6 +67952,7 @@ out.push({
 key: list[i].src, src: p.src,
 volume: list[i].volume * (p.volume == null ? 1 : p.volume),
 yaw: list[i].yaw, pitch: list[i].pitch,
+fadeIn: list[i].fadeIn, fadeOut: list[i].fadeOut,
 });
 }
 return out;
@@ -68424,20 +68484,21 @@ if (!it || !it.src) continue;
 voulu['amb:' + (it.key || it.src)] = it;
 }
 for (var k in aSlots) {
-if (k.indexOf('amb:') === 0 && !voulu[k]) aStopStream(k, fade);
+if (k.indexOf('amb:') === 0 && !voulu[k]) aStopStream(k, aSlots[k].fadeOut != null ? aSlots[k].fadeOut : fade);
 }
 for (var k2 in voulu) {
 var s = aSlots[k2];
 if (s && s.mourant) { s.mourant = false; }
-aStream(k2, voulu[k2].src, {
+var s2 = aStream(k2, voulu[k2].src, {
 bus: 'ambience',
 loop: true,
 volume: voulu[k2].volume == null ? 1 : voulu[k2].volume,
-fade: fade,
+fade: voulu[k2].fadeIn != null ? voulu[k2].fadeIn : fade,
 play: jouer !== false,
 yaw: voulu[k2].yaw,
 pitch: voulu[k2].pitch,
 });
+if (s2) s2.fadeOut = voulu[k2].fadeOut;
 }
 }
 function aBytes(buf) {
@@ -81527,6 +81588,601 @@ loop();
   });
   var LEGACY_NARRATION_POS = { top: "top-center", bottom: "bottom-center", center: "middle-center" };
   var normalizeNarrationPos = (p) => !p ? "bottom-center" : p.includes("-") ? p : LEGACY_NARRATION_POS[p] || "bottom-center";
+  var SONS_CASE = 128;
+  var SONS_PISTE = 58;
+  var SONS_FONDU_MAX = 10;
+  var SONS_DELAI_MAX = 60;
+  var SONS_COULEUR = { musique: C.amber, ambiance: C.cyan, bruitage: "#B79BF2" };
+  var sonsBorne = (v, d, lo, hi) => {
+    const n = typeof v === "number" ? v : parseFloat(v);
+    return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d;
+  };
+  var sonsArrondi = (v) => Math.round(v * 10) / 10;
+  function sonsCheminAuto(scenes, graphe, startId) {
+    const ids = scenes.map((s) => s.id);
+    let cur = ids.indexOf(startId) >= 0 ? startId : ids[0];
+    const chemin = [];
+    const vu = {};
+    while (cur && !vu[cur]) {
+      chemin.push(cur);
+      vu[cur] = true;
+      const suite = (graphe.edgesFrom[cur] || []).filter((e) => !e.broken && ids.indexOf(e.to) >= 0 && !vu[e.to]);
+      cur = suite.length ? suite[0].to : null;
+    }
+    return chemin;
+  }
+  function sonsClips(scenes, chemin) {
+    const sc = chemin.map((id) => scenes.find((s) => s.id === id)).filter(Boolean);
+    const musique = [];
+    let run = null;
+    sc.forEach((s, i) => {
+      const m = s.music && s.music.src ? s.music : null;
+      if (run && m && m.src === run.src && run.fin === i - 1) {
+        run.fin = i;
+        return;
+      }
+      run = m ? { piste: "musique", src: m.src, debut: i, fin: i, volume: m.volume == null ? 0.6 : m.volume, fadeIn: m.fadeIn, fadeOut: m.fadeOut } : null;
+      if (run) musique.push(run);
+    });
+    const ambiances = [];
+    const ouverts = {};
+    sc.forEach((s, i) => {
+      normalizeAmbience(s.ambience).forEach((a) => {
+        const o = ouverts[a.src];
+        if (o && o.fin === i - 1) {
+          o.fin = i;
+          return;
+        }
+        const c = { piste: "ambiance", src: a.src, debut: i, fin: i, volume: a.volume, fadeIn: a.fadeIn, fadeOut: a.fadeOut };
+        ouverts[a.src] = c;
+        ambiances.push(c);
+      });
+    });
+    ambiances.sort((a, b) => a.debut - b.debut || a.fin - b.fin);
+    const finsPistes = [];
+    ambiances.forEach((c) => {
+      let l = finsPistes.findIndex((f) => f < c.debut);
+      if (l < 0) {
+        l = finsPistes.length;
+        finsPistes.push(-1);
+      }
+      finsPistes[l] = c.fin;
+      c.ligne = l;
+    });
+    const bruitages = [];
+    sc.forEach((s, i) => {
+      (Array.isArray(s.sfx) ? s.sfx : []).forEach((b, j) => {
+        if (b && b.soundId) {
+          bruitages.push({
+            piste: "bruitage",
+            src: b.soundId,
+            debut: i,
+            fin: i,
+            index: j,
+            sceneId: s.id,
+            volume: b.volume == null ? 1 : b.volume,
+            delay: sonsBorne(b.delay, 0, 0, SONS_DELAI_MAX)
+          });
+        }
+      });
+    });
+    return { musique, ambiances, lignesAmb: finsPistes.length, bruitages };
+  }
+  function sonsPoser(scene, clip, props) {
+    if (clip.piste === "musique") {
+      const base = scene.music && scene.music.src === clip.src ? scene.music : { src: clip.src, loop: true };
+      return { ...scene, music: { ...base, src: clip.src, volume: props.volume, fadeIn: props.fadeIn, fadeOut: props.fadeOut } };
+    }
+    const liste = normalizeAmbience(scene.ambience);
+    const k = liste.findIndex((a) => a.src === clip.src);
+    const entree = {
+      ...k >= 0 ? liste[k] : { src: clip.src, yaw: null, pitch: null },
+      volume: props.volume,
+      fadeIn: props.fadeIn,
+      fadeOut: props.fadeOut
+    };
+    return { ...scene, ambience: k >= 0 ? liste.map((a, i) => i === k ? entree : a) : [...liste, entree] };
+  }
+  function sonsRetirer(scene, clip) {
+    if (clip.piste === "musique") return scene.music && scene.music.src === clip.src ? { ...scene, music: null } : scene;
+    return { ...scene, ambience: normalizeAmbience(scene.ambience).filter((a) => a.src !== clip.src) };
+  }
+  function sonsModifier(scenes, chemin, clip, nouveau) {
+    const avant = {};
+    for (let i = clip.debut; i <= clip.fin; i++) if (chemin[i]) avant[chemin[i]] = true;
+    const apres = {};
+    if (nouveau) {
+      for (let i = nouveau.debut; i <= nouveau.fin; i++) if (chemin[i]) apres[chemin[i]] = true;
+    }
+    return scenes.map((s) => {
+      if (apres[s.id]) return sonsPoser(s, clip, nouveau);
+      if (avant[s.id]) return sonsRetirer(s, clip);
+      return s;
+    });
+  }
+  function sonsBruitage(scenes, sceneId, index, maj) {
+    return scenes.map((s) => {
+      if (s.id !== sceneId) return s;
+      const l = Array.isArray(s.sfx) ? s.sfx.slice() : [];
+      if (index < 0) l.push({ type: "play_sound", ...maj });
+      else if (maj) l[index] = { ...l[index], ...maj };
+      else l.splice(index, 1);
+      return { ...s, sfx: l };
+    });
+  }
+  function SoundTimeline({ scenes, startSceneId, puzzles, items, variables, dialogues, gameId, onChangeScenes }) {
+    const { audio, setAudio } = useAudioCtx();
+    const graphe = (0, import_react.useMemo)(
+      () => buildStoryGraph({ scenes, puzzles, items, variables, dialogues, startSceneId }),
+      [scenes, puzzles, items, variables, dialogues, startSceneId]
+    );
+    const cleChemin = "e360-sons-chemin:" + (gameId || "");
+    const lireChemin = () => {
+      try {
+        const v = JSON.parse(localStorage.getItem(cleChemin) || "null");
+        return Array.isArray(v) ? v : null;
+      } catch (e) {
+        return null;
+      }
+    };
+    const [cheminBrut, setCheminBrut] = (0, import_react.useState)(lireChemin);
+    (0, import_react.useEffect)(() => {
+      setCheminBrut(lireChemin());
+    }, [cleChemin]);
+    const changerChemin = (c) => {
+      setCheminBrut(c);
+      try {
+        if (c) localStorage.setItem(cleChemin, JSON.stringify(c));
+        else localStorage.removeItem(cleChemin);
+      } catch (e) {
+      }
+    };
+    const chemin = (0, import_react.useMemo)(() => {
+      const ids = scenes.map((s) => s.id);
+      const c = (cheminBrut || []).filter((id, i, a) => ids.indexOf(id) >= 0 && a.indexOf(id) === i);
+      return c.length ? c : sonsCheminAuto(scenes, graphe, startSceneId);
+    }, [cheminBrut, scenes, graphe, startSceneId]);
+    const sceneDe = (id) => scenes.find((s) => s.id === id);
+    const d = (0, import_react.useMemo)(() => sonsClips(scenes, chemin), [scenes, chemin]);
+    const [sel, setSel] = (0, import_react.useState)(null);
+    const [arme, setArme] = (0, import_react.useState)(null);
+    const [notice, setNotice] = (0, import_react.useState)("");
+    const [apercu, setApercu] = (0, import_react.useState)(null);
+    const glisse = (0, import_react.useRef)(null);
+    const fichier = (0, import_react.useRef)(null);
+    const busImport = (0, import_react.useRef)("ambience");
+    const [ecoute, setEcoute] = (0, import_react.useState)(null);
+    (0, import_react.useEffect)(() => () => {
+      aStopStream("sons-ecoute");
+    }, []);
+    const nomDe = (ref) => audioPlayable(audio, ref, "sfx").name || "son";
+    const n = chemin.length;
+    const trouve = (s) => {
+      if (!s) return null;
+      if (s.piste === "bruitage") return d.bruitages.find((b) => b.sceneId === s.sceneId && b.index === s.index) || null;
+      const l = s.piste === "musique" ? d.musique : d.ambiances;
+      return l.find((c) => c.src === s.src && c.debut <= s.debut && s.debut <= c.fin) || null;
+    };
+    const choisi = trouve(sel);
+    const cleDe = (c) => c.piste === "bruitage" ? { piste: c.piste, sceneId: c.sceneId, index: c.index } : { piste: c.piste, src: c.src, debut: c.debut };
+    const estChoisi = (c) => choisi === c;
+    const ecouter = (ref) => {
+      aUnlock();
+      if (ecoute === ref) {
+        aStopStream("sons-ecoute");
+        setEcoute(null);
+        return;
+      }
+      const p = audioPlayable(audio, ref, "sfx");
+      if (!p.src) return;
+      aStream("sons-ecoute", p.src, { bus: p.bus, loop: false, restart: true, volume: 1 });
+      setEcoute(ref);
+    };
+    const baseDe = (c) => ({ debut: c.debut, fin: c.fin, volume: c.volume, fadeIn: c.fadeIn, fadeOut: c.fadeOut });
+    const majClip = (c, champs) => {
+      if (c.piste === "bruitage") {
+        onChangeScenes((ss) => sonsBruitage(ss, c.sceneId, c.index, champs));
+        return;
+      }
+      onChangeScenes((ss) => sonsModifier(ss, chemin, c, { ...baseDe(c), ...champs }));
+    };
+    const supprimer = (c) => {
+      if (c.piste === "bruitage") onChangeScenes((ss) => sonsBruitage(ss, c.sceneId, c.index, null));
+      else onChangeScenes((ss) => sonsModifier(ss, chemin, c, null));
+      setSel(null);
+    };
+    const poserIci = (piste, i) => {
+      if (!arme) {
+        setNotice("Choisis d'abord un son dans la m\xE9diath\xE8que, \xE0 droite, puis touche une case.");
+        return;
+      }
+      setNotice("");
+      const id = chemin[i];
+      if (piste === "bruitage") {
+        const l = (sceneDe(id) && Array.isArray(sceneDe(id).sfx) ? sceneDe(id).sfx : []).length;
+        onChangeScenes((ss) => sonsBruitage(ss, id, -1, { soundId: arme, volume: 1, delay: 0 }));
+        setSel({ piste, sceneId: id, index: l });
+        return;
+      }
+      const clip = { piste, src: arme, debut: i, fin: -1 };
+      onChangeScenes((ss) => sonsModifier(ss, chemin, clip, { debut: i, fin: i, volume: piste === "musique" ? 0.6 : 1, fadeIn: null, fadeOut: null }));
+      setSel({ piste, src: arme, debut: i });
+    };
+    const calculer = (g, dx) => {
+      const c = g.clip;
+      const dc = Math.round(dx / SONS_CASE);
+      const base = baseDe(c);
+      if (c.piste === "bruitage") return { debut: Math.max(0, Math.min(n - 1, c.debut + dc)) };
+      if (g.mode === "deplacer") {
+        const long = c.fin - c.debut;
+        const deb = Math.max(0, Math.min(n - 1 - long, c.debut + dc));
+        return { ...base, debut: deb, fin: deb + long };
+      }
+      if (g.mode === "debut") return { ...base, debut: Math.max(0, Math.min(c.fin, c.debut + dc)) };
+      if (g.mode === "fin") return { ...base, fin: Math.max(c.debut, Math.min(n - 1, c.fin + dc)) };
+      const pas = dx / SONS_CASE * SONS_FONDU_MAX;
+      if (g.mode === "fondu-entree") return { ...base, fadeIn: sonsArrondi(sonsBorne((c.fadeIn || 0) + pas, 0, 0, SONS_FONDU_MAX)) };
+      if (g.mode === "fondu-sortie") return { ...base, fadeOut: sonsArrondi(sonsBorne((c.fadeOut || 0) - pas, 0, 0, SONS_FONDU_MAX)) };
+      return base;
+    };
+    const commencer = (e, clip, mode) => {
+      e.stopPropagation();
+      e.preventDefault();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (er) {
+      }
+      glisse.current = { clip, mode, x0: e.clientX, bouge: false };
+    };
+    const bouger = (e) => {
+      const g = glisse.current;
+      if (!g) return;
+      const dx = e.clientX - g.x0;
+      if (!g.bouge && Math.abs(dx) < 6) return;
+      g.bouge = true;
+      setApercu({ clip: g.clip, ...calculer(g, dx) });
+    };
+    const finir = (e, annule) => {
+      const g = glisse.current;
+      glisse.current = null;
+      setApercu(null);
+      if (!g) return;
+      if (!g.bouge) {
+        if (!annule) setSel(cleDe(g.clip));
+        return;
+      }
+      if (annule) return;
+      const a = calculer(g, e.clientX - g.x0);
+      const c = g.clip;
+      if (c.piste === "bruitage") {
+        if (a.debut === c.debut) return;
+        const sc = sceneDe(c.sceneId);
+        const b = sc && sc.sfx && sc.sfx[c.index];
+        if (!b) return;
+        const cible = chemin[a.debut];
+        const l = (sceneDe(cible) && Array.isArray(sceneDe(cible).sfx) ? sceneDe(cible).sfx : []).length;
+        onChangeScenes((ss) => sonsBruitage(
+          sonsBruitage(ss, c.sceneId, c.index, null),
+          cible,
+          -1,
+          { soundId: b.soundId, volume: b.volume, delay: b.delay }
+        ));
+        setSel({ piste: "bruitage", sceneId: cible, index: l });
+        return;
+      }
+      onChangeScenes((ss) => sonsModifier(ss, chemin, c, a));
+      setSel({ piste: c.piste, src: c.src, debut: a.debut });
+    };
+    const petit = { fontFamily: sans, fontSize: 10.5, color: C.textDim, lineHeight: 1.4 };
+    const largeur = Math.max(1, n) * SONS_CASE;
+    const dessinClip = (c0, top, haut) => {
+      const a = apercu && apercu.clip === c0 ? apercu : null;
+      const c = a ? { ...c0, ...a } : c0;
+      const coul = SONS_COULEUR[c0.piste];
+      const sel0 = estChoisi(c0);
+      const nom = nomDe(c0.src);
+      const introuvable = !audioPlayable(audio, c0.src, "sfx").src;
+      if (c0.piste === "bruitage") {
+        const x2 = c.debut * SONS_CASE + 4 + c0.delay / SONS_DELAI_MAX * (SONS_CASE - 56);
+        const rang = c0.index % 2;
+        return /* @__PURE__ */ import_react.default.createElement(
+          "div",
+          {
+            key: "b" + c0.sceneId + c0.index,
+            onPointerDown: (e) => commencer(e, c0, "deplacer"),
+            title: nom,
+            "data-sons-clip": "bruitage",
+            style: {
+              position: "absolute",
+              left: x2,
+              top: top + 4 + rang * ((haut - 8) / 2),
+              width: 52,
+              height: (haut - 12) / 2,
+              borderRadius: 6,
+              background: coul + "40",
+              border: `1px solid ${sel0 ? C.text : coul}`,
+              color: C.text,
+              fontFamily: sans,
+              fontSize: 10.5,
+              padding: "0 5px",
+              boxSizing: "border-box",
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+              textOverflow: "ellipsis",
+              lineHeight: (haut - 14) / 2 + "px",
+              touchAction: "none",
+              opacity: a ? 0.75 : 1,
+              cursor: "grab"
+            }
+          },
+          introuvable ? "\u26A0 " : "",
+          nom
+        );
+      }
+      const x = c.debut * SONS_CASE + 2;
+      const w = (c.fin - c.debut + 1) * SONS_CASE - 4;
+      const h = haut - 8;
+      const fIn = Math.min(w / 2, (c.fadeIn || 0) / SONS_FONDU_MAX * SONS_CASE);
+      const fOut = Math.min(w / 2, (c.fadeOut || 0) / SONS_FONDU_MAX * SONS_CASE);
+      const yVol = 4 + (1 - sonsBorne(c.volume, 1, 0, 1)) * (h - 8);
+      const poignee = {
+        position: "absolute",
+        top: 0,
+        bottom: 0,
+        width: 20,
+        touchAction: "none",
+        cursor: "ew-resize",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      };
+      const pointFondu = {
+        position: "absolute",
+        top: -6,
+        width: 28,
+        height: 28,
+        touchAction: "none",
+        cursor: "ew-resize",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
+      };
+      return /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          key: c0.piste + c0.src + c0.debut,
+          onPointerDown: (e) => commencer(e, c0, "deplacer"),
+          "data-sons-clip": c0.piste,
+          style: {
+            position: "absolute",
+            left: x,
+            top: top + 4,
+            width: w,
+            height: h,
+            borderRadius: 7,
+            background: coul + "33",
+            border: `1px solid ${sel0 ? C.text : coul + "AA"}`,
+            boxSizing: "border-box",
+            touchAction: "none",
+            cursor: "grab",
+            opacity: a ? 0.8 : 1,
+            overflow: "visible"
+          }
+        },
+        /* @__PURE__ */ import_react.default.createElement("svg", { width: w, height: h, style: { position: "absolute", left: -1, top: -1, pointerEvents: "none" } }, fIn > 0 && /* @__PURE__ */ import_react.default.createElement("polygon", { points: `0,0 ${fIn},0 0,${h}`, fill: "rgba(0,0,0,.45)" }), fIn > 0 && /* @__PURE__ */ import_react.default.createElement("line", { x1: "0", y1: h, x2: fIn, y2: "0", stroke: coul, strokeWidth: "1.5" }), fOut > 0 && /* @__PURE__ */ import_react.default.createElement("polygon", { points: `${w},0 ${w - fOut},0 ${w},${h}`, fill: "rgba(0,0,0,.45)" }), fOut > 0 && /* @__PURE__ */ import_react.default.createElement("line", { x1: w - fOut, y1: "0", x2: w, y2: h, stroke: coul, strokeWidth: "1.5" }), /* @__PURE__ */ import_react.default.createElement("line", { x1: fIn, y1: yVol, x2: w - fOut, y2: yVol, stroke: "rgba(255,255,255,.55)", strokeWidth: "1" })),
+        /* @__PURE__ */ import_react.default.createElement("div", { style: {
+          position: "absolute",
+          left: 10 + fIn,
+          right: 10 + fOut,
+          top: 5,
+          fontFamily: sans,
+          fontSize: 11.5,
+          color: introuvable ? C.danger : C.text,
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          pointerEvents: "none"
+        } }, introuvable ? "\u26A0 son introuvable" : nom),
+        /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", left: 10, bottom: 4, fontFamily: sans, fontSize: 10, color: C.textDim, pointerEvents: "none" } }, Math.round(sonsBorne(c.volume, 1, 0, 1) * 100), " %"),
+        /* @__PURE__ */ import_react.default.createElement("div", { onPointerDown: (e) => commencer(e, c0, "debut"), style: { ...poignee, left: -2 }, "data-sons-bord": "debut" }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 3, height: 18, borderRadius: 2, background: sel0 ? C.text : coul + "99" } })),
+        /* @__PURE__ */ import_react.default.createElement("div", { onPointerDown: (e) => commencer(e, c0, "fin"), style: { ...poignee, right: -2 }, "data-sons-bord": "fin" }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 3, height: 18, borderRadius: 2, background: sel0 ? C.text : coul + "99" } })),
+        sel0 && /* @__PURE__ */ import_react.default.createElement("div", { onPointerDown: (e) => commencer(e, c0, "fondu-entree"), style: { ...pointFondu, left: Math.max(4, fIn - 14) }, "data-sons-fondu": "entree" }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 12, height: 12, borderRadius: 6, background: C.text, border: `2px solid ${coul}` } })),
+        sel0 && /* @__PURE__ */ import_react.default.createElement("div", { onPointerDown: (e) => commencer(e, c0, "fondu-sortie"), style: { ...pointFondu, left: Math.min(w - 32, w - fOut - 14) }, "data-sons-fondu": "sortie" }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 12, height: 12, borderRadius: 6, background: C.text, border: `2px solid ${coul}` } }))
+      );
+    };
+    const pistes = [{ cle: "musique", nom: "Musique", piste: "musique", clips: d.musique }];
+    for (let l = 0; l <= d.lignesAmb; l++) {
+      pistes.push({ cle: "amb" + l, nom: "Ambiance " + (l + 1), piste: "ambiance", clips: d.ambiances.filter((c) => c.ligne === l), libre: l === d.lignesAmb });
+    }
+    pistes.push({ cle: "bruitages", nom: "Bruitages", piste: "bruitage", clips: d.bruitages });
+    const suivantes = n ? (graphe.edgesFrom[chemin[n - 1]] || []).map((e) => e.to).filter((id, i, a) => sceneDe(id) && chemin.indexOf(id) < 0 && a.indexOf(id) === i) : [];
+    const autres = scenes.filter((s) => chemin.indexOf(s.id) < 0 && suivantes.indexOf(s.id) < 0);
+    const lib = audio.library || [];
+    const libelleBus = { music: "musique", ambience: "ambiance", sfx: "bruitage", voice: "voix", ui: "interface" };
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0, minWidth: 0, background: C.ink }, "data-sons-atelier": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "10px 16px", borderBottom: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: serif, fontSize: 15 } }, "Sons"), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 12, color: C.textDim } }, "Chemin :"), chemin.map((id, i) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, { key: id }, i > 0 && /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "\u203A"), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => changerChemin(chemin.slice(0, i + 1)),
+        style: { ...smallBtn, background: i === n - 1 ? C.panel : C.line },
+        "data-sons-etape": i
+      },
+      i + 1,
+      ". ",
+      sceneDe(id) && sceneDe(id).name || id
+    ))), (suivantes.length > 0 || autres.length > 0) && /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: "",
+        onChange: (e) => {
+          if (e.target.value) changerChemin([...chemin, e.target.value]);
+        },
+        style: { ...input, width: "auto", marginTop: 0, padding: "6px 8px", fontSize: 12 },
+        "data-sons-ajout": true
+      },
+      /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "+ Sc\xE8ne suivante\u2026"),
+      suivantes.length > 0 && /* @__PURE__ */ import_react.default.createElement("optgroup", { label: "Reli\xE9es \xE0 la derni\xE8re sc\xE8ne" }, suivantes.map((id) => /* @__PURE__ */ import_react.default.createElement("option", { key: id, value: id }, sceneDe(id).name || id))),
+      autres.length > 0 && /* @__PURE__ */ import_react.default.createElement("optgroup", { label: "Autres sc\xE8nes" }, autres.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id)))
+    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => changerChemin(null), style: { ...smallBtn, background: "transparent", color: C.textDim }, "data-sons-auto": true }, "Chemin automatique")), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petit, marginTop: 4 } }, "La timeline d\xE9roule ce chemin, une case par sc\xE8ne. Toucher une sc\xE8ne du chemin coupe la suite : choisis ensuite une autre branche. Un son pos\xE9 sur une sc\xE8ne vaut pour tous les chemins qui y passent.")), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0, overflow: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 120, flexShrink: 0, borderRight: `1px solid ${C.line}`, background: C.ink2, position: "sticky", left: 0, zIndex: 2 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { height: 40, borderBottom: `1px solid ${C.line}` } }), pistes.map((p) => /* @__PURE__ */ import_react.default.createElement("div", { key: p.cle, style: {
+      height: SONS_PISTE,
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      padding: "0 10px",
+      borderBottom: `1px solid ${C.line}`,
+      fontFamily: sans,
+      fontSize: 12,
+      color: p.libre ? C.textDim : C.text,
+      boxSizing: "border-box"
+    } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 8, height: 8, borderRadius: 4, background: SONS_COULEUR[p.piste], opacity: p.libre ? 0.4 : 1, flexShrink: 0 } }), p.nom))), /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        style: { position: "relative", width: largeur, flexShrink: 0 },
+        onPointerMove: bouger,
+        onPointerUp: (e) => finir(e, false),
+        onPointerCancel: (e) => finir(e, true)
+      },
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", height: 40, borderBottom: `1px solid ${C.line}`, position: "sticky", top: 0, background: C.ink2, zIndex: 1 } }, chemin.map((id, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: id, style: {
+        width: SONS_CASE,
+        flexShrink: 0,
+        boxSizing: "border-box",
+        borderRight: `1px solid ${C.line}`,
+        padding: "4px 8px",
+        fontFamily: sans,
+        fontSize: 12,
+        color: C.text,
+        overflow: "hidden"
+      } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10, color: C.textDim } }, "Case ", i + 1), /* @__PURE__ */ import_react.default.createElement("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, sceneDe(id) && sceneDe(id).name || id)))),
+      pistes.map((p) => /* @__PURE__ */ import_react.default.createElement("div", { key: p.cle, style: { position: "relative", height: SONS_PISTE, borderBottom: `1px solid ${C.line}` }, "data-sons-piste": p.cle }, chemin.map((id, i) => /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          key: id,
+          onClick: () => poserIci(p.piste, i),
+          style: {
+            position: "absolute",
+            left: i * SONS_CASE,
+            top: 0,
+            width: SONS_CASE,
+            height: "100%",
+            boxSizing: "border-box",
+            borderRight: `1px solid ${C.line}`,
+            background: arme ? "rgba(255,255,255,.025)" : "transparent",
+            cursor: arme ? "copy" : "default"
+          },
+          "data-sons-case": i
+        }
+      )), p.clips.map((c) => dessinClip(c, 0, SONS_PISTE))))
+    )), /* @__PURE__ */ import_react.default.createElement("div", { style: { borderTop: `1px solid ${C.line}`, padding: "10px 16px", background: C.ink2, minHeight: 64 }, "data-sons-inspecteur": true }, !choisi ? /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: notice ? C.amber : C.textDim } }, notice || (arme ? "Touche une case vide d'une piste pour y poser \xAB " + nomDe(arme) + " \xBB." : "Choisis un son dans la m\xE9diath\xE8que, puis touche une case. Touche un clip pour le r\xE9gler ; tire ses bords pour l'\xE9tirer sur plus de sc\xE8nes.")) : /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 18, alignItems: "flex-end", flexWrap: "wrap", fontFamily: sans, fontSize: 12, color: C.textDim } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { minWidth: 160 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.text, fontSize: 13, fontWeight: 600 } }, nomDe(choisi.src)), /* @__PURE__ */ import_react.default.createElement("div", null, choisi.piste === "musique" ? "Musique" : choisi.piste === "ambiance" ? "Ambiance" : "Bruitage", " \xB7 ", choisi.piste === "bruitage" ? "case " + (choisi.debut + 1) : choisi.fin > choisi.debut ? "cases " + (choisi.debut + 1) + " \xE0 " + (choisi.fin + 1) + " (" + (choisi.fin - choisi.debut + 1) + " sc\xE8nes)" : "case " + (choisi.debut + 1))), /* @__PURE__ */ import_react.default.createElement("label", { style: { width: 150 } }, "Volume \u2014 ", Math.round(sonsBorne(choisi.volume, 1, 0, 1) * 100), " %", /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: "1",
+        step: "0.05",
+        value: sonsBorne(choisi.volume, 1, 0, 1),
+        onChange: (e) => majClip(choisi, { volume: parseFloat(e.target.value) }),
+        style: { width: "100%" },
+        "data-sons-volume": true
+      }
+    )), choisi.piste === "bruitage" ? /* @__PURE__ */ import_react.default.createElement("label", { style: { width: 170 } }, "D\xE9lai apr\xE8s l'arriv\xE9e \u2014 ", choisi.delay, " s", /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: SONS_DELAI_MAX,
+        step: "0.5",
+        value: choisi.delay,
+        onChange: (e) => majClip(choisi, { delay: parseFloat(e.target.value) }),
+        style: { width: "100%" },
+        "data-sons-delai": true
+      }
+    )) : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("label", { style: { width: 150 } }, "Fondu d'entr\xE9e \u2014 ", choisi.fadeIn == null ? "auto" : choisi.fadeIn + " s", /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: SONS_FONDU_MAX,
+        step: "0.5",
+        value: choisi.fadeIn || 0,
+        onChange: (e) => majClip(choisi, { fadeIn: parseFloat(e.target.value) }),
+        style: { width: "100%" },
+        "data-sons-fondu-entree": true
+      }
+    )), /* @__PURE__ */ import_react.default.createElement("label", { style: { width: 150 } }, "Fondu de sortie \u2014 ", choisi.fadeOut == null ? "auto" : choisi.fadeOut + " s", /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0",
+        max: SONS_FONDU_MAX,
+        step: "0.5",
+        value: choisi.fadeOut || 0,
+        onChange: (e) => majClip(choisi, { fadeOut: parseFloat(e.target.value) }),
+        style: { width: "100%" },
+        "data-sons-fondu-sortie": true
+      }
+    ))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => ecouter(choisi.src), style: smallBtn, "data-sons-ecouter": true }, ecoute === choisi.src ? "\u25A0 Arr\xEAter" : "\u25B6 \xC9couter"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => supprimer(choisi), style: { ...dangerBtn, padding: "6px 10px", fontSize: 12 }, "data-sons-supprimer": true }, "Retirer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setSel(null), style: { ...smallBtn, background: "transparent", color: C.textDim } }, "Fermer")))), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 240, flexShrink: 0, borderLeft: `1px solid ${C.line}`, background: C.ink2, padding: 12, overflowY: "auto", boxSizing: "border-box" }, "data-sons-mediatheque": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: serif, fontSize: 15, marginBottom: 8 } }, "M\xE9diath\xE8que"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 } }, [["music", "Musique"], ["ambience", "Ambiance"], ["sfx", "Bruitage"]].map(([bus, nom]) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: bus,
+        onClick: () => {
+          busImport.current = bus;
+          if (fichier.current) fichier.current.click();
+        },
+        style: { ...smallBtn, fontSize: 11 },
+        "data-sons-importer": bus
+      },
+      /* @__PURE__ */ import_react.default.createElement(Plus, { size: 11 }),
+      " ",
+      nom
+    ))), /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        ref: fichier,
+        type: "file",
+        accept: "audio/*",
+        style: { display: "none" },
+        onChange: async (e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          if (!f) return;
+          const src = await readAsDataUrl(f);
+          const nom = f.name.replace(/\.[^.]+$/, "").slice(0, 60) || "Son";
+          const ref = audioAdd(audio, setAudio, src, nom, busImport.current, busImport.current !== "sfx");
+          setArme(ref);
+          setNotice("");
+        }
+      }
+    ), lib.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: petit }, "Aucun son pour l'instant : importe une musique, une ambiance ou un bruitage."), lib.map((s) => {
+      const ref = AUDIO_PREFIX + s.id;
+      const on = arme === ref;
+      return /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          key: s.id,
+          onClick: () => {
+            setArme(on ? null : ref);
+            setNotice("");
+          },
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "6px 6px",
+            marginBottom: 4,
+            borderRadius: 6,
+            background: on ? C.panel : "transparent",
+            border: `1px solid ${on ? C.amber : "transparent"}`,
+            cursor: "pointer"
+          },
+          "data-sons-son": s.id
+        },
+        /* @__PURE__ */ import_react.default.createElement("button", { onClick: (e) => {
+          e.stopPropagation();
+          ecouter(ref);
+        }, style: { ...iconBtn, color: C.text }, title: "\xC9couter" }, ecoute === ref ? "\u25A0" : "\u25B6"),
+        /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, s.name), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10, color: C.textDim } }, libelleBus[s.bus] || s.bus))
+      );
+    })));
+  }
   function App() {
     const [scenes, setScenes] = (0, import_react.useState)([
       { id: "scene_intro", name: "D\xE9part", image: null, text: "Importe une image 360\xB0 pour commencer l'aventure...", hotspots: [], layers: [], editor: normalizeSceneEditor(null) }
@@ -82492,7 +83148,7 @@ loop();
       },
       /* @__PURE__ */ import_react.default.createElement(Play, { size: 13 }),
       " Tester la sc\xE8ne"
-    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: testGame, style: { ...smallBtn, background: C.amber, color: C.ink }, title: "Lance le jeu complet depuis l'\xE9cran d'accueil, comme dans le jeu export\xE9" }, "\u25B6 Tester le jeu"), mode === "editor" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", background: C.panel, borderRadius: 8, padding: 3, gap: 3 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("list"), style: { ...smallBtn, background: editorView === "list" ? C.amber : "transparent", color: editorView === "list" ? C.ink : C.textDim } }, "\u2630 Liste"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("map"), style: { ...smallBtn, background: editorView === "map" ? C.amber : "transparent", color: editorView === "map" ? C.ink : C.textDim } }, "\u{1F5FA} Carte"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("hud"), "data-view-hud": true, style: { ...smallBtn, background: editorView === "hud" ? C.amber : "transparent", color: editorView === "hud" ? C.ink : C.textDim } }, "\u2699 Interface"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("dialogues"), "data-view-dialogues": true, style: { ...smallBtn, background: editorView === "dialogues" ? C.amber : "transparent", color: editorView === "dialogues" ? C.ink : C.textDim } }, "\u{1F4AC} Dialogues"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("puzzles"), "data-view-puzzles": true, style: { ...smallBtn, background: editorView === "puzzles" ? C.amber : "transparent", color: editorView === "puzzles" ? C.ink : C.textDim } }, "\u{1F9E9} \xC9nigmes")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowLibrary(true), style: smallBtn }, "\u{1F4DA} Mes jeux"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHomeEditor(true), style: smallBtn }, "\u{1F3E0} Page d'accueil"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => saveProject(), style: { ...smallBtn, background: saveState === "saved" ? "#2E7D32" : saveState === "error" ? C.danger : C.line } }, saveState === "saving" ? "Enregistrement..." : saveState === "saved" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Check, { size: 13 }), " Enregistr\xE9") : saveState === "error" ? "\xC9chec" : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Save, { size: 13 }), " Enregistrer")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => importRef.current.click(), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Charger"), /* @__PURE__ */ import_react.default.createElement("input", { ref: importRef, type: "file", accept: "application/json", hidden: true, onChange: (e) => e.target.files[0] && importProject(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHudEditor(true), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 13 }), " HUD"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowDa(true), style: smallBtn, title: "Direction artistique : exporter les cadres, importer vos PNG", "data-open-da": true }, "\u{1F3A8} DA"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportJSON, style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Download, { size: 13 }), " JSON"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportGame, style: { ...smallBtn, background: C.amber, color: C.ink } }, /* @__PURE__ */ import_react.default.createElement(Film, { size: 13 }), " Exporter le jeu"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowAppExport(true), style: { ...smallBtn, background: C.amber, color: C.ink } }, "\u{1F4F1} Application"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, mode === "editor" && /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 220, borderRight: `1px solid ${C.line}`, background: C.ink2, padding: 12, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8nes"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: testGame, style: { ...smallBtn, background: C.amber, color: C.ink }, title: "Lance le jeu complet depuis l'\xE9cran d'accueil, comme dans le jeu export\xE9" }, "\u25B6 Tester le jeu"), mode === "editor" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", background: C.panel, borderRadius: 8, padding: 3, gap: 3 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("list"), style: { ...smallBtn, background: editorView === "list" ? C.amber : "transparent", color: editorView === "list" ? C.ink : C.textDim } }, "\u2630 Liste"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("map"), style: { ...smallBtn, background: editorView === "map" ? C.amber : "transparent", color: editorView === "map" ? C.ink : C.textDim } }, "\u{1F5FA} Carte"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("hud"), "data-view-hud": true, style: { ...smallBtn, background: editorView === "hud" ? C.amber : "transparent", color: editorView === "hud" ? C.ink : C.textDim } }, "\u2699 Interface"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("dialogues"), "data-view-dialogues": true, style: { ...smallBtn, background: editorView === "dialogues" ? C.amber : "transparent", color: editorView === "dialogues" ? C.ink : C.textDim } }, "\u{1F4AC} Dialogues"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("puzzles"), "data-view-puzzles": true, style: { ...smallBtn, background: editorView === "puzzles" ? C.amber : "transparent", color: editorView === "puzzles" ? C.ink : C.textDim } }, "\u{1F9E9} \xC9nigmes"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("sons"), "data-view-sons": true, style: { ...smallBtn, background: editorView === "sons" ? C.amber : "transparent", color: editorView === "sons" ? C.ink : C.textDim } }, "\u{1F50A} Sons")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowLibrary(true), style: smallBtn }, "\u{1F4DA} Mes jeux"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHomeEditor(true), style: smallBtn }, "\u{1F3E0} Page d'accueil"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => saveProject(), style: { ...smallBtn, background: saveState === "saved" ? "#2E7D32" : saveState === "error" ? C.danger : C.line } }, saveState === "saving" ? "Enregistrement..." : saveState === "saved" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Check, { size: 13 }), " Enregistr\xE9") : saveState === "error" ? "\xC9chec" : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Save, { size: 13 }), " Enregistrer")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => importRef.current.click(), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Charger"), /* @__PURE__ */ import_react.default.createElement("input", { ref: importRef, type: "file", accept: "application/json", hidden: true, onChange: (e) => e.target.files[0] && importProject(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHudEditor(true), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 13 }), " HUD"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowDa(true), style: smallBtn, title: "Direction artistique : exporter les cadres, importer vos PNG", "data-open-da": true }, "\u{1F3A8} DA"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportJSON, style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Download, { size: 13 }), " JSON"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportGame, style: { ...smallBtn, background: C.amber, color: C.ink } }, /* @__PURE__ */ import_react.default.createElement(Film, { size: 13 }), " Exporter le jeu"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowAppExport(true), style: { ...smallBtn, background: C.amber, color: C.ink } }, "\u{1F4F1} Application"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, mode === "editor" && /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 220, borderRight: `1px solid ${C.line}`, background: C.ink2, padding: 12, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8nes"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement(
       "div",
       {
         key: s.id,
@@ -82604,6 +83260,18 @@ loop();
         onRedo: redoUi,
         canUndo: uiHistory.past.length > 0,
         canRedo: uiHistory.future.length > 0
+      }
+    ) : mode === "editor" && editorView === "sons" ? /* @__PURE__ */ import_react.default.createElement(
+      SoundTimeline,
+      {
+        scenes,
+        startSceneId,
+        puzzles,
+        items,
+        variables,
+        dialogues,
+        gameId: gameMeta.id,
+        onChangeScenes: (f) => setScenes((ss) => f(ss))
       }
     ) : mode === "editor" && editorView === "puzzles" ? /* @__PURE__ */ import_react.default.createElement(
       PuzzleWorkshop,
@@ -83095,9 +83763,11 @@ loop();
       })
     )), dialog !== null && /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: () => setDialog(null) }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: serif, fontSize: 15, lineHeight: 1.5 } }, dialog), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setDialog(null), style: primaryBtn }, "Fermer")))));
   }
+
+  // entree.jsx
   var boot = document.getElementById("boot");
   if (boot) boot.remove();
-  (0, import_client.createRoot)(document.getElementById("root")).render(import_react.default.createElement(App));
+  (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ import_react2.default.createElement(App, null));
 })();
 /*! Bundled license information:
 
