@@ -281,7 +281,9 @@
   }
   function gererAccueil(h) {
     if (accueil.fait) return;
-    if (Date.now() - accueil.debut > 6000) { finAccueil(); return; }
+    // Fenêtre jamais venue : on laisse l'éditeur. Une fois ouverte, on continue de préparer
+    // ses lignes même si la liste des jeux arrive tard (stockage lent au lancement).
+    if (!accueil.vu && Date.now() - accueil.debut > 6000) { finAccueil(); return; }
     var fen = fenetreMesJeux();
     if (!fen) {
       if (accueil.demande) {
@@ -297,18 +299,38 @@
     document.documentElement.classList.remove("e360-demarrage");
     var carte = fen.firstElementChild;
     if (!carte) return;
+    // La croix de fermeture est le bouton de l'en-tête de la fenêtre. On la repère par sa
+    // place et non par son style : Safari n'écrit pas les styles comme Chrome.
+    function fermer() {
+      var tete = carte.firstElementChild;
+      var x = tete && tete.querySelector("button");
+      if (x) x.click();
+    }
     Array.prototype.forEach.call(carte.children, function (c) {
       if (c.tagName === "BUTTON" && /Nouveau jeu$/.test(libelle(c))) c.setAttribute("data-e360", "nouveau-jeu");
-      if (c.tagName === "DIV" && c.querySelector("button") && !c.hasAttribute("data-e360-ligne") && c.getAttribute("style") && c.getAttribute("style").indexOf("padding: 8px 10px") >= 0) {
-        c.setAttribute("data-e360-ligne", "");
-        // Toute la ligne ouvre le jeu ; la ligne du jeu en cours le reprend.
-        c.addEventListener("click", function (e) {
-          if (!fen.isConnected || fen.getAttribute("data-e360") !== "accueil" || e.target.closest("button")) return;
-          var ouvrir = Array.prototype.filter.call(c.querySelectorAll("button"), function (x) { return libelle(x) === "Ouvrir"; })[0];
-          if (ouvrir) ouvrir.click();
-          else { var x = fen.querySelector("button[style*='background: transparent']"); if (x) x.click(); }
-        });
+      if (c.tagName !== "DIV" || c.hasAttribute("data-e360-ligne") || !c.querySelector("button")) return;
+      var ouvrir = Array.prototype.filter.call(c.querySelectorAll("button"), function (x) { return libelle(x) === "Ouvrir"; })[0];
+      var enCours = Array.prototype.filter.call(c.children, function (x) { return x.tagName === "SPAN" && /En cours/.test(x.textContent); })[0];
+      if (!ouvrir && !enCours) return;
+      c.setAttribute("data-e360-ligne", "");
+      c.setAttribute("role", "button");
+      // Le jeu en cours a son propre bouton « Continuer », bien visible.
+      if (enCours) {
+        c.setAttribute("data-e360-en-cours", "");
+        var cont = document.createElement("button");
+        cont.type = "button";
+        cont.className = "e360-continuer";
+        cont.textContent = "Continuer";
+        cont.addEventListener("click", function (e) { e.stopPropagation(); fermer(); });
+        c.insertBefore(cont, enCours);
       }
+      // Toute la ligne ouvre le jeu ; la ligne du jeu en cours le reprend.
+      c.addEventListener("click", function (e) {
+        if (!fen.isConnected || fen.getAttribute("data-e360") !== "accueil" || e.target.closest("button")) return;
+        var o = Array.prototype.filter.call(c.querySelectorAll("button"), function (x) { return libelle(x) === "Ouvrir"; })[0];
+        if (o) o.click();
+        else fermer();
+      });
     });
   }
   function finAccueil() {
@@ -329,7 +351,17 @@
     try { localStorage.setItem(cle, JSON.stringify(v)); } catch (e) { /* stockage indisponible : l'état ne sera pas gardé */ }
   }
   var replis = lireReglage("e360-replis", {});
-  if (lireReglage("e360-colonne-masquee", false)) document.documentElement.classList.add("e360-colonne-masquee");
+  // Écran étroit (iPad en portrait) : la barre latérale devient un tiroir posé par-dessus
+  // le contenu, fermé par défaut ; son état n'est alors pas mémorisé.
+  var etroit = window.matchMedia("(max-width: 1100px)");
+  function appliquerLargeur() {
+    var masquee = etroit.matches ? true : lireReglage("e360-colonne-masquee", false);
+    document.documentElement.classList.toggle("e360-colonne-masquee", masquee);
+    document.documentElement.classList.toggle("e360-etroit", etroit.matches);
+  }
+  appliquerLargeur();
+  if (etroit.addEventListener) etroit.addEventListener("change", appliquerLargeur);
+  else if (etroit.addListener) etroit.addListener(appliquerLargeur);
 
   function colonneGauche() {
     var app = document.querySelector("#root > div");
@@ -354,9 +386,19 @@
         '<span class="e360-r-ferme">Scènes · Objets · Énigmes · Intervenants · Sons</span>';
       p.addEventListener("click", function () {
         var masquee = document.documentElement.classList.toggle("e360-colonne-masquee");
-        ecrireReglage("e360-colonne-masquee", masquee);
+        if (!etroit.matches) ecrireReglage("e360-colonne-masquee", masquee);
       });
       col.insertBefore(p, col.firstChild);
+    }
+    // En tiroir, toucher le contenu à côté le referme.
+    var corps = col.parentElement;
+    if (corps && !corps.hasAttribute("data-e360")) {
+      corps.setAttribute("data-e360", "corps");
+      corps.addEventListener("click", function (e) {
+        if (!etroit.matches || document.documentElement.classList.contains("e360-colonne-masquee")) return;
+        var c = colonneGauche();
+        if (c && !c.contains(e.target)) document.documentElement.classList.add("e360-colonne-masquee");
+      }, true);
     }
     var cle = null;
     Array.prototype.forEach.call(col.children, function (el) {

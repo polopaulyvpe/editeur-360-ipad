@@ -198,6 +198,10 @@ html { -webkit-font-smoothing: antialiased; }
   background-color: transparent !important; border: 1px solid var(--trait) !important;
 }
 #root div[style*="padding: 10px 16px"][style*="border-bottom"] { flex-wrap: wrap; row-gap: 8px; }
+/* Toute barre d'outils en ligne passe à la ligne plutôt que de glisser sous le panneau voisin
+   (barre de l'énigme, barre de l'interface…). */
+#root div[style*="display: flex"][style*="align-items: center"][style*="border-bottom"],
+#root div[style*="display: flex"][style*="align-items: center"][style*="border-top"] { flex-wrap: wrap; row-gap: 6px; }
 #root div[style*="padding: 10px 16px"][style*="border-bottom"] > span[style*="Fraunces"] { font-size: 17px !important; }
 
 /* Panneau de réglages de la scène : plus large, plus lisible. */
@@ -307,6 +311,20 @@ html.e360-colonne-masquee #root .e360-replier .e360-r-ferme {
   display: block; writing-mode: vertical-rl; letter-spacing: .06em; white-space: nowrap;
 }
 
+/* Écran étroit (portrait) : la barre latérale est un tiroir posé par-dessus le contenu.
+   Seule la bande de 48 px prend de la place ; ouverte, la barre recouvre la vue. */
+html.e360-etroit #root [data-e360="corps"] { position: relative; padding-left: 48px; }
+html.e360-etroit #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+  position: absolute; top: 0; bottom: 0; left: 0; z-index: 40; width: 280px !important;
+  box-shadow: 12px 0 32px rgba(0, 0, 0, .45);
+}
+html.e360-etroit.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+  width: 48px !important; box-shadow: none;
+}
+/* Colonnes de la vue Énigmes un peu plus étroites, pour laisser de la place à l'aperçu. */
+html.e360-etroit #root div[style*="width: 230px"][style*="flex-shrink: 0"] { width: 190px !important; }
+html.e360-etroit #root div[style*="width: 300px"][style*="border-left"][style*="flex-shrink: 0"] { width: 280px !important; }
+
 /* ---------- Aides : « ? » à côté du libellé, bulle au toucher ---------- */
 #root [data-e360-aide] { display: none !important; }
 #root .e360-q {
@@ -372,6 +390,13 @@ html.e360-demarrage #root { visibility: hidden; }
 }
 #root [data-e360="accueil"] [data-e360-ligne]:active { background-color: var(--surface-2) !important; }
 #root [data-e360="accueil"] [data-e360-ligne] > div:first-child > div:first-child { font-size: 17px !important; font-weight: 600; }
+/* Le jeu en cours : un vrai bouton « Continuer » à la place de la mention « En cours ». */
+#root [data-e360="accueil"] [data-e360-en-cours] > span { display: none; }
+#root [data-e360="accueil"] [data-e360-ligne] .e360-continuer {
+  min-height: 40px; padding: 0 18px !important; border: none; border-radius: 10px !important;
+  background: var(--accent) !important; color: #14110b !important; font: 600 15px var(--police) !important; cursor: pointer;
+}
+#root [data-e360="accueil"] [data-e360-ligne] .e360-continuer:active { opacity: .8; }
 
 @media (prefers-reduced-motion: reduce) {
   #root *, .e360-menu { animation: none !important; transition: none !important; }
