@@ -19,7 +19,11 @@
   --accent-doux: rgba(232, 163, 61, .14);
   --anneau: rgba(232, 163, 61, .35);
   --rayon: 9px;
+  /* Trois familles pour lire la page d'un coup d'œil :
+     titres des grands blocs en serif, rubriques en capitales étroites, le reste en sans. */
   --police: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  --police-titre: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --police-rubrique: "Avenir Next Condensed", "Avenir Next", "Arial Narrow", ui-rounded, sans-serif;
 }
 
 html, body { background: var(--fond) !important; }
@@ -28,7 +32,26 @@ html { -webkit-font-smoothing: antialiased; }
 
 /* ---------- Police unique, couleurs neutres ---------- */
 #root, #root [style*="font-family"] { font-family: var(--police) !important; }
-#root [style*="Fraunces"] { font-weight: 600 !important; letter-spacing: 0 !important; }
+
+/* ---------- Typographie : trois niveaux bien distincts ---------- */
+/* 1. Titres des grands blocs : serif, grand, clair. */
+#root [style*="Fraunces"],
+#root [style*="justify-content: space-between"][style*="margin-bottom: 10px"] > span:first-child,
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
+  font-family: var(--police-titre) !important; font-weight: 600 !important; letter-spacing: 0 !important;
+  text-transform: none !important; color: var(--texte) !important;
+}
+#root [style*="justify-content: space-between"][style*="margin-bottom: 10px"] > span:first-child { font-size: 21px !important; }
+#root div[style*="padding: 10px 16px"][style*="border-bottom"] > span[style*="Fraunces"] { font-size: 21px !important; }
+
+/* 2. Rubriques à l'intérieur d'un bloc : capitales étroites, espacées, grises. */
+#root div[style*="text-transform: uppercase"] {
+  font-family: var(--police-rubrique) !important; font-weight: 600 !important;
+  font-size: 12px !important; letter-spacing: .12em !important; color: var(--texte-2) !important;
+}
+
+/* 3. Contenu, boutons, champs : sans-serif système (règle générale plus haut). */
+
 
 #root [style*="background: rgb(11, 14, 20)"] { background-color: var(--fond) !important; }
 #root [style*="background: rgb(18, 21, 31)"] { background-color: var(--surface) !important; }
@@ -98,7 +121,8 @@ html { -webkit-font-smoothing: antialiased; }
 #root [data-e360="barre"] > * { flex-shrink: 0; white-space: nowrap; }
 #root [data-e360="logo"], #root [data-e360="marque"], #root [data-e360-menu] { display: none !important; }
 #root [data-e360="nom-jeu"] {
-  order: 1; margin: 0 6px 0 2px !important; font-size: 16px !important; font-weight: 600;
+  order: 1; margin: 0 6px 0 2px !important; font-size: 19px !important; font-weight: 600;
+  font-family: var(--police-titre) !important;
   color: var(--texte) !important; max-width: 240px !important;
 }
 #root [data-e360="vues"] { order: 2; }
@@ -109,7 +133,7 @@ html { -webkit-font-smoothing: antialiased; }
 #root [data-e360="tester-jeu"] { order: 7; }
 #root [data-e360="barre"] > .e360-plus { order: 8; }
 
-#root [data-e360="mes-jeux"], #root [data-e360="enregistrer"], #root [data-e360="tester-scene"] {
+#root [data-e360="mes-jeux"], #root [data-e360="enregistrer"][style*="background: rgb(36, 41, 56)"], #root [data-e360="tester-scene"] {
   background-color: transparent !important; border: 1px solid var(--trait) !important;
 }
 #root [data-e360="tester-jeu"] { padding: 6px 16px !important; font-weight: 600; }
@@ -150,7 +174,11 @@ html { -webkit-font-smoothing: antialiased; }
   width: 248px !important; padding: 10px 10px 20px !important; background-color: var(--surface) !important;
 }
 #root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
-  font-size: 11px !important; font-weight: 600; letter-spacing: .06em; margin: 18px 6px 6px !important;
+  font-family: var(--police-titre) !important; font-size: 18px !important; letter-spacing: 0 !important;
+  margin: 22px 6px 6px !important; padding-top: 16px; border-top: 1px solid var(--trait);
+}
+#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"]:first-child {
+  margin-top: 4px !important; padding-top: 0; border-top: none;
 }
 #root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > button {
   width: 100%; justify-content: flex-start !important; background-color: transparent !important;
@@ -175,8 +203,6 @@ html { -webkit-font-smoothing: antialiased; }
 /* Panneau de réglages de la scène : plus large, plus lisible. */
 #root div[style*="width: 170px"][style*="flex-shrink: 0"] { width: 250px !important; }
 
-/* Libellés de section. */
-#root div[style*="text-transform: uppercase"] { letter-spacing: .06em !important; font-weight: 600; }
 
 /* ---------- Champs ---------- */
 #root input:not([type]), #root input[type="text"], #root input[type="number"], #root input[type="search"],
@@ -237,6 +263,72 @@ html { -webkit-font-smoothing: antialiased; }
 #root ::-webkit-scrollbar-thumb { background: var(--bouton-appui); border-radius: 3px; }
 #root ::-webkit-scrollbar-track { background: transparent; }
 #root [style*="overflow-y: auto"], #root [style*="overflow: auto"] { overscroll-behavior: contain; }
+
+/* ---------- Aides : « ? » à côté du libellé, bulle au toucher ---------- */
+#root [data-e360-aide] { display: none !important; }
+#root .e360-q {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 22px; height: 22px; min-height: 22px; min-width: 22px; padding: 0; margin: 0 0 0 6px;
+  vertical-align: middle; border-radius: 50% !important; border: 1px solid var(--trait);
+  background: transparent; color: var(--texte-2);
+  font: 600 12px/1 var(--police) !important; letter-spacing: 0 !important; text-transform: none !important;
+  position: relative;
+}
+/* Zone de toucher plus grande que le rond visible. */
+#root .e360-q::after { content: ""; position: absolute; inset: -10px; }
+#root .e360-q:active { background: var(--bouton-appui); color: var(--texte); }
+#root .e360-q.e360-q-seul { display: flex; margin: 6px 0 2px; }
+#root button .e360-q { width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin-left: 8px;
+  border-color: currentColor; color: inherit; opacity: .55; font-size: 11px !important; }
+
+.e360-bulle {
+  position: fixed; z-index: 1001; max-width: min(340px, calc(100vw - 16px)); padding: 12px 14px;
+  background: var(--surface-2); border: 1px solid var(--trait); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .5); animation: e360-fondu .12s ease-out;
+  font: 400 14px/1.5 var(--police); color: var(--texte);
+}
+.e360-bulle p { margin: 0; }
+.e360-bulle p + p { margin-top: 8px; }
+
+/* ---------- Écran d'accueil (fenêtre « Mes jeux » au lancement) ---------- */
+html.e360-demarrage #root { visibility: hidden; }
+#root [data-e360="accueil"][style*="position: fixed"][style*="inset: 0px"][style*="background"] {
+  background-color: var(--fond) !important; animation: none; align-items: flex-start !important;
+  overflow-y: auto; padding: max(48px, 8vh) 16px 40px;
+}
+#root [data-e360="accueil"][style*="position: fixed"][style*="inset: 0px"][style*="background"] > div {
+  display: flex; flex-direction: column; width: 560px !important; max-width: 100% !important;
+  max-height: none !important; overflow: visible !important;
+  background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important;
+}
+#root [data-e360="accueil"] > div::before {
+  content: "Éditeur 360"; order: -3; font: 600 40px/1.1 var(--police-titre); color: var(--texte);
+}
+#root [data-e360="accueil"] > div::after {
+  content: "Crée un nouveau jeu ou reprends-en un."; order: -2; margin: 10px 0 32px;
+  font: 400 16px var(--police); color: var(--texte-2);
+}
+/* En-tête « Mes jeux », titre du jeu en cours et note de bas : inutiles ici. */
+#root [data-e360="accueil"] > div > div:first-child,
+#root [data-e360="accueil"] > div > input,
+#root [data-e360="accueil"] > div > div[style*="text-transform: uppercase"]:nth-child(2),
+#root [data-e360="accueil"] > div > div:last-child:not([data-e360-ligne]),
+#root [data-e360="accueil"] .e360-q { display: none !important; }
+
+#root [data-e360="accueil"] [data-e360="nouveau-jeu"] {
+  order: -1; min-height: 64px; margin: 0 0 36px !important; justify-content: center;
+  font-size: 18px !important; font-weight: 600 !important; border-radius: 14px !important;
+}
+#root [data-e360="accueil"] div[style*="text-transform: uppercase"] {
+  font-family: var(--police-titre) !important; font-size: 22px !important; letter-spacing: 0 !important;
+  text-transform: none !important; color: var(--texte) !important; margin: 0 0 14px !important;
+}
+#root [data-e360="accueil"] [data-e360-ligne] {
+  min-height: 68px; padding: 12px 14px !important; margin-bottom: 10px !important; border-radius: 14px !important;
+  background-color: var(--surface) !important; cursor: pointer;
+}
+#root [data-e360="accueil"] [data-e360-ligne]:active { background-color: var(--surface-2) !important; }
+#root [data-e360="accueil"] [data-e360-ligne] > div:first-child > div:first-child { font-size: 17px !important; font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   #root *, .e360-menu { animation: none !important; transition: none !important; }
