@@ -325,6 +325,35 @@ html.e360-etroit.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-
 html.e360-etroit #root div[style*="width: 230px"][style*="flex-shrink: 0"] { width: 190px !important; }
 html.e360-etroit #root div[style*="width: 300px"][style*="border-left"][style*="flex-shrink: 0"] { width: 280px !important; }
 
+/* ---------- Options rangées en onglets ---------- */
+#root [data-e360-hors-onglet] { display: none !important; }
+#root .e360-onglets {
+  position: sticky; top: -1px; z-index: 5; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  margin: 8px -4px 6px; padding: 6px 4px; background: var(--surface); border-bottom: 1px solid var(--trait);
+  -webkit-overflow-scrolling: touch; touch-action: pan-x;
+  /* Fondu à droite : on devine qu'il y a d'autres onglets plus loin. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+#root .e360-onglets::-webkit-scrollbar { display: none; }
+#root .e360-onglets > button {
+  flex: none; min-height: 36px; padding: 0 12px !important; border: none !important; border-radius: 18px !important;
+  background: transparent !important; color: var(--texte-2) !important;
+  font: 600 13px var(--police-rubrique) !important; letter-spacing: .02em; white-space: nowrap; cursor: pointer;
+}
+#root .e360-onglets > button.e360-onglet-actif { background: var(--bouton) !important; color: var(--texte) !important; box-shadow: inset 0 -2px 0 var(--accent); }
+/* La rubrique affichée porte déjà son nom sur l'onglet : son titre est discret. */
+#root .e360-onglets ~ div[style*="text-transform: uppercase"] { margin-top: 4px !important; }
+/* Réglages de la scène : les onglets au-dessus, une seule colonne à la fois, sur toute la largeur. */
+#root [data-e360-scene] { flex-wrap: wrap !important; row-gap: 4px; }
+#root [data-e360-scene] > .e360-onglets { flex: 0 0 100%; margin: 0 0 4px; position: static; }
+#root [data-e360-scene] > div:not(.e360-onglets) { flex: 1 1 100% !important; width: auto !important; min-width: 0; }
+#root [data-e360-scene][data-e360-page="Narration"] > div:last-child { display: none !important; }
+#root [data-e360-entree="droite"] { animation: e360-de-droite .22s ease-out; }
+#root [data-e360-entree="gauche"] { animation: e360-de-gauche .22s ease-out; }
+@keyframes e360-de-droite { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes e360-de-gauche { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+
 /* ---------- Aides : « ? » à côté du libellé, bulle au toucher ---------- */
 #root [data-e360-aide] { display: none !important; }
 #root .e360-q {

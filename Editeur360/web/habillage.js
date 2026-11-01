@@ -427,6 +427,219 @@
     });
   }
 
+  // ---------- Options rangées en onglets ----------
+  // Tout panneau qui enchaîne plusieurs rubriques (titres en capitales) est découpé en
+  // pages : une rangée d'onglets en tête, et on glisse le doigt de côté pour changer.
+  // Rien n'est déplacé : les rubriques des autres onglets sont seulement masquées,
+  // pour que l'éditeur continue de gérer ses éléments comme avant.
+  // Au-delà de 10 rubriques, elles sont regroupées par thème.
+  var THEMES = [
+    ["Général", /titre|nom|description|identifiant|version|narration|texte|type/i],
+    ["Logique", /logique|variable|condition|action|r[ée]ussite|[ée]chec|indice|solution|abandon|ouverture|pr[ée]requis|d[ée]blocage|r[eè]gle/i],
+    ["Sons", /musique|ambiance|\bsons?\b|bruitage|volume|audio|voix/i],
+    ["Affichage", /pr[ée]sentation|champ de vision|cam[ée]ra|affichage|[ée]cran|t[ée]l[ée]phone/i],
+    ["Contenu", /[ée]l[ée]ment|plateau|calque|objet|sc[eè]ne|carte|intervenant|personnage/i],
+    ["Apparence", /couleur|fond|image|police|style|logo|opacit|arrondi|th[eè]me|ic[oô]ne|transition|habillage|apparence|visuel|taille|dessin|fen[eê]tre|bouton/i],
+    ["Publier", /v[ée]rification|export|publi|application/i]
+  ];
+  var choixOnglet = {};   // onglet choisi, par panneau (clé : la liste de ses rubriques)
+
+  function estRubrique(el) {
+    return el.tagName === "DIV" && el.style.textTransform === "uppercase" && el.style.marginTop !== "0px" &&
+      !el.classList.contains("e360-onglets");
+  }
+  // Une rubrique, ou un bloc qui commence par une rubrique (liste d'actions…).
+  function rubriqueDe(el) {
+    if (el.tagName !== "DIV") return null;
+    if (estRubrique(el)) return el.textContent || "";
+    var a = el.firstElementChild;
+    return a && estRubrique(a) ? a.textContent || "" : null;
+  }
+  function nomCourt(t) {
+    t = t.replace(/\?\s*$/, "").replace(/\s*\(.*?\)\s*/g, " ").replace(/\s+[—–-]\s+.*$/, "").trim();
+    t = t.replace(/^(le|la|les|des|du)\s+/i, "").replace(/^l['’]\s*/i, "");
+    t = t.replace(/\s+d(e|u|es)\s+(l['’]\s*|la\s+)?(énigme|jeu|scène)$/i, "");
+    t = t.replace(/^si elle est abandonnée$/i, "Abandon").replace(/^à\s+(la\s+|l['’]\s*)?/i, "");
+    t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+    return t.length > 24 ? t.slice(0, 23) + "…" : t;
+  }
+  // Dans un formulaire, seuls les thèmes sans ambiguïté sont séparés ; le reste est « Général ».
+  var THEMES_FINS = { "Logique": 1, "Sons": 1, "Apparence": 1, "Publier": 1 };
+  function themeDe(t, fin) {
+    for (var i = 0; i < THEMES.length; i++) {
+      if (fin && !THEMES_FINS[THEMES[i][0]]) continue;
+      if (THEMES[i][1].test(t)) return THEMES[i][0];
+    }
+    return null;
+  }
+
+  // Un libellé de champ (capitales, petit) ou une ligne qui commence par un tel libellé
+  // (deux champs côte à côte) : dans un formulaire, chacun ouvre une rubrique.
+  function libelleDe(el) {
+    if (el.tagName !== "DIV" || el.classList.contains("e360-onglets")) return null;
+    if (el.style.textTransform === "uppercase") return el.textContent || "";
+    var a = el.firstElementChild, b = a && a.firstElementChild;
+    if (a && a.tagName === "DIV" && b && b.tagName === "DIV" && b.style.textTransform === "uppercase") return b.textContent || "";
+    return null;
+  }
+
+  // Les rubriques d'un panneau, puis ses pages. « fin » : formulaire découpé à chaque
+  // libellé de champ, toujours regroupé par thème.
+  function decouper(p, fin) {
+    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); });
+    // Le bouton principal en bas d'une fenêtre reste toujours visible.
+    if (kids.length && kids[kids.length - 1].tagName === "BUTTON") kids.pop();
+    var rubs = [], cur = null, premier = null;
+    kids.forEach(function (k) {
+      var nom = fin ? libelleDe(k) : rubriqueDe(k);
+      if (nom !== null) {
+        cur = { nom: nom.replace(/\?\s*$/, "").trim(), els: [k] };
+        rubs.push(cur);
+        if (!premier) premier = k;
+      } else if (cur) cur.els.push(k);
+    });
+    // Le titre ou le nom en tête d'un formulaire reste toujours visible.
+    if (fin && rubs.length && /^(titre|nom)(\s|$)/i.test(rubs[0].nom)) { rubs.shift(); premier = rubs.length ? rubs[0].els[0] : null; }
+    if (rubs.length < 2) return null;
+    // Une page par rubrique, ou par thème quand il y en a trop.
+    var pages = [];
+    if (!fin && rubs.length <= 10) {
+      rubs.forEach(function (r) { pages.push({ nom: nomCourt(r.nom), els: r.els.slice() }); });
+    } else {
+      var parNom = {};
+      rubs.forEach(function (r) {
+        var th = themeDe(r.nom, fin) || (fin || !pages.length ? "Général" : pages[pages.length - 1].nom);
+        if (!parNom[th]) { parNom[th] = { nom: th, els: [] }; pages.push(parNom[th]); }
+        parNom[th].els = parNom[th].els.concat(r.els);
+      });
+    }
+    if (pages.length < 2) return null;
+    return { avant: premier, pages: pages, cle: rubs.map(function (r) { return nomCourt(r.nom); }).join("|") };
+  }
+
+  // Le bas de la vue Liste : narration à gauche, réglages de la scène à droite.
+  function decouperScene(p) {
+    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); });
+    if (kids.length !== 2) return null;
+    var reglages = Array.prototype.slice.call(kids[1].children);
+    var i = 0;
+    while (i < reglages.length && !/musique|ambiance/i.test(reglages[i].textContent || "")) i++;
+    var pages = [{ nom: "Narration", els: [kids[0]] }, { nom: "Réglages", els: reglages.slice(0, i) }];
+    if (i < reglages.length) pages.push({ nom: "Sons", els: reglages.slice(i) });
+    return { avant: kids[0], pages: pages, cle: "scene" };
+  }
+
+  function montrerOnglet(p, d, nom, anime) {
+    choixOnglet[d.cle] = nom;
+    var vise = d.pages.filter(function (pg) { return pg.nom === nom; })[0] || d.pages[0];
+    if (p.getAttribute("data-e360-page") !== vise.nom) p.setAttribute("data-e360-page", vise.nom);
+    d.pages.forEach(function (pg) {
+      pg.els.forEach(function (el) {
+        if (pg === vise) {
+          if (el.hasAttribute("data-e360-hors-onglet")) {
+            el.removeAttribute("data-e360-hors-onglet");
+            if (anime) { el.setAttribute("data-e360-entree", anime); setTimeout(function () { el.removeAttribute("data-e360-entree"); }, 260); }
+          }
+        } else if (!el.hasAttribute("data-e360-hors-onglet")) el.setAttribute("data-e360-hors-onglet", "");
+      });
+    });
+    var barre = p.querySelector(":scope > .e360-onglets");
+    if (barre) Array.prototype.forEach.call(barre.children, function (b) {
+      var actif = b.getAttribute("data-onglet") === vise.nom;
+      if (actif !== b.classList.contains("e360-onglet-actif")) {
+        b.classList.toggle("e360-onglet-actif", actif);
+        if (actif && b.scrollIntoView) b.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
+    });
+  }
+
+  function glisser(p) {
+    var x0 = null, y0 = 0;
+    p.addEventListener("touchstart", function (e) {
+      var t = e.target;
+      x0 = t.closest && t.closest("input[type='range'], canvas, svg, textarea, select, .e360-onglets") ? null : e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+    }, { passive: true });
+    p.addEventListener("touchend", function (e) {
+      if (x0 === null) return;
+      var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      // Panneau rangé dans un autre : le plus proche du doigt change seul de page.
+      if (e.__e360Glisse) return;
+      var d = p.__e360Decoupe && p.__e360Decoupe();
+      if (!d) return;
+      e.__e360Glisse = true;
+      var noms = d.pages.map(function (pg) { return pg.nom; });
+      var i = noms.indexOf(choixOnglet[d.cle]);
+      if (i < 0) i = 0;
+      var j = Math.max(0, Math.min(noms.length - 1, i + (dx < 0 ? 1 : -1)));
+      if (j !== i) montrerOnglet(p, d, noms[j], dx < 0 ? "droite" : "gauche");
+    }, { passive: true });
+  }
+
+  function appliquerOnglets(p, decoupe) {
+    var d = decoupe();
+    var barre = p.querySelector(":scope > .e360-onglets");
+    if (!d) {
+      if (barre) barre.remove();
+      p.removeAttribute("data-e360-page");
+      Array.prototype.forEach.call(p.querySelectorAll("[data-e360-hors-onglet]"), function (el) { el.removeAttribute("data-e360-hors-onglet"); });
+      return;
+    }
+    p.__e360Decoupe = decoupe;
+    var noms = d.pages.map(function (pg) { return pg.nom; });
+    if (!barre || barre.getAttribute("data-noms") !== noms.join("|")) {
+      if (barre) barre.remove();
+      barre = document.createElement("div");
+      barre.className = "e360-onglets";
+      barre.setAttribute("role", "tablist");
+      barre.setAttribute("data-noms", noms.join("|"));
+      noms.forEach(function (nom) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "tab");
+        b.setAttribute("data-onglet", nom);
+        b.textContent = nom;
+        b.addEventListener("click", function () { var dd = p.__e360Decoupe && p.__e360Decoupe(); if (dd) montrerOnglet(p, dd, nom, null); });
+        barre.appendChild(b);
+      });
+    }
+    if (barre.nextElementSibling !== d.avant) p.insertBefore(barre, d.avant);
+    if (!p.hasAttribute("data-e360-glisse")) { p.setAttribute("data-e360-glisse", ""); glisser(p); }
+    montrerOnglet(p, d, noms.indexOf(choixOnglet[d.cle]) >= 0 ? choixOnglet[d.cle] : noms[0], null);
+  }
+
+  function ongletsPanneaux(root) {
+    var vus = [];
+    root.querySelectorAll("div").forEach(function (p) {
+      if (p.classList.contains("e360-onglets") || p.closest("[data-e360='colonne'], [data-e360='accueil'], .e360-menu")) return;
+      var grands = 0, petits = 0, premierEnfant = p.firstElementChild;
+      for (var k = premierEnfant; k; k = k.nextElementSibling) {
+        if (rubriqueDe(k) !== null) grands++;
+        else if (libelleDe(k) !== null) petits++;
+      }
+      if (grands >= 2) { vus.push([p, function () { return decouper(p, false); }]); return; }
+      // Réglages de la scène.
+      if (p.children.length >= 2 && p.style.borderTop && p.style.display === "flex") {
+        var c0 = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); })[0];
+        var l0 = c0 && c0.firstElementChild;
+        if (l0 && l0.style.textTransform === "uppercase" && /narration/i.test(l0.textContent || "")) {
+          p.setAttribute("data-e360-scene", "");
+          vus.push([p, function () { return decouperScene(p); }]);
+          return;
+        }
+      }
+      // Formulaire d'une fenêtre ou d'un panneau qui défile : un libellé par champ.
+      var fenetre = p.parentElement && p.parentElement.style.position === "fixed";
+      var defile = p.style.overflowY === "auto" || p.style.overflow === "auto";
+      if (petits + grands >= 4 && (fenetre || defile) && !(p.parentElement && p.parentElement.closest("[data-e360-glisse]"))) {
+        vus.push([p, function () { return decouper(p, true); }]);
+      }
+    });
+    vus.forEach(function (v) { appliquerOnglets(v[0], v[1]); });
+  }
+
   var prevu = false;
   function passe() {
     prevu = false;
@@ -438,9 +651,17 @@
     gererAccueil(h);
     colonne();
     aides(root);
+    ongletsPanneaux(root);
   }
   function planifier() {
-    if (!prevu) { prevu = true; requestAnimationFrame(passe); }
+    if (prevu) return;
+    prevu = true;
+    // Une seule passe, à l'image suivante ; la minuterie sert de filet si les images
+    // sont suspendues (vue en arrière-plan).
+    var fait = false;
+    var une = function () { if (!fait) { fait = true; passe(); } };
+    requestAnimationFrame(une);
+    setTimeout(une, 150);
   }
 
   function demarrer() {

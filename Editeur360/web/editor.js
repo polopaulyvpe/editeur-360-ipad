@@ -40891,6 +40891,7 @@
   .pz-box{display:flex;flex-direction:column;background:#161A25;border:1px solid #242938;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .pz-embedded{width:calc(100% - 20px);height:calc(100% - 40px)}
   .pz-panel{position:absolute;left:0;right:0;bottom:0;height:72%;border-radius:14px 14px 0 0}
+  .pz-box.pz-plein{position:absolute;inset:0;width:auto;height:auto;border:none;border-radius:0;box-shadow:none;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
   .pz-window{width:calc(100% - 40px);max-height:80%}
   .pz-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid #242938}
   .pz-title{display:flex;flex-direction:column;min-width:0}
@@ -47566,7 +47567,17 @@
       },
       /* @__PURE__ */ import_react.default.createElement("option", { value: "panel" }, "Dans un panneau"),
       /* @__PURE__ */ import_react.default.createElement("option", { value: "fullscreen" }, "En plein \xE9cran")
-    ), phases.map(([cle, lab]) => /* @__PURE__ */ import_react.default.createElement("div", { key: cle }, /* @__PURE__ */ import_react.default.createElement(Label, null, lab), /* @__PURE__ */ import_react.default.createElement(
+    ), puzzle.display.mode !== "fullscreen" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Sur t\xE9l\xE9phone"), /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: puzzle.display.telephone || "plein",
+        onChange: (e) => set({ display: { ...puzzle.display, telephone: e.target.value } }),
+        style: { ...select, marginTop: 0 },
+        "data-pz-telephone": true
+      },
+      /* @__PURE__ */ import_react.default.createElement("option", { value: "plein" }, "Sur tout l'\xE9cran (conseill\xE9)"),
+      /* @__PURE__ */ import_react.default.createElement("option", { value: "comme" }, "Comme ci-dessus")
+    )), phases.map(([cle, lab]) => /* @__PURE__ */ import_react.default.createElement("div", { key: cle }, /* @__PURE__ */ import_react.default.createElement(Label, null, lab), /* @__PURE__ */ import_react.default.createElement(
       ActionListEditor,
       {
         actions: puzzle[cle] || [],
@@ -52846,7 +52857,8 @@
     return {
       mode,
       w: Math.round(puzNum(s.w, 560, 200, 2e3)),
-      h: Math.round(puzNum(s.h, 440, 200, 2e3))
+      h: Math.round(puzNum(s.h, 440, 200, 2e3)),
+      telephone: s.telephone === "comme" ? "comme" : "plein"
     };
   }
   function normalizePuzzleSounds(s) {
@@ -66044,15 +66056,23 @@
         if (ctx.onChange) ctx.onChange(s);
         return s;
       };
+      let pageOptions = 0;
       const render = function() {
         ov.textContent = "";
         const settings = HomeSettings.get();
         const box = PlayerUI.box(ov, "Options");
         const mkEl = PlayerUI.mk;
+        const onglets = mkEl("div", { display: "flex", gap: "6px", overflowX: "auto", margin: "4px 0 8px", paddingBottom: "2px" });
+        onglets.setAttribute("data-opt-onglets", "");
+        box.appendChild(onglets);
+        const pages = [];
+        let cur = box;
         const head = function(t) {
-          const h = mkEl("div", { fontSize: ".75em", letterSpacing: ".08em", textTransform: "uppercase", color: "#8B8FA3", margin: "14px 0 2px" });
-          h.textContent = t;
-          box.appendChild(h);
+          const pg = mkEl("div", {});
+          pg.setAttribute("data-opt-page", t);
+          box.appendChild(pg);
+          pages.push({ t, el: pg });
+          cur = pg;
         };
         const row = function(label, ctl) {
           const r = mkEl("label", { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "44px" });
@@ -66060,7 +66080,7 @@
           s.textContent = label;
           r.appendChild(s);
           r.appendChild(ctl);
-          box.appendChild(r);
+          cur.appendChild(r);
           return r;
         };
         const check = function(key, label) {
@@ -66183,6 +66203,47 @@
         if (F.camera) {
           head("Jeu");
           range("cameraSensitivity", "Sensibilit\xE9 de la cam\xE9ra", 0.4, 2.5, 0.1);
+        }
+        if (pageOptions >= pages.length) pageOptions = 0;
+        const montre = function(i) {
+          pageOptions = i;
+          pages.forEach(function(pg, j) {
+            pg.el.style.display = j === i ? "" : "none";
+          });
+          Array.prototype.forEach.call(onglets.children, function(b, j) {
+            b.style.opacity = j === i ? "1" : ".6";
+            b.style.boxShadow = j === i ? "inset 0 -2px 0 #E8A33D" : "none";
+          });
+        };
+        if (pages.length > 1) {
+          pages.forEach(function(pg, j) {
+            const b = PlayerUI.button(pg.t, function() {
+              montre(j);
+            }, false);
+            b.style.flex = "none";
+            b.style.minWidth = "0";
+            b.style.padding = "0 14px";
+            onglets.appendChild(b);
+          });
+          montre(pageOptions);
+          let x0 = null, y0 = 0;
+          box.addEventListener("touchstart", function(e) {
+            const t = e.touches[0];
+            x0 = e.target.type === "range" || e.target.closest("[data-opt-onglets]") ? null : t.clientX;
+            y0 = t.clientY;
+          }, { passive: true });
+          box.addEventListener("touchend", function(e) {
+            if (x0 === null) return;
+            const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+            x0 = null;
+            if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+            montre(Math.max(0, Math.min(pages.length - 1, pageOptions + (dx < 0 ? 1 : -1))));
+          }, { passive: true });
+        } else {
+          onglets.style.display = "none";
+          pages.forEach(function(pg) {
+            pg.el.style.display = "";
+          });
         }
         box.appendChild(PlayerUI.button(ctx.closeLabel || "Retour", close, true));
       };
@@ -71513,6 +71574,7 @@ return {
 mode: mode,
 w: Math.round(puzNum(s.w, 560, 200, 2000)),
 h: Math.round(puzNum(s.h, 440, 200, 2000)),
+telephone: s.telephone === 'comme' ? 'comme' : 'plein',
 };
 }
 function normalizePuzzleSounds(s) {
@@ -82001,13 +82063,21 @@ const OptionsPanel = {
       if (ctx.onChange) ctx.onChange(s);
       return s;
     };
+    let pageOptions = 0;
     const render = function () {
       ov.textContent = "";
       const settings = HomeSettings.get();
       const box = PlayerUI.box(ov, "Options");
       const mkEl = PlayerUI.mk;
-      const head = function (t) { const h = mkEl("div", { fontSize: ".75em", letterSpacing: ".08em", textTransform: "uppercase", color: "#8B8FA3", margin: "14px 0 2px" }); h.textContent = t; box.appendChild(h); };
-      const row = function (label, ctl) { const r = mkEl("label", { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "44px" }); const s = mkEl("span"); s.textContent = label; r.appendChild(s); r.appendChild(ctl); box.appendChild(r); return r; };
+      // Chaque rubrique devient une page : des onglets en haut, et on glisse le doigt
+      // de c\xF4t\xE9 pour passer \xE0 la suivante.
+      const onglets = mkEl("div", { display: "flex", gap: "6px", overflowX: "auto", margin: "4px 0 8px", paddingBottom: "2px" });
+      onglets.setAttribute("data-opt-onglets", "");
+      box.appendChild(onglets);
+      const pages = [];
+      let cur = box;
+      const head = function (t) { const pg = mkEl("div", {}); pg.setAttribute("data-opt-page", t); box.appendChild(pg); pages.push({ t: t, el: pg }); cur = pg; };
+      const row = function (label, ctl) { const r = mkEl("label", { display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", minHeight: "44px" }); const s = mkEl("span"); s.textContent = label; r.appendChild(s); r.appendChild(ctl); cur.appendChild(r); return r; };
       const check = function (key, label) { const i = mkEl("input", { width: "22px", height: "22px" }); i.type = "checkbox"; i.checked = !!settings[key]; i.setAttribute("data-opt", key); i.addEventListener("change", function () { const p = {}; p[key] = i.checked; change(p); }); return row(label, i); };
       const range = function (key, label, min, max, step) { const i = mkEl("input", { width: "140px" }); i.type = "range"; i.min = String(min); i.max = String(max); i.step = String(step); i.value = String(settings[key]); i.setAttribute("data-opt", key); i.addEventListener("input", function () { const p = {}; p[key] = parseFloat(i.value); change(p); }); return row(label, i); };
       // Un curseur par bus, et seulement pour les bus que ce jeu emploie :
@@ -82068,6 +82138,39 @@ const OptionsPanel = {
         check("dialogAuto", "Encha\xEEner tout seul");
       }
       if (F.camera) { head("Jeu"); range("cameraSensitivity", "Sensibilit\xE9 de la cam\xE9ra", 0.4, 2.5, 0.1); }
+      if (pageOptions >= pages.length) pageOptions = 0;
+      const montre = function (i) {
+        pageOptions = i;
+        pages.forEach(function (pg, j) { pg.el.style.display = j === i ? "" : "none"; });
+        Array.prototype.forEach.call(onglets.children, function (b, j) {
+          b.style.opacity = j === i ? "1" : ".6";
+          b.style.boxShadow = j === i ? "inset 0 -2px 0 #E8A33D" : "none";
+        });
+      };
+      if (pages.length > 1) {
+        pages.forEach(function (pg, j) {
+          const b = PlayerUI.button(pg.t, function () { montre(j); }, false);
+          b.style.flex = "none"; b.style.minWidth = "0"; b.style.padding = "0 14px";
+          onglets.appendChild(b);
+        });
+        montre(pageOptions);
+        let x0 = null, y0 = 0;
+        box.addEventListener("touchstart", function (e) {
+          const t = e.touches[0];
+          x0 = (e.target.type === "range" || e.target.closest("[data-opt-onglets]")) ? null : t.clientX;
+          y0 = t.clientY;
+        }, { passive: true });
+        box.addEventListener("touchend", function (e) {
+          if (x0 === null) return;
+          const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+          x0 = null;
+          if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+          montre(Math.max(0, Math.min(pages.length - 1, pageOptions + (dx < 0 ? 1 : -1))));
+        }, { passive: true });
+      } else {
+        onglets.style.display = "none";
+        pages.forEach(function (pg) { pg.el.style.display = ""; });
+      }
       box.appendChild(PlayerUI.button(ctx.closeLabel || "Retour", close, true));
     };
     render();
@@ -82947,6 +83050,11 @@ function openPuzzle(hs, consume){
   bus.emit(PUZZLE_EVENTS.opened, { puzzleId: p.id });
   buildPuzzleUI(); refreshPuzzleUI(); refreshPuzzleStatus();
 }
+/*  Un telephone : le cadre du jeu est etroit dans sa plus petite dimension. */
+function pleinSurTelephone(p){
+  if(p.display && p.display.telephone === 'comme') return false;
+  try{ const r = frameEl.getBoundingClientRect(); return Math.min(r.width, r.height) < 600; }catch(e){ return false; }
+}
 function openNativePuzzle(p, consume){
   const t = getPuzzleType(p.kind);
   if(!t || !t.mount){ showModal("Ce type d'enigme n'est pas disponible."); return; }
@@ -82969,7 +83077,8 @@ function openNativePuzzle(p, consume){
   };
   activeP = {
     p: p, native: true, type: t, live: live, inst: null,
-    mode: t.enScene ? 'scene' : (p.display.mode === 'fullscreen' ? 'embedded' : 'panel'),
+    mode: t.enScene ? 'scene' : ((p.display.mode === 'fullscreen' || pleinSurTelephone(p)) ? 'embedded' : 'panel'),
+    plein: !t.enScene && pleinSurTelephone(p),
     view: solved ? 'solved' : 'play', already: solved,
     openLines: [], failLines: [], successLines: [], nav: null, consume: consume || [],
   };
@@ -83176,7 +83285,7 @@ function buildPuzzleUI(){
   /*  Dans la scene, pas de voile : un bandeau, et le panorama reste a portee de doigt. */
   const enScene = ap.mode === 'scene';
   const root = mk('div','pz-overlay' + (enScene ? ' pz-en-scene' : '')); root.setAttribute('role', enScene ? 'region' : 'dialog'); if(!enScene) root.setAttribute('aria-modal','true');
-  const box = mk('div','pz-box pz-'+ap.mode); root.appendChild(box);
+  const box = mk('div','pz-box pz-'+ap.mode+(ap.plein ? ' pz-plein' : '')); root.appendChild(box);
   const head = mk('div','pz-head'); box.appendChild(head);
   const ttl = mk('div','pz-title'); head.appendChild(ttl);
   ttl.appendChild(mk('span','pz-tag','\u{1F9E9} \xC9NIGME')); ttl.appendChild(mk('span','pz-name', p.title||'\xC9nigme'));
