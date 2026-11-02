@@ -36865,6 +36865,58 @@
     }
     return null;
   }
+  function normalizeObjectifs(liste) {
+    return (Array.isArray(liste) ? liste : []).filter((o) => o && typeof o === "object" && o.id).map((o) => ({
+      id: String(o.id),
+      texte: String(o.texte || "").slice(0, 160),
+      indices: (Array.isArray(o.indices) ? o.indices : []).map((t) => String(t || "").slice(0, 300)).slice(0, 3),
+      apparaitSi: normalizeRequirements(o.apparaitSi),
+      reussiSi: normalizeRequirements(o.reussiSi)
+    }));
+  }
+  function normalizeAide(a) {
+    const s = a && typeof a === "object" ? a : {};
+    const m = parseFloat(s.coupDePouce);
+    return { coupDePouce: isFinite(m) ? Math.max(0, Math.min(60, m)) : 0, precedemment: s.precedemment !== false };
+  }
+  function ObjectifsManager({ meta, setMeta, items, variables, puzzles, scenes, onClose }) {
+    const liste = meta.objectifs || [];
+    const aide = normalizeAide(meta.aide);
+    const ecrire = (l) => setMeta((m) => ({ ...m, objectifs: l }));
+    const maj = (i, patch) => ecrire(liste.map((o, k) => k === i ? { ...o, ...patch } : o));
+    const deplace = (i, d) => {
+      const j = i + d;
+      if (j < 0 || j >= liste.length) return;
+      const l = liste.slice();
+      [l[i], l[j]] = [l[j], l[i]];
+      ecrire(l);
+    };
+    const majAide = (patch) => setMeta((m) => ({ ...m, aide: { ...normalizeAide(m.aide), ...patch } }));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 460, maxHeight: "88vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), "data-objectifs-manager": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Objectifs et aide"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Objectifs (", liste.length, ")"), liste.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginBottom: 6 } }, "Aucun objectif pour l'instant."), liste.map((o, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: o.id, style: { background: C.ink2, borderRadius: 6, padding: 8, marginBottom: 8 }, "data-objectif": o.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, width: 18 } }, i + 1, "."), /* @__PURE__ */ import_react.default.createElement("input", { value: o.texte, onChange: (e) => maj(i, { texte: e.target.value }), style: { ...input, flex: 1, marginTop: 0 }, placeholder: "Trouver un moyen d'ouvrir la cave" }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => deplace(i, -1), style: iconBtn, title: "Monter" }, "\u2191"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => deplace(i, 1), style: iconBtn, title: "Descendre" }, "\u2193"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire(liste.filter((_, k) => k !== i)), style: iconBtn, title: "Supprimer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "8px 0 2px" } }, "Indices, du plus vague au plus pr\xE9cis :"), [0, 1, 2].map((k) => /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        key: k,
+        value: (o.indices || [])[k] || "",
+        onChange: (e) => {
+          const ind = [0, 1, 2].map((x) => (o.indices || [])[x] || "");
+          ind[k] = e.target.value;
+          maj(i, { indices: ind });
+        },
+        style: { ...input, marginTop: 4 },
+        placeholder: ["Le jardinier sait peut-\xEAtre quelque chose.", "Parle au jardinier de la cave.", "Donne la pelle au jardinier : il t'ouvrira."][k]
+      }
+    )), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "8px 0 2px" } }, "Appara\xEEt quand (vide : d\xE8s le d\xE9but) :"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: o.apparaitSi || [], onChange: (c) => maj(i, { apparaitSi: c }), items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "8px 0 2px" } }, "Accompli quand :"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: o.reussiSi || [], onChange: (c) => maj(i, { reussiSi: c }), items, variables, puzzles, scenes }))), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => ecrire([...liste, { id: "obj_" + Math.random().toString(36).slice(2, 8), texte: "", indices: ["", "", ""], apparaitSi: [], reussiSi: [] }]),
+        style: smallBtn,
+        "data-objectif-ajout": true
+      },
+      /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }),
+      " Ajouter un objectif"
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Aide au joueur"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "Coup de pouce automatique", /* @__PURE__ */ import_react.default.createElement("select", { value: String(aide.coupDePouce), onChange: (e) => majAide({ coupDePouce: parseFloat(e.target.value) }), style: { ...select, width: "auto", marginTop: 0 }, "data-coup-de-pouce": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Jamais"), /* @__PURE__ */ import_react.default.createElement("option", { value: "2" }, "Apr\xE8s 2 min sans progr\xE8s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "5" }, "Apr\xE8s 5 min sans progr\xE8s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Apr\xE8s 10 min sans progr\xE8s"))), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: aide.precedemment, onChange: (e) => majAide({ precedemment: e.target.checked }), "data-precedemment": true }), "\xAB Pr\xE9c\xE9demment\u2026 \xBB : un rappel quand le joueur reprend sa partie"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, lineHeight: 1.55, marginTop: 10 } }, "L'objectif affich\xE9 est le premier de la liste qui est apparu et pas encore accompli : le joueur le voit annonc\xE9, dans son journal et en touchant un bouton \xAB Aide \xBB de l'interface. Chaque indice demand\xE9 compte dans le bilan de fin. Dans l'Interface, un bouton peut aussi \xAB Prendre une photo \xBB : elle se range dans le journal, avec les notes du joueur.")));
+  }
   function HotspotEditor({ hotspot, scenes, items, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -39302,6 +39354,7 @@
     ["open_journal", "Journal"],
     ["open_help", "Aide"],
     ["save", "Enregistrer la partie"],
+    ["photo", "Prendre une photo"],
     ["custom", "Actions au choix"]
   ];
   var HUD_FONT_LABELS = [["sans", "Sans empattement"], ["serif", "Avec empattements"], ["mono", "Chasse fixe"], ["display", "Manuscrite"]];
@@ -51287,7 +51340,8 @@
     "open_journal",
     "open_help",
     "save",
-    "custom"
+    "custom",
+    "photo"
   ];
   var UI_ANIMS = ["none", "fade", "scale", "slide", "pulse", "shake"];
   var UI_ICON_KINDS = ["builtin", "library", "image", "none"];
@@ -67369,6 +67423,8 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
       author: String(s.author != null ? s.author : base && base.author || "").slice(0, 80),
       description: String(s.description != null ? s.description : base && base.description || "").slice(0, 400),
       succes: normalizeSucces(s.succes || base && base.succes),
+      objectifs: normalizeObjectifs(s.objectifs || base && base.objectifs),
+      aide: normalizeAide(s.aide || base && base.aide),
       app: {
         appName: String(a.appName || b.appName || title).slice(0, 30),
         packageId: String(a.packageId != null ? a.packageId : b.packageId || ""),
@@ -67408,7 +67464,7 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
     const m = p.meta;
     return {
       version: GAME_FORMAT_VERSION,
-      game: { id: m.id, title: m.title, author: m.author, description: m.description, succes: normalizeSucces(m.succes) },
+      game: { id: m.id, title: m.title, author: m.author, description: m.description, succes: normalizeSucces(m.succes), objectifs: normalizeObjectifs(m.objectifs), aide: normalizeAide(m.aide) },
       app: { appName: m.app.appName, packageId: m.app.packageId, version: m.app.version },
       scenes: p.scenes.map(function(s) {
         return s.onEnter && s.onEnter.length ? { ...s, onEnter: normalizeActions(s.onEnter) } : s;
@@ -68318,6 +68374,16 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
   #viewer.tr-secoue-fort{animation:tr-secoue-fort .7s ease}
   @keyframes tr-secoue{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
   @keyframes tr-secoue-fort{0%,100%{transform:none}15%{transform:translate(-16px,8px) rotate(-1deg)}30%{transform:translate(14px,-10px) rotate(1deg)}45%{transform:translate(-12px,6px)}60%{transform:translate(9px,-5px)}80%{transform:translate(-4px,2px)}}
+  .aide-objectif{font:600 16px/1.4 system-ui,sans-serif;margin:6px 0 12px}
+  .aide-indice{display:block;line-height:1.5}
+  .aide-btn,.jr-photo-btn{margin-top:10px;min-height:40px;padding:0 16px;border-radius:10px;border:none;background:var(--accent,#E8A33D);color:#14110b;font:600 14px system-ui,sans-serif;cursor:pointer}
+  .jr-notes{width:100%;box-sizing:border-box;min-height:90px;resize:vertical;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.25);color:inherit;font:14px/1.45 system-ui,sans-serif;padding:8px}
+  .jr-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .jr-photos img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:6px;cursor:pointer}
+  .photo-flash{position:absolute;inset:0;z-index:65;background:#fff;pointer-events:none;animation:photo-flash .45s ease forwards}
+  @keyframes photo-flash{from{opacity:.85}to{opacity:0}}
+  .precedemment{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:62;width:min(420px,calc(100% - 32px));box-sizing:border-box;padding:14px 16px;border-radius:14px;background:rgba(16,19,27,.92);border:1px solid rgba(255,255,255,.12);color:#E9E6DD;font:14px/1.5 system-ui,sans-serif;box-shadow:0 14px 40px rgba(0,0,0,.5);animation:tr-apparait .4s ease;cursor:pointer}
+  .precedemment b{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent,#E8A33D);margin-bottom:4px}
   #fin-jeu{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:#05070b center/cover no-repeat;animation:tr-apparait .8s ease}
   #fin-jeu::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,.55),rgba(5,7,11,.9))}
   .fin-boite{position:relative;max-width:440px;width:100%;max-height:100%;overflow-y:auto;text-align:center;color:#E9E6DD;font-family:system-ui,sans-serif}
@@ -69041,6 +69107,104 @@ setInterval(function(){
   if(playerScreen !== 'playing' || !saveEnabled || document.getElementById('fin-jeu')) return;
   vars.__temps = (vars.__temps || 0) + 1;
 }, 1000);
+/*  Lot 3. L'objectif en cours : le premier de la liste qui est apparu
+    et pas encore accompli. Tout se decide par les conditions.        */
+function objectifsDuJeu(){ return (GAME.game && Array.isArray(GAME.game.objectifs)) ? GAME.game.objectifs : []; }
+function aideDuJeu(){ return (GAME.game && GAME.game.aide) || {}; }
+function objectifApparu(o){ return !reqMissing(o.apparaitSi || [], inventory, vars).length; }
+function objectifAccompli(o){ return (o.reussiSi || []).length > 0 && !reqMissing(o.reussiSi, inventory, vars).length; }
+function objectifEnCours(){
+  const l = objectifsDuJeu();
+  for(let i = 0; i < l.length; i++){ if(objectifApparu(l[i]) && !objectifAccompli(l[i])) return l[i]; }
+  return null;
+}
+function indicesDe(o){ return ((o && o.indices) || []).filter(function(t){ return t && String(t).trim(); }); }
+/*  Annonce d'un nouvel objectif, et coup de pouce apres un long moment
+    sans rien de neuf (le temps qui passe ne compte pas comme progres). */
+let objectifVu, dernierProgres = Date.now(), sigProgres = '';
+setInterval(function(){
+  if(playerScreen !== 'playing' || !saveEnabled || document.getElementById('fin-jeu')) return;
+  const o = objectifEnCours(), id = o ? o.id : null;
+  if(id !== objectifVu && o && o.texte && (objectifVu !== undefined || (vars.__temps || 0) < 6)){
+    try{ hudNotify('\u{1F9ED} Objectif : ' + o.texte, 'info'); }catch(e){}
+  }
+  objectifVu = id;
+  const v = Object.assign({}, vars); delete v.__temps;
+  const sig = JSON.stringify([current && current.id, inventory, v]);
+  if(sig !== sigProgres){ sigProgres = sig; dernierProgres = Date.now(); }
+  const m = parseFloat(aideDuJeu().coupDePouce) || 0;
+  if(m > 0 && o && Date.now() - dernierProgres > m * 60000){
+    dernierProgres = Date.now();
+    const ind = indicesDe(o);
+    try{ hudNotify('\u{1F4A1} ' + (ind.length ? ind[0] : 'Objectif : ' + o.texte), 'info'); }catch(e){}
+  }
+}, 2000);
+/*  Un panneau du jeu, sur le modele du journal (meme place, memes
+    gestes pour le fermer).                                           */
+function panneauJeu(titre, aria){
+  closeJournal();
+  const el = document.createElement('div');
+  el.id = 'journal';
+  el.setAttribute('role','dialog'); el.setAttribute('aria-modal','true'); el.setAttribute('aria-label', aria || titre);
+  const box = mk('div','pnl pnl-center');
+  box.style.maxHeight = '78%';
+  box.appendChild(mk('h4','pnl-title', titre));
+  const finir = function(){
+    const x = mk('button','pnl-close','\u2715');
+    x.type = 'button'; x.id = 'journal-close'; x.setAttribute('aria-label','Fermer');
+    x.onclick = closeJournal;
+    box.appendChild(x);
+    el.appendChild(box);
+    el.onclick = function(e){ if(e.target === el) closeJournal(); };
+    frameEl.appendChild(el);
+    if(!HomeSettings.get().reduceMotion) box.classList.add('hud-in-fade');
+  };
+  return { box: box, finir: finir };
+}
+function openAide(){
+  const p = panneauJeu('Que dois-je faire ?');
+  const o = objectifEnCours();
+  if(!o){
+    p.box.appendChild(mk('div','pnl-empty', "Rien de pr\xE9cis pour l'instant : explore les lieux et touche ce qui attire l'\u0153il."));
+  } else {
+    p.box.appendChild(mk('div','aide-objectif', o.texte || 'Continue d\u2019explorer.'));
+    const ind = indicesDe(o), n = Math.min(vars['__aide:' + o.id] || 0, ind.length);
+    if(n){
+      const l = mk('div','pnl-list');
+      for(let i = 0; i < n; i++) l.appendChild(mk('div','pnl-row aide-indice', '\u{1F4A1} ' + ind[i]));
+      p.box.appendChild(l);
+    }
+    if(n < ind.length){
+      const b = mk('button','aide-btn', n ? 'Un indice plus pr\xE9cis' : 'Un indice ?');
+      b.type = 'button';
+      b.onclick = function(){ vars['__aide:' + o.id] = n + 1; vars.__indices = (vars.__indices || 0) + 1; saveGame(); openAide(); };
+      p.box.appendChild(b);
+    } else if(ind.length){
+      p.box.appendChild(mk('div','pnl-empty', 'Tu as vu tous les indices de cet objectif.'));
+    }
+  }
+  p.finir();
+}
+/*  Photos et notes : rangees a part de la sauvegarde, sur l'appareil. */
+function cleCarnet(nom){ return 'bd360:' + GAME_ID + (TEST_START ? ':test' : '') + ':' + nom; }
+function lirePhotos(){ try{ const l = JSON.parse(localStorage.getItem(cleCarnet('photos')) || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+function prendrePhoto(){
+  try{
+    renderer.render(scene, camera);
+    const s = renderer.domElement, k = Math.min(1, 640 / (s.width || 640));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(s.width * k)); c.height = Math.max(1, Math.round(s.height * k));
+    c.getContext('2d').drawImage(s, 0, 0, c.width, c.height);
+    const l = lirePhotos();
+    l.push({ img: c.toDataURL('image/jpeg', 0.72), lieu: current ? (current.name || current.id) : '', t: Date.now() });
+    while(l.length > 24) l.shift();
+    let ok = false;
+    while(!ok && l.length){ try{ localStorage.setItem(cleCarnet('photos'), JSON.stringify(l)); ok = true; }catch(e){ l.shift(); } }
+    mount.appendChild(mk('div','photo-flash'));
+    setTimeout(function(){ const f = mount.querySelector('.photo-flash'); if(f) f.remove(); }, 500);
+    try{ hudNotify(ok ? '\u{1F4F7} Photo rang\xE9e dans le journal' : "\u{1F4F7} Plus de place pour les photos", 'info'); }catch(e){}
+  }catch(e){ showModal("La photo n'a pas pu \xEAtre prise."); }
+}
 function aCollectionner(){ return (GAME.inventory_items || []).filter(function(it){ return it && it.collection; }); }
 function noteCollecte(){
   let neuf = null;
@@ -70344,7 +70508,7 @@ const UI_SURFACES = ["glass", "solid", "minimal", "none"];
 const UI_UNITS = ["px", "%"];
 const UI_BUTTON_ACTIONS = [
 "open_inventory", "open_map", "open_pause", "open_history", "open_journal",
-"open_help", "save", "custom",
+"open_help", "save", "custom", "photo",
 ];
 const UI_ANIMS = ["none", "fade", "scale", "slide", "pulse", "shake"];
 const UI_ICON_KINDS = ["builtin", "library", "image", "none"];
@@ -83391,6 +83555,12 @@ function openJournal(){
     lines.forEach(function(t){ l.appendChild(mk('div','pnl-row', t)); });
     box.appendChild(l);
   };
+  const obEnCours = objectifEnCours();
+  if(objectifsDuJeu().length){
+    section('Objectif', obEnCours && obEnCours.texte ? [obEnCours.texte] : []);
+    const faits = objectifsDuJeu().filter(function(o){ return objectifApparu(o) && objectifAccompli(o) && o.texte; });
+    if(faits.length) section('Accompli', faits.map(function(o){ return '\u2713 ' + o.texte; }));
+  }
   section('Lieux visit\xE9s', GAME.scenes.filter(function(s){ return discovered.has(s.id); }).map(function(s){ return s.name || s.id; }));
   section('Objets en poche', Object.keys(inventory).filter(function(id){ return uiNumberOf(inventory[id]) > 0; }).map(function(id){
     const it = hudItemDef(id, defs);
@@ -83404,6 +83574,27 @@ function openJournal(){
   const su = succesDuJeu();
   if(su.length) section('Succ\xE8s \xB7 ' + su.filter(function(s){ return vars['__succes:' + s.id]; }).length + ' / ' + su.length,
     su.map(function(s){ return vars['__succes:' + s.id] ? '\u{1F3C6} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '') : (s.secret ? '\u{1F512} Succ\xE8s secret' : '\u{1F512} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '')); }));
+  box.appendChild(mk('div','jr-head','Mes notes'));
+  const notes = document.createElement('textarea');
+  notes.className = 'jr-notes'; notes.placeholder = 'Un code, un nom, une id\xE9e\u2026';
+  try{ notes.value = localStorage.getItem(cleCarnet('notes')) || ''; }catch(e){}
+  notes.addEventListener('input', function(){ try{ localStorage.setItem(cleCarnet('notes'), notes.value); }catch(e){} });
+  box.appendChild(notes);
+  const photos = lirePhotos();
+  box.appendChild(mk('div','jr-head','Photos \xB7 ' + photos.length));
+  if(photos.length){
+    const g = mk('div','jr-photos');
+    photos.slice().reverse().forEach(function(ph){
+      const im = document.createElement('img'); im.src = ph.img; im.alt = ph.lieu || 'Photo';
+      im.onclick = function(){ montrerImage(ph.img, ph.lieu || ''); };
+      g.appendChild(im);
+    });
+    box.appendChild(g);
+  }
+  const pb = mk('button','jr-photo-btn','\u{1F4F7} Prendre une photo');
+  pb.type = 'button';
+  pb.onclick = function(){ closeJournal(); setTimeout(prendrePhoto, 60); };
+  box.appendChild(pb);
   const x = mk('button','pnl-close','\u2715');
   x.type = 'button'; x.id = 'journal-close'; x.setAttribute('aria-label','Fermer');
   x.onclick = closeJournal;
@@ -83494,11 +83685,28 @@ window.addEventListener('keydown', function(e){
 /*  Une nouvelle partie part de l'accueil : la scene de depart est
     chargee avant que le jeu ne commence, ses actions d'arrivee
     attendent donc le premier instant de jeu.                        */
-let entreeAuDepart = false;
+let entreeAuDepart = false, repriseEnAttente = false;
+function montrerPrecedemment(){
+  if(playerScreen !== 'playing') return;
+  const c = mk('div','precedemment');
+  c.appendChild(mk('b','', 'Pr\xE9c\xE9demment\u2026'));
+  const lignes = [];
+  if(current) lignes.push('Tu es dans : ' + (current.name || current.id) + '.');
+  const faits = objectifsDuJeu().filter(function(o){ return objectifApparu(o) && objectifAccompli(o) && o.texte; });
+  if(faits.length) lignes.push('D\xE9j\xE0 fait : ' + faits[faits.length - 1].texte + '.');
+  const o = objectifEnCours();
+  if(o && o.texte) lignes.push('Maintenant : ' + o.texte);
+  if(vars.__temps) lignes.push('Temps de jeu : ' + dureeLisible(vars.__temps) + '.');
+  lignes.forEach(function(t){ c.appendChild(mk('div','', t)); });
+  const ferme = function(){ if(c.parentNode) c.remove(); };
+  c.onclick = ferme;
+  frameEl.appendChild(c);
+  setTimeout(ferme, 9000);
+}
 const homeHost = {
   hasSave: function(){ const s = readSave(); return !!(s && GAME.scenes.some(function(x){ return x.id===s.scene; })); },
   newGame: function(){ saveEnabled = true; resetProgress(startSceneId()); markSaved(); entreeAuDepart = true; },
-  continueGame: function(){ const s = readSave(); saveEnabled = true; if(s) applySave(s); markSaved(); },
+  continueGame: function(){ const s = readSave(); saveEnabled = true; if(s) applySave(s); markSaved(); repriseEnAttente = !!s; },
   startChapter: function(sceneId){ saveEnabled = true; resetProgress(GAME.scenes.some(function(x){ return x.id===sceneId; }) ? sceneId : startSceneId()); markSaved(); entreeAuDepart = true; },
   canQuit: function(){ try{ return !(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='ios'); }catch(e){ return true; } },
   quit: function(){
@@ -83515,6 +83723,7 @@ const homeHost = {
   afterStart: function(){
     setScreen('playing'); syncMusic(); flushDialogue();
     if(entreeAuDepart){ entreeAuDepart = false; runSceneEnter(current); }
+    if(repriseEnAttente){ repriseEnAttente = false; if(aideDuJeu().precedemment !== false) setTimeout(montrerPrecedemment, 500); }
   },
 };
 function showHome(returning){
@@ -84965,7 +85174,9 @@ function hudRunAction(el){
   if(a.type === 'save') return manualSave();
   if(a.type === 'open_history'){ if(playerScreen === 'dialogue') dlgToggleHistory(); return; }
   if(a.type === 'custom') return hudRunList(a.actions || []);
-  // open_journal / open_help : panneaux \xE0 venir, on ne casse rien en attendant
+  if(a.type === 'open_journal') return openJournal();
+  if(a.type === 'open_help') return openAide();
+  if(a.type === 'photo') return prendrePhoto();
   showModal("Cette fonction n'est pas encore disponible.");
 }
 function hudRunList(actions){
@@ -87082,6 +87293,7 @@ loop();
     const [activePuzzle, setActivePuzzle] = (0, import_react.useState)(null);
     const [puzzleManager, setPuzzleManager] = (0, import_react.useState)(null);
     const [showSucces, setShowSucces] = (0, import_react.useState)(false);
+    const [showObjectifs, setShowObjectifs] = (0, import_react.useState)(false);
     const puzzleBus = (0, import_react.useRef)(null);
     if (!puzzleBus.current) puzzleBus.current = createEventBus();
     const gameRef = (0, import_react.useRef)({});
@@ -88072,7 +88284,7 @@ loop();
         /* @__PURE__ */ import_react.default.createElement("span", { style: { flexShrink: 0 } }, natif ? t ? t.icon : "\u{1F9E9}" : providerOrGeneric(p.provider).icon),
         /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.title || "\xC9nigme sans nom")
       );
-    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
+    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
       const pose = c.poses.find((p) => p.id === c.defaultPose) || c.poses[0] || {};
       return /* @__PURE__ */ import_react.default.createElement(
         "div",
@@ -88550,7 +88762,7 @@ loop();
         onChange: setCharacters,
         onClose: () => setShowCharManager(false)
       }
-    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
+    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), showObjectifs && /* @__PURE__ */ import_react.default.createElement(ObjectifsManager, { meta: gameMeta, setMeta: setGameMeta, items, variables, puzzles, scenes, onClose: () => setShowObjectifs(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
       PuzzleManager,
       {
         dialogues,
