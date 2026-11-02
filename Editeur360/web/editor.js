@@ -35893,7 +35893,16 @@
         } else if (a.type === "fin") {
           vars.__fin = a.titre || "Fin";
           effects.push({ kind: "fin", action: a });
-        } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
+        } else if (a.type === "ajouter" && a.key) {
+          const avant = parseFloat(vars[a.key]);
+          vars[a.key] = (isFinite(avant) ? avant : 0) + (a.amount || 0);
+        } else if (a.type === "fragment" && a.texte) {
+          const cle = "__fragment:" + (a.id || a.texte);
+          if (!vars[cle]) {
+            vars[cle] = a.texte;
+            effects.push({ kind: "fragment", action: a });
+          }
+        } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image" || a.type === "bulle") {
           effects.push({ kind: a.type, action: a });
         }
       });
@@ -36082,7 +36091,10 @@
     ["vibrer", "Faire vibrer"],
     ["image", "Montrer une image en grand"],
     ["succes", "D\xE9bloquer un succ\xE8s"],
-    ["fin", "Terminer le jeu (une fin)"]
+    ["fin", "Terminer le jeu (une fin)"],
+    ["ajouter", "Ajouter \xE0 une variable (compteur, relation)"],
+    ["bulle", "Bulle de parole dans la 360"],
+    ["fragment", "R\xE9v\xE9ler un fragment (m\xE9ta-\xE9nigme)"]
   ];
   var VARIABLE_TYPES = [["boolean", "Vrai / Faux"], ["number", "Nombre"], ["text", "Texte"]];
   var puzzleProviders = /* @__PURE__ */ new Map();
@@ -37062,6 +37074,645 @@
       }
     ), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 3 } }, "Il joue en boucle depuis ce point, vient de sa direction, et monte quand le joueur se tourne vers lui. Il se tait quand le point est fait ou cach\xE9."));
   }
+  var PROJET_EDITEUR = { scenes: [], variables: [], dialogues: [], items: [] };
+  function normalizeOptionsJeu(o) {
+    const s = o && typeof o === "object" ? o : {};
+    const c = s.confort || {}, carte = s.carte || {}, ch = s.chargement || {}, pa = s.partage || {}, la = s.langues || {};
+    return {
+      confort: {
+        reticule: !!c.reticule,
+        montrerPoints: !!c.montrerPoints,
+        montrerFois: Math.max(0, Math.min(99, parseInt(c.montrerFois, 10) || 0)),
+        annonces: c.annonces !== false,
+        vibrations: c.vibrations !== false
+      },
+      carte: {
+        image: String(carte.image || ""),
+        positions: carte.positions && typeof carte.positions === "object" ? carte.positions : {},
+        brouillard: carte.brouillard !== false,
+        voyage: carte.voyage !== false
+      },
+      relations: (Array.isArray(s.relations) ? s.relations : []).filter((r) => r && r.variable).map((r) => ({
+        characterId: String(r.characterId || ""),
+        nom: String(r.nom || "").slice(0, 60),
+        variable: String(r.variable),
+        max: Math.max(1, Math.min(100, parseFloat(r.max) || 10))
+      })),
+      chargement: { image: String(ch.image || ""), conseils: (Array.isArray(ch.conseils) ? ch.conseils : []).map((t) => String(t || "").slice(0, 200)).filter(Boolean) },
+      partage: { resume: String(pa.resume || "").slice(0, 300), imageUrl: String(pa.imageUrl || "").slice(0, 500), icone: String(pa.icone || "") },
+      langues: {
+        codes: (Array.isArray(la.codes) ? la.codes : []).filter((l) => l && l.code).map((l) => ({ code: String(l.code).slice(0, 12), nom: String(l.nom || l.code).slice(0, 40) })),
+        textes: la.textes && typeof la.textes === "object" ? la.textes : {}
+      }
+    };
+  }
+  var petitTexte = { fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.45 };
+  function Coche({ checked, onChange, children, data }) {
+    return /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 6, marginTop: 8, fontFamily: sans, fontSize: 12, color: C.text, lineHeight: 1.4 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!checked, onChange: (e) => onChange(e.target.checked), style: { marginTop: 2 }, "data-coche": data || "" }), /* @__PURE__ */ import_react.default.createElement("span", null, children));
+  }
+  function Fenetre({ titre, onClose, largeur, children, data }) {
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: largeur || 480, maxWidth: "94vw", maxHeight: "88vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), "data-fenetre": data || "" }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, titre), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), children));
+  }
+  function OptionsJeu({ meta, setMeta, characters, variables, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const ecrire = (patch) => setMeta((m) => ({ ...m, options: { ...normalizeOptionsJeu(m.options), ...patch } }));
+    const confort = (patch) => ecrire({ confort: { ...o.confort, ...patch } });
+    const rel = o.relations;
+    const majRel = (i, patch) => ecrire({ relations: rel.map((r, k) => k === i ? { ...r, ...patch } : r) });
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Options du jeu", onClose, data: "options-jeu" }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Confort du joueur"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: o.confort.reticule, onChange: (v) => confort({ reticule: v }), data: "reticule" }, "R\xE9ticule qui change : une main, un \u0153il, une porte ou une bulle selon ce que l'on vise"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: o.confort.montrerPoints, onChange: (v) => confort({ montrerPoints: v }), data: "montrer" }, "Bouton \xAB Montrer les points \xBB : r\xE9v\xE8le un instant tous les points de la sc\xE8ne"), o.confort.montrerPoints && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, display: "flex", alignItems: "center", gap: 6, marginLeft: 22, marginTop: 4 } }, "Utilisable", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", max: "99", value: o.confort.montrerFois, onChange: (e) => confort({ montrerFois: parseInt(e.target.value, 10) || 0 }), style: { ...input, width: 60, marginTop: 0 } }), "fois par partie (0 : sans limite)"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: o.confort.annonces, onChange: (v) => confort({ annonces: v }), data: "annonces" }, "Annonces soign\xE9es : une petite animation quand on obtient un objet ou qu'un objectif change"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: o.confort.vibrations, onChange: (v) => confort({ vibrations: v }), data: "vibrations" }, "Vibrations sur t\xE9l\xE9phone : objet trouv\xE9, \xE9nigme r\xE9solue, erreur"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Relations avec les personnages"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Une jauge de confiance par personnage, rang\xE9e dans une variable. L'action \xAB Ajouter \xE0 une variable \xBB la fait monter ou baisser ; les conditions sur cette variable changent ce qu'il dit ou accepte de donner. Le joueur la voit dans son journal."), rel.map((r, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, flexWrap: "wrap" }, "data-relation": i }, /* @__PURE__ */ import_react.default.createElement("select", { value: r.characterId, onChange: (e) => {
+      const c = characters.find((x) => x.id === e.target.value);
+      majRel(i, { characterId: e.target.value, nom: c ? c.name : "" });
+    }, style: { ...select, marginTop: 0, flex: 1, minWidth: 120 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 personnage \u2014"), characters.map((c) => /* @__PURE__ */ import_react.default.createElement("option", { key: c.id, value: c.id }, c.name))), /* @__PURE__ */ import_react.default.createElement("select", { value: r.variable, onChange: (e) => majRel(i, { variable: e.target.value }), style: { ...select, marginTop: 0, flex: 1, minWidth: 120 } }, variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "sur"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", max: "100", value: r.max, onChange: (e) => majRel(i, { max: parseFloat(e.target.value) || 10 }), style: { ...input, width: 56, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire({ relations: rel.filter((_, k) => k !== i) }), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), variables.length ? /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire({ relations: [...rel, { characterId: "", nom: "", variable: variables[0].key, max: 10 }] }), style: { ...smallBtn, marginTop: 6 }, "data-relation-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une jauge") : /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Cr\xE9e d'abord une variable (\xAB \xC9nigmes externes et variables \xBB)."), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9cran de chargement"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Affich\xE9 quand une sc\xE8ne lourde met du temps \xE0 arriver."), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: o.chargement.image, onChange: (image) => ecrire({ chargement: { ...o.chargement, image } }), libelle: "Image de chargement" }), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: o.chargement.conseils.join("\n"),
+        onChange: (e) => ecrire({ chargement: { ...o.chargement, conseils: e.target.value.split("\n") } }),
+        placeholder: "Un conseil ou une citation par ligne.\nRegarde aussi au plafond.",
+        style: { ...input, minHeight: 60, resize: "vertical", marginTop: 6 },
+        "data-conseils": true
+      }
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Aper\xE7u de partage"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Ce qui s'affiche quand on envoie le lien du jeu export\xE9 (messagerie, r\xE9seaux)."), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: o.partage.resume,
+        onChange: (e) => ecrire({ partage: { ...o.partage, resume: e.target.value } }),
+        placeholder: "R\xE9sum\xE9 en une ou deux phrases",
+        style: { ...input, minHeight: 44, resize: "vertical", marginTop: 6 },
+        "data-partage-resume": true
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("input", { value: o.partage.imageUrl, onChange: (e) => ecrire({ partage: { ...o.partage, imageUrl: e.target.value } }), placeholder: "Adresse de l'image (si le jeu est en ligne) : https://\u2026", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: o.partage.icone, onChange: (icone) => ecrire({ partage: { ...o.partage, icone } }), libelle: "Ic\xF4ne du jeu (onglet, \xE9cran d'accueil)" }));
+  }
+  function CarteIllustree({ meta, setMeta, scenes, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const c = o.carte;
+    const [choisie, setChoisie] = (0, import_react.useState)(scenes[0] ? scenes[0].id : "");
+    const ecrire = (patch) => setMeta((m) => {
+      const n = normalizeOptionsJeu(m.options);
+      return { ...m, options: { ...n, carte: { ...n.carte, ...patch } } };
+    });
+    const poser = (e) => {
+      if (!choisie) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      const x = Math.round((e.clientX - r.left) / r.width * 1e3) / 10, y = Math.round((e.clientY - r.top) / r.height * 1e3) / 10;
+      ecrire({ positions: { ...c.positions, [choisie]: { x, y } } });
+      const i = scenes.findIndex((s) => s.id === choisie);
+      const suivante = scenes.slice(i + 1).concat(scenes.slice(0, i)).find((s) => !c.positions[s.id]);
+      if (suivante) setChoisie(suivante.id);
+    };
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Carte illustr\xE9e", onClose, largeur: 720, data: "carte-illustree" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Ton propre plan dessin\xE9 devient la carte du joueur : les lieux sont pos\xE9s dessus, ceux qu'il n'a pas encore vus restent dans le brouillard, et un \u{1F9E9} signale les \xE9nigmes non r\xE9solues."), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: c.image, onChange: (image) => ecrire({ image }), libelle: "Image de la carte" }), c.image && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "Lieu \xE0 placer :"), /* @__PURE__ */ import_react.default.createElement("select", { value: choisie, onChange: (e) => setChoisie(e.target.value), style: { ...select, marginTop: 0, flex: 1, minWidth: 140 }, "data-carte-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, (c.positions[s.id] ? "\u2713 " : "") + (s.name || s.id)))), c.positions[choisie] && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => {
+      const p = { ...c.positions };
+      delete p[choisie];
+      ecrire({ positions: p });
+    } }, "Retirer de la carte")), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Touche la carte \xE0 l'endroit du lieu."), /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "relative", marginTop: 6, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }, onClick: poser, "data-carte-image": true }, /* @__PURE__ */ import_react.default.createElement("img", { src: c.image, alt: "", style: { width: "100%", display: "block", pointerEvents: "none" } }), scenes.filter((s) => c.positions[s.id]).map((s) => /* @__PURE__ */ import_react.default.createElement("div", { key: s.id, style: {
+      position: "absolute",
+      left: c.positions[s.id].x + "%",
+      top: c.positions[s.id].y + "%",
+      transform: "translate(-50%,-50%)",
+      pointerEvents: "none",
+      background: s.id === choisie ? C.amber : "rgba(16,19,27,.85)",
+      color: s.id === choisie ? C.ink : "#fff",
+      borderRadius: 99,
+      padding: "2px 8px",
+      fontFamily: sans,
+      fontSize: 11,
+      whiteSpace: "nowrap",
+      border: "1px solid rgba(255,255,255,.6)"
+    } }, s.name || s.id))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.brouillard, onChange: (v) => ecrire({ brouillard: v }) }, "Brouillard sur les lieux encore inconnus"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.voyage, onChange: (v) => ecrire({ voyage: v }) }, "Voyage rapide : toucher un lieu d\xE9j\xE0 visit\xE9 pour s'y rendre"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 8 }, onClick: () => ecrire({ image: "" }) }, "Revenir \xE0 la carte automatique")));
+  }
+  function VideoScene({ scene, onChange }) {
+    const v = scene.video || null;
+    const [msg, setMsg] = (0, import_react.useState)("");
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, ...petitTexte }, "data-video-scene": true }, "Vid\xE9o 360 en fond", v && v.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text } }, "\u{1F39E} ", v.nom || "vid\xE9o", " \xB7 ", Math.round(v.src.length * 0.75 / 1e5) / 10, " Mo"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange({ video: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!v.son, onChange: (son) => onChange({ video: { ...v, son } }) }, "Garder le son de la vid\xE9o")) : /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "file",
+        accept: "video/mp4,video/quicktime,video/*",
+        style: { display: "block", marginTop: 4, width: "100%", fontSize: 10.5 },
+        "data-video-file": true,
+        onChange: (e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          if (f.size > 6e7) {
+            setMsg("Vid\xE9o de " + Math.round(f.size / 1e6) + " Mo : trop lourde (60 Mo au plus). Raccourcis-la ou baisse sa r\xE9solution.");
+            return;
+          }
+          setMsg(f.size > 2e7 ? "Vid\xE9o lourde : le jeu mettra du temps \xE0 s'ouvrir." : "");
+          const r = new FileReader();
+          r.onload = () => onChange({ video: { src: r.result, nom: f.name.slice(0, 60), son: false } });
+          r.readAsDataURL(f);
+        }
+      }
+    ), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.amber, marginTop: 3 } }, msg), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 2, fontSize: 10 } }, "Une vid\xE9o \xE9quirectangulaire (2:1) en MP4, jou\xE9e en boucle \xE0 la place de l'image. Garde une image dans la sc\xE8ne : elle sert \xE0 placer les points."));
+  }
+  function GrosPlanEditor({ valeur, onChange, items, scenes, variables, dialogues }) {
+    const g = valeur || { image: "", zones: [] };
+    const zones = g.zones || [];
+    const [trace, setTrace] = (0, import_react.useState)(null);
+    const [ouvert, setOuvert] = (0, import_react.useState)(-1);
+    const boite = (0, import_react.useRef)(null);
+    const maj = (patch) => onChange({ ...g, zones, ...patch });
+    const majZone = (i, patch) => maj({ zones: zones.map((z, k) => k === i ? { ...z, ...patch } : z) });
+    const pct = (e) => {
+      const r = boite.current.getBoundingClientRect();
+      return { x: Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100)), y: Math.max(0, Math.min(100, (e.clientY - r.top) / r.height * 100)) };
+    };
+    const r1 = (n) => Math.round(n * 10) / 10;
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-gros-plan-editeur": true }, /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: g.image, onChange: (image) => onChange(image || zones.length ? { ...g, zones, image } : void 0), libelle: "Image du gros plan" }), g.image && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, margin: "6px 0 4px" } }, "Fais glisser sur l'image pour dessiner une zone \xE0 toucher (un tiroir, une gravure\u2026)."), /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        ref: boite,
+        style: { position: "relative", touchAction: "none", userSelect: "none", borderRadius: 6, overflow: "hidden", cursor: "crosshair" },
+        "data-gp-image": true,
+        onPointerDown: (e) => {
+          e.preventDefault();
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch (x) {
+          }
+          const p = pct(e);
+          setTrace({ x0: p.x, y0: p.y, x: p.x, y: p.y });
+        },
+        onPointerMove: (e) => {
+          if (!trace) return;
+          const p = pct(e);
+          setTrace((t) => t ? { ...t, x: p.x, y: p.y } : t);
+        },
+        onPointerUp: () => {
+          if (trace) {
+            const z = { x: r1(Math.min(trace.x0, trace.x)), y: r1(Math.min(trace.y0, trace.y)), w: r1(Math.abs(trace.x - trace.x0)), h: r1(Math.abs(trace.y - trace.y0)) };
+            if (z.w > 2 && z.h > 2) {
+              maj({ zones: [...zones, { ...z, label: "", texte: "", actions: [], uneFois: true }] });
+              setOuvert(zones.length);
+            }
+          }
+          setTrace(null);
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement("img", { src: g.image, alt: "", style: { width: "100%", display: "block", pointerEvents: "none" } }),
+      zones.map((z, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: {
+        position: "absolute",
+        left: z.x + "%",
+        top: z.y + "%",
+        width: z.w + "%",
+        height: z.h + "%",
+        border: "2px solid " + (i === ouvert ? C.amber : "rgba(255,255,255,.85)"),
+        background: "rgba(232,163,61,.18)",
+        borderRadius: 4,
+        boxSizing: "border-box",
+        fontFamily: sans,
+        fontSize: 11,
+        color: "#fff",
+        padding: "1px 4px",
+        pointerEvents: "none"
+      } }, i + 1)),
+      trace && /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", left: Math.min(trace.x0, trace.x) + "%", top: Math.min(trace.y0, trace.y) + "%", width: Math.abs(trace.x - trace.x0) + "%", height: Math.abs(trace.y - trace.y0) + "%", border: "2px dashed " + C.amber, pointerEvents: "none" } })
+    ), zones.map((z, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginTop: 6 }, "data-gp-zone": i }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOuvert(ouvert === i ? -1 : i), style: { ...smallBtn, flex: "none" } }, ouvert === i ? "\u25BE" : "\u25B8", " Zone ", i + 1), /* @__PURE__ */ import_react.default.createElement("input", { value: z.label || "", onChange: (e) => majZone(i, { label: e.target.value }), placeholder: "Tiroir du haut", style: { ...input, marginTop: 0, flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => {
+      maj({ zones: zones.filter((_, k) => k !== i) });
+      setOuvert(-1);
+    }, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), ouvert === i && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: z.texte || "",
+        onChange: (e) => majZone(i, { texte: e.target.value }),
+        placeholder: "Texte affich\xE9 quand on touche la zone",
+        style: { ...input, minHeight: 40, resize: "vertical", marginTop: 6 }
+      }
+    ), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: z.uneFois !== false, onChange: (v) => majZone(i, { uneFois: v }) }, "Les actions ne se font qu'une fois"), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, margin: "6px 0 2px" } }, "Alors :"), /* @__PURE__ */ import_react.default.createElement(ActionListEditor, { actions: z.actions || [], onChange: (actions) => majZone(i, { actions }), items, scenes, variables, dialogues, emptyText: "Rien." }))))));
+  }
+  function FacesObjet({ faces, onChange }) {
+    const P = PROJET_EDITEUR;
+    const maj = (i, patch) => onChange(faces.map((f, k) => k === i ? { ...f, ...patch } : f));
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-faces": true }, faces.map((f, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, ...petitTexte } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, ["Devant", "Dos", "Dessous", "Dessus", "C\xF4t\xE9 gauche", "C\xF4t\xE9 droit"][i] || "Face " + (i + 1)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(faces.filter((_, k) => k !== i)), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: f.image, onChange: (image) => maj(i, { image }), libelle: "Image de cette face" }), /* @__PURE__ */ import_react.default.createElement("input", { value: f.texte || "", onChange: (e) => maj(i, { texte: e.target.value }), placeholder: "Une gravure : \xAB 1789 \xBB", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, margin: "6px 0 2px" } }, "Quand le joueur d\xE9couvre cette face :"), /* @__PURE__ */ import_react.default.createElement(ActionListEditor, { actions: f.actions || [], onChange: (actions) => maj(i, { actions }), items: P.items, scenes: P.scenes, variables: P.variables, dialogues: P.dialogues, emptyText: "Rien." }))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange([...faces, { image: "", texte: "", actions: [] }]), style: smallBtn, "data-face-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une face"));
+  }
+  function ActionLot678({ a, update, scenes, variables }) {
+    if (a.type === "ajouter") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: a.key || "", onChange: (e) => update({ key: e.target.value }), style: { ...select, marginTop: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 variable \u2014"), (variables || []).map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", step: "1", value: a.amount == null ? 1 : a.amount, onChange: (e) => update({ amount: parseFloat(e.target.value) || 0 }), style: { ...input, width: 64, marginTop: 0 }, title: "N\xE9gatif pour retirer" }));
+    }
+    if (a.type === "bulle") {
+      const sc = (scenes || []).find((s) => s.id === a.sceneId);
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("textarea", { value: a.texte || "", onChange: (e) => update({ texte: e.target.value }), placeholder: "H\xE9 ! Par ici !", style: { ...input, minHeight: 40, resize: "vertical", marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("select", { value: a.sceneId || "", onChange: (e) => update({ sceneId: e.target.value }), style: { ...select, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 sc\xE8ne o\xF9 elle appara\xEEt \u2014"), (scenes || []).map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id))), /* @__PURE__ */ import_react.default.createElement(
+        RegardChoix,
+        {
+          scene: sc,
+          value: a.yaw == null ? void 0 : { yaw: a.yaw, pitch: a.pitch || 0 },
+          onChange: (v) => update(v ? { yaw: v.yaw, pitch: v.pitch } : { yaw: void 0, pitch: void 0 }),
+          vide: "Place la bulle sur le personnage"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, ...petitTexte } }, "Pendant ", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", max: "30", value: a.duree == null ? 4 : a.duree, onChange: (e) => update({ duree: parseFloat(e.target.value) || 4 }), style: { ...input, width: 56, marginTop: 0 } }), " s"));
+    }
+    if (a.type === "fragment") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("input", { value: a.texte || "", onChange: (e) => update({ texte: e.target.value }), placeholder: "Le deuxi\xE8me chiffre est 7", style: { ...input, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 3 } }, "Rang\xE9 dans le journal, rubrique \xAB Fragments \xBB : la m\xE9ta-\xE9nigme finale demandera de les rassembler."));
+    }
+    return null;
+  }
+  function SouciEnigme({ id, params }) {
+    const t = getPuzzleType(id);
+    const souci = t ? t.solvable(params) : [];
+    if (!souci.length) return null;
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.danger, marginTop: 8, lineHeight: 1.4 } }, "\u26A0 ", souci.join(" \xB7 "));
+  }
+  function PianoEditor({ params, onChange }) {
+    const set = (patch) => onChange({ ...params, ...patch });
+    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Instrument"), /* @__PURE__ */ import_react.default.createElement("select", { value: params.timbre, onChange: (e) => set({ timbre: e.target.value }), style: { ...select, marginTop: 0 }, "data-piano-timbre": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "piano" }, "Clavier"), /* @__PURE__ */ import_react.default.createElement("option", { value: "cloches" }, "Cloches"), /* @__PURE__ */ import_react.default.createElement("option", { value: "verres" }, "Verres d'eau")), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Nombre de touches"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: 3, max: 12, value: params.touches, onChange: (e) => set({ touches: parseInt(e.target.value, 10) || 8 }), style: input }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "M\xE9lodie \xE0 rejouer"), /* @__PURE__ */ import_react.default.createElement("input", { value: params.melodie, onChange: (e) => set({ melodie: e.target.value }), placeholder: "1 3 5 8", style: input, "data-piano-melodie": true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Les num\xE9ros des touches de gauche \xE0 droite, s\xE9par\xE9s par des espaces (Do = 1, R\xE9 = 2\u2026). L'\xE9nigme est r\xE9solue d\xE8s que le joueur la joue."), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: params.noms, onChange: (v) => set({ noms: v }) }, "\xC9crire le nom des notes sur les touches"), /* @__PURE__ */ import_react.default.createElement(SouciEnigme, { id: "piano", params }));
+  }
+  function HorlogeEditor({ params, onChange }) {
+    const set = (patch) => onChange({ ...params, ...patch });
+    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "L'heure \xE0 afficher"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: 1, max: 12, value: params.heure, onChange: (e) => set({ heure: parseInt(e.target.value, 10) || 12 }), style: { ...input, width: 70, marginTop: 0 }, "data-horloge-heure": true }), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "h"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: 0, max: 59, step: params.pas, value: params.minute, onChange: (e) => set({ minute: parseInt(e.target.value, 10) || 0 }), style: { ...input, width: 70, marginTop: 0 }, "data-horloge-minute": true }), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "min")), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Les minutes avancent de"), /* @__PURE__ */ import_react.default.createElement("select", { value: String(params.pas), onChange: (e) => set({ pas: parseInt(e.target.value, 10) }), style: { ...select, marginTop: 0 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "1" }, "1 minute"), /* @__PURE__ */ import_react.default.createElement("option", { value: "5" }, "5 minutes"), /* @__PURE__ */ import_react.default.createElement("option", { value: "15" }, "15 minutes")), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Le joueur fait tourner les aiguilles au doigt ou avec les fl\xE8ches, puis valide."), /* @__PURE__ */ import_react.default.createElement(SouciEnigme, { id: "horloge", params }));
+  }
+  function DechireEditor({ params, onChange }) {
+    const set = (patch) => onChange({ ...params, ...patch });
+    const objets = COMBO_EDITEUR && COMBO_EDITEUR.items || [];
+    const n = params.cols * params.rows;
+    const morceaux = Array.from({ length: n }, (_, i) => (params.morceaux || [])[i] || "");
+    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: params.image, onChange: (image) => set({ image }), libelle: "La lettre enti\xE8re" }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "D\xE9coupage"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: 2, max: 4, value: params.cols, onChange: (e) => set({ cols: parseInt(e.target.value, 10) || 2 }), style: { ...input, width: 60, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "\xD7"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: 1, max: 4, value: params.rows, onChange: (e) => set({ rows: parseInt(e.target.value, 10) || 2 }), style: { ...input, width: 60, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "morceaux")), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "O\xF9 sont les morceaux"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Un morceau li\xE9 \xE0 un objet n'appara\xEEt que si le joueur l'a ramass\xE9 (dans une autre sc\xE8ne, par exemple). Sans objet, il est d\xE9j\xE0 l\xE0."), morceaux.map((m, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, width: 64 } }, "Morceau ", i + 1), /* @__PURE__ */ import_react.default.createElement("select", { value: m, onChange: (e) => {
+      const l = morceaux.slice();
+      l[i] = e.target.value;
+      set({ morceaux: l });
+    }, style: { ...select, marginTop: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "D\xE9j\xE0 sur la table"), objets.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, "Objet : ", it.name))))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: params.rotation, onChange: (v) => set({ rotation: v }) }, "Les morceaux arrivent tourn\xE9s (toucher deux fois un morceau pos\xE9 le fait pivoter)"), /* @__PURE__ */ import_react.default.createElement(SouciEnigme, { id: "dechire", params }));
+  }
+  function FusiblesEditor({ params, onChange }) {
+    const set = (patch) => onChange({ ...params, ...patch });
+    const objets = COMBO_EDITEUR && COMBO_EDITEUR.items || [];
+    const cible = params.interrupteurs;
+    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Position des interrupteurs qui rallume la machine"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap" } }, cible.split("").map((b, i) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: i,
+        type: "button",
+        onClick: () => set({ interrupteurs: cible.slice(0, i) + (b === "1" ? "0" : "1") + cible.slice(i + 1) }),
+        style: { ...smallBtn, minWidth: 40, background: b === "1" ? C.amber : void 0, color: b === "1" ? C.ink : void 0 },
+        "data-fus-inter": i
+      },
+      b === "1" ? "\u25B2" : "\u25BC"
+    )), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => cible.length < 8 && set({ interrupteurs: cible + "0" }) }, "+"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => cible.length > 1 && set({ interrupteurs: cible.slice(0, -1) }) }, "\u2212")), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Fusibles \xE0 remettre"), (params.fusibles || []).map((f, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: f, onChange: (e) => {
+      const l = params.fusibles.slice();
+      l[i] = e.target.value;
+      set({ fusibles: l });
+    }, style: { ...select, marginTop: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 objet fusible \u2014"), objets.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, onClick: () => set({ fusibles: params.fusibles.filter((_, k) => k !== i) }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), (params.fusibles || []).length < 4 && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 4 }, onClick: () => set({ fusibles: [...params.fusibles || [], ""] }) }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Un fusible"), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Le joueur pose les fusibles qu'il a trouv\xE9s et bascule les interrupteurs : la lampe s'allume quand tout est juste."), /* @__PURE__ */ import_react.default.createElement(SouciEnigme, { id: "fusibles", params }));
+  }
+  function parcourirJeu(obj, fn) {
+    if (!obj || typeof obj !== "object") return;
+    if (Array.isArray(obj)) {
+      obj.forEach((x) => parcourirJeu(x, fn));
+      return;
+    }
+    fn(obj);
+    Object.keys(obj).forEach((k) => {
+      const v = obj[k];
+      if (v && typeof v === "object") parcourirJeu(v, fn);
+    });
+  }
+  function analyseJeu({ scenes, items, puzzles, dialogues, variables, startSceneId }) {
+    const nomS = (id) => {
+      const s = scenes.find((x) => x.id === id);
+      return s ? s.name || s.id : id;
+    };
+    const nomO = (id) => {
+      const i = items.find((x) => x.id === id);
+      return i ? i.name || i.id : id;
+    };
+    const nomP = (id) => {
+      const p = puzzles.find((x) => x.id === id);
+      return p ? p.title || p.id : id;
+    };
+    const nomD = (id) => {
+      const d = dialogues.find((x) => x.id === id);
+      return d ? d.name || d.title || d.id : id;
+    };
+    const donne = {}, demande = {}, consomme = {}, varSet = {}, varLue = {}, aretes = {};
+    const plus = (m, k, lieu) => {
+      (m[k] = m[k] || []).push(lieu);
+    };
+    const placeEnigme = {}, placeDialogue = {};
+    scenes.forEach((s) => (s.hotspots || []).forEach((h) => {
+      if (h.puzzleId) (placeEnigme[h.puzzleId] = placeEnigme[h.puzzleId] || []).push(s.id);
+      if (h.dialogId) (placeDialogue[h.dialogId] = placeDialogue[h.dialogId] || []).push(s.id);
+    }));
+    const visite = (racine, lieu, sceneIds) => parcourirJeu(racine, (o) => {
+      if (o.type === "give_item" && o.itemId) plus(donne, o.itemId, lieu);
+      else if (o.type === "remove_item" && o.itemId) plus(consomme, o.itemId, lieu);
+      else if ((o.type === "set_variable" || o.type === "ajouter") && o.key) plus(varSet, o.key, lieu);
+      else if (o.type === "variable" && o.key) plus(varLue, o.key, lieu);
+      else if (o.type === "open_puzzle" && o.puzzleId) (placeEnigme[o.puzzleId] = placeEnigme[o.puzzleId] || []).push("");
+      else if (o.type === "navigate" && o.target) sceneIds.forEach((sid) => {
+        (aretes[sid] = aretes[sid] || /* @__PURE__ */ new Set()).add(o.target);
+      });
+      else if (!o.type && o.itemId && (o.qty != null || o.consume != null)) {
+        plus(demande, o.itemId, lieu);
+        if (o.consume) plus(consomme, o.itemId, lieu);
+      } else if (o.itemId && o.consomme) {
+        plus(demande, o.itemId, lieu);
+        if (o.consomme !== "garde") plus(consomme, o.itemId, lieu);
+      }
+    });
+    const problemes = [];
+    const pb = (niveau, texte, sceneId) => problemes.push({ niveau, texte, sceneId });
+    scenes.forEach((s) => {
+      const lieu = "sc\xE8ne \xAB " + nomS(s.id) + " \xBB";
+      if (!s.image && !(s.video && s.video.src)) pb("attention", "La sc\xE8ne \xAB " + nomS(s.id) + " \xBB n'a pas d'image.", s.id);
+      (s.hotspots || []).forEach((h) => {
+        const lh = (h.label ? "\xAB " + h.label + " \xBB dans " : "un point de ") + lieu;
+        if (h.type === "pickup_item" && h.item) plus(donne, h.item, lh);
+        if (h.type === "navigate" && h.target) {
+          (aretes[s.id] = aretes[s.id] || /* @__PURE__ */ new Set()).add(h.target);
+          if (!scenes.some((x) => x.id === h.target)) pb("bloquant", "Le point " + lh + " m\xE8ne \xE0 une sc\xE8ne qui n'existe plus.", s.id);
+        }
+        if ((h.type === "puzzle" || h.type === "external_puzzle") && h.puzzleId && !puzzles.some((p) => p.id === h.puzzleId)) pb("bloquant", "Le point " + lh + " ouvre une \xE9nigme supprim\xE9e.", s.id);
+        if (h.type === "dialogue" && h.dialogId && !dialogues.some((d) => d.id === h.dialogId)) pb("bloquant", "Le point " + lh + " ouvre un dialogue supprim\xE9.", s.id);
+        if (!h.zone && (h.size || 36) < 32) pb("info", "Le point " + lh + " fait " + (h.size || 36) + " px : trop petit pour un doigt (44 px conseill\xE9s).", s.id);
+        visite(h, lh, [s.id]);
+      });
+      visite({ onEnter: s.onEnter, variantes: s.variantes, couches: s.couches }, lieu, [s.id]);
+    });
+    puzzles.forEach((p) => {
+      const lieu = "l'\xE9nigme \xAB " + nomP(p.id) + " \xBB";
+      visite(p, lieu, placeEnigme[p.id] || []);
+      const t = p.kind && typeof getPuzzleType === "function" ? getPuzzleType(p.kind) : null;
+      if (t && t.consumes) (t.consumes(p.params || {}) || []).forEach((c) => c && c.itemId && plus(demande, c.itemId, lieu));
+      if (!placeEnigme[p.id]) pb("attention", "L'\xE9nigme \xAB " + nomP(p.id) + " \xBB n'est plac\xE9e nulle part : le joueur ne la verra jamais.");
+      if (["simon", "lightsout", "memory"].indexOf(p.kind) >= 0) pb("info", "L'\xE9nigme \xAB " + nomP(p.id) + " \xBB : v\xE9rifie qu'elle ne repose pas sur la couleur seule (daltonisme). Ajoute des formes, des chiffres ou des sons.");
+    });
+    dialogues.forEach((d) => visite(d, "le dialogue \xAB " + nomD(d.id) + " \xBB", placeDialogue[d.id] || []));
+    items.forEach((it) => {
+      (it.demonter || []).forEach((x) => x.itemId && plus(donne, x.itemId, "le d\xE9montage de \xAB " + nomO(it.id) + " \xBB"));
+      (it.faces || []).forEach((f) => visite(f.actions || [], "l'examen de \xAB " + nomO(it.id) + " \xBB", []));
+    });
+    Object.keys(demande).forEach((id) => {
+      if (!donne[id]) pb("bloquant", "L'objet \xAB " + nomO(id) + " \xBB est demand\xE9 (" + demande[id].slice(0, 2).join(", ") + ") mais le joueur ne peut l'obtenir nulle part.");
+      else if ((consomme[id] || []).length > donne[id].length && demande[id].length > donne[id].length)
+        pb("attention", "L'objet \xAB " + nomO(id) + " \xBB est consomm\xE9 " + consomme[id].length + " fois mais n'est donn\xE9 que " + donne[id].length + " fois : un joueur peut se retrouver sans lui alors qu'il en a encore besoin.");
+    });
+    Object.keys(varLue).forEach((k) => {
+      if (!varSet[k]) pb("bloquant", "La variable \xAB " + k + " \xBB est test\xE9e (" + varLue[k][0] + ") mais rien ne la change jamais.");
+    });
+    items.forEach((it) => {
+      if (!demande[it.id] && !it.collection && !it.document && !(it.faces && it.faces.length) && !(it.demonter && it.demonter.length) && !it.faussePiste)
+        pb("info", "L'objet \xAB " + nomO(it.id) + " \xBB ne sert \xE0 rien. Si c'est voulu, marque-le comme fausse piste.");
+    });
+    const depart = startSceneId || (scenes[0] || {}).id;
+    const vues = /* @__PURE__ */ new Set();
+    const file = depart ? [depart] : [];
+    while (file.length) {
+      const id = file.shift();
+      if (vues.has(id)) continue;
+      vues.add(id);
+      (aretes[id] ? Array.from(aretes[id]) : []).forEach((t) => file.push(t));
+    }
+    scenes.forEach((s) => {
+      if (!vues.has(s.id)) pb("attention", "La sc\xE8ne \xAB " + nomS(s.id) + " \xBB ne peut pas \xEAtre atteinte depuis la sc\xE8ne de d\xE9part.", s.id);
+      const sorties = aretes[s.id] ? aretes[s.id].size : 0;
+      const finale = JSON.stringify(s).indexOf('"type":"fin"') >= 0;
+      if (!sorties && !finale && scenes.length > 1) pb("attention", "La sc\xE8ne \xAB " + nomS(s.id) + " \xBB n'a aucune sortie : le joueur y reste coinc\xE9.", s.id);
+    });
+    const ordre = { bloquant: 0, attention: 1, info: 2 };
+    problemes.sort((a, b) => ordre[a.niveau] - ordre[b.niveau]);
+    return { problemes, donne, demande, consomme, varSet, varLue, nomO };
+  }
+  var CLES_TEXTE = ["name", "text", "label", "description", "prompt", "titre", "texte", "nom", "title"];
+  function remplacerTextes(obj, avant, apres) {
+    if (Array.isArray(obj)) return obj.map((x) => remplacerTextes(x, avant, apres));
+    if (!obj || typeof obj !== "object") return obj;
+    const out = {};
+    Object.keys(obj).forEach((k) => {
+      const v = obj[k];
+      if (typeof v === "string" && CLES_TEXTE.indexOf(k) >= 0 && v.indexOf(avant) >= 0) out[k] = v.split(avant).join(apres);
+      else out[k] = v && typeof v === "object" ? remplacerTextes(v, avant, apres) : v;
+    });
+    return out;
+  }
+  function modeleJeu(type) {
+    const id = (p) => p + "_" + Math.random().toString(36).slice(2, 7);
+    const pt = (o) => ({ id: id("hs"), size: 40, requirements: [], ...o });
+    const sc = (nom, x, y) => ({ id: id("sc"), name: nom, image: null, text: "", hotspots: [], layers: [], editor: { x, y } });
+    const items = [], scenes = [];
+    if (type === "piece") {
+      const piece = sc("La pi\xE8ce ferm\xE9e", 0, 0), sortie = sc("Dehors", 320, 0);
+      const cle = { id: id("it"), name: "Petite cl\xE9", description: "Elle \xE9tait dans le tiroir.", image: "" };
+      items.push(cle);
+      piece.hotspots.push(pt({ type: "show_text", label: "Note", text: "\xAB Le tiroir ne s'ouvre qu'aux curieux. \xBB", position: { yaw: 0.6, pitch: -0.1 } }));
+      piece.hotspots.push(pt({ type: "pickup_item", label: "Tiroir", item: cle.id, amount: 1, position: { yaw: -0.8, pitch: -0.35 } }));
+      piece.hotspots.push(pt({ type: "navigate", label: "Porte", target: sortie.id, requirements: [{ itemId: cle.id, qty: 1, consume: true }], position: { yaw: 3.1, pitch: 0 } }));
+      sortie.hotspots.push(pt({ type: "show_text", label: "Libert\xE9", text: "Tu es sorti !", position: { yaw: 0, pitch: 0 } }));
+      scenes.push(piece, sortie);
+    } else if (type === "enquete") {
+      const bureau = sc("Le bureau", 0, 0), salon = sc("Le salon", 320, -120), jardin = sc("Le jardin", 320, 120);
+      const lettre = { id: id("it"), name: "Lettre d\xE9chir\xE9e", description: "Une \xE9criture press\xE9e.", image: "" };
+      items.push(lettre);
+      bureau.hotspots.push(pt({ type: "navigate", label: "Vers le salon", target: salon.id, position: { yaw: 1.5, pitch: 0 } }));
+      bureau.hotspots.push(pt({ type: "navigate", label: "Vers le jardin", target: jardin.id, position: { yaw: -1.5, pitch: 0 } }));
+      salon.hotspots.push(pt({ type: "navigate", label: "Retour au bureau", target: bureau.id, position: { yaw: 3.1, pitch: 0 } }));
+      salon.hotspots.push(pt({ type: "pickup_item", label: "Sous le coussin", item: lettre.id, amount: 1, position: { yaw: 0.4, pitch: -0.4 } }));
+      jardin.hotspots.push(pt({ type: "navigate", label: "Retour au bureau", target: bureau.id, position: { yaw: 3.1, pitch: 0 } }));
+      jardin.hotspots.push(pt({ type: "show_text", label: "Traces", text: "Des pas dans la boue, vers la serre.", position: { yaw: 0.2, pitch: -0.5 } }));
+      scenes.push(bureau, salon, jardin);
+    } else {
+      const place = sc("La place du village", 0, 0);
+      const lieux = [sc("La for\xEAt", 320, -160), sc("Le port", 320, 0), sc("Le ch\xE2teau", 320, 160)];
+      lieux.forEach((l, i) => {
+        place.hotspots.push(pt({ type: "navigate", label: "Vers " + l.name.toLowerCase(), target: l.id, position: { yaw: -1.6 + i * 1.6, pitch: 0 } }));
+        l.hotspots.push(pt({ type: "navigate", label: "Retour \xE0 la place", target: place.id, position: { yaw: 3.1, pitch: 0 } }));
+      });
+      scenes.push(place, ...lieux);
+    }
+    return { scenes, items };
+  }
+  function OutilsJeu({ scenes, setScenes, items, setItems, puzzles, dialogues, setDialogues, variables, startSceneId, gameMeta, onAller, onClose }) {
+    const [onglet, setOnglet] = (0, import_react.useState)("verifier");
+    const [q, setQ] = (0, import_react.useState)("");
+    const [rempl, setRempl] = (0, import_react.useState)("");
+    const [statsScene, setStatsScene] = (0, import_react.useState)("");
+    const [, rafraichir] = (0, import_react.useState)(0);
+    const a = (0, import_react.useMemo)(() => analyseJeu({ scenes, items, puzzles, dialogues, variables, startSceneId }), [scenes, items, puzzles, dialogues, variables, startSceneId]);
+    const couleur = { bloquant: C.danger, attention: C.amber, info: C.textDim };
+    const icone = { bloquant: "\u26D4", attention: "\u26A0", info: "\u2139" };
+    const ONGLETS = [["verifier", "V\xE9rifier"], ["dependances", "D\xE9pendances"], ["chercher", "Rechercher"], ["tests", "Tests"], ["modeles", "Mod\xE8les"]];
+    const resultats = [];
+    const t = q.trim().toLowerCase();
+    if (t.length >= 2) {
+      const dans = (s) => typeof s === "string" && s.toLowerCase().indexOf(t) >= 0;
+      scenes.forEach((s) => {
+        if (dans(s.name) || dans(s.text) || s.id.toLowerCase() === t) resultats.push({ quoi: "Sc\xE8ne", texte: s.name || s.id, sceneId: s.id });
+        (s.hotspots || []).forEach((h) => {
+          if (dans(h.label) || dans(h.text) || JSON.stringify(h).toLowerCase().indexOf(t) >= 0) resultats.push({ quoi: "Point", texte: (h.label || h.type) + " \xB7 " + (s.name || s.id), sceneId: s.id });
+        });
+      });
+      items.forEach((it) => {
+        if (dans(it.name) || dans(it.description) || it.id.toLowerCase() === t) resultats.push({ quoi: "Objet", texte: it.name + (a.donne[it.id] ? " \xB7 obtenu dans " + a.donne[it.id].length + " endroit(s)" : "") + (a.demande[it.id] ? " \xB7 demand\xE9 " + a.demande[it.id].length + " fois" : "") });
+      });
+      puzzles.forEach((p) => {
+        if (dans(p.title) || JSON.stringify(p).toLowerCase().indexOf(t) >= 0) resultats.push({ quoi: "\xC9nigme", texte: p.title || p.id });
+      });
+      dialogues.forEach((d) => (d.nodes || []).forEach((n) => {
+        if (dans(n.text) || dans(n.prompt) || (n.options || []).some((o) => dans(o.text))) resultats.push({ quoi: "Dialogue", texte: (d.name || d.title || d.id) + " \xB7 " + String(n.text || n.prompt || "").slice(0, 60) });
+      }));
+      variables.forEach((v) => {
+        if (dans(v.key) || dans(v.label)) resultats.push({ quoi: "Variable", texte: (v.label || v.key) + " \xB7 test\xE9e " + (a.varLue[v.key] || []).length + " fois, chang\xE9e " + (a.varSet[v.key] || []).length + " fois" });
+      });
+    }
+    let stats = null;
+    try {
+      stats = JSON.parse(localStorage.getItem("e360:stats:" + (gameMeta.id || gameMeta.title || "game")) || "null");
+    } catch (e) {
+      stats = null;
+    }
+    const canvasRef = (0, import_react.useRef)(null);
+    (0, import_react.useEffect)(() => {
+      if (onglet !== "tests" || !stats || !canvasRef.current) return;
+      const sc = scenes.find((s) => s.id === statsScene) || scenes.find((s) => stats.scenes && stats.scenes[s.id]);
+      if (!sc) return;
+      const cv = canvasRef.current, g = cv.getContext("2d");
+      const dessine = (img) => {
+        g.clearRect(0, 0, cv.width, cv.height);
+        if (img) g.drawImage(img, 0, 0, cv.width, cv.height);
+        else {
+          g.fillStyle = "#1a1e2a";
+          g.fillRect(0, 0, cv.width, cv.height);
+        }
+        const r = stats.scenes[sc.id] && stats.scenes[sc.id].regard || [];
+        const max = Math.max(1, ...r.map((x) => x || 0));
+        for (let i = 0; i < 24 * 12; i++) {
+          const v = (r[i] || 0) / max;
+          if (v <= 0) continue;
+          g.fillStyle = "rgba(255," + Math.round(200 - 160 * v) + ",40," + (0.15 + 0.55 * v) + ")";
+          g.fillRect(i % 24 * cv.width / 24, Math.floor(i / 24) * cv.height / 12, cv.width / 24 + 1, cv.height / 12 + 1);
+        }
+      };
+      if (sc.image && sc.imageFormat !== "hdr") {
+        const im = new Image();
+        im.onload = () => dessine(im);
+        im.onerror = () => dessine(null);
+        im.src = sc.image;
+      } else dessine(null);
+    });
+    const temps = (s) => s < 60 ? Math.round(s) + " s" : Math.floor(s / 60) + " min " + Math.round(s % 60) + " s";
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Outils", onClose, largeur: 640, data: "outils" }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 10 } }, ONGLETS.map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: k, type: "button", onClick: () => setOnglet(k), style: { ...smallBtn, background: onglet === k ? C.amber : void 0, color: onglet === k ? C.ink : void 0 }, "data-outil": k }, l))), onglet === "verifier" && /* @__PURE__ */ import_react.default.createElement("div", { "data-verificateur": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Le jeu entier pass\xE9 au crible : ce qui bloque un joueur (\u26D4), ce qui risque de le g\xEAner (\u26A0) et les petites am\xE9liorations (\u2139).", " ", a.problemes.filter((p) => p.niveau === "bloquant").length, " blocage(s), ", a.problemes.filter((p) => p.niveau === "attention").length, " alerte(s)."), !a.problemes.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 13, color: C.text, marginTop: 10 } }, "\u2713 Rien \xE0 signaler : chaque objet demand\xE9 peut \xEAtre trouv\xE9, chaque sc\xE8ne est atteignable."), a.problemes.map((p, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 8, alignItems: "flex-start", padding: "7px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 12.5, color: C.text, lineHeight: 1.4 }, "data-probleme": p.niveau }, /* @__PURE__ */ import_react.default.createElement("span", { style: { color: couleur[p.niveau], flex: "none" } }, icone[p.niveau]), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, p.texte), p.sceneId && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, flex: "none" }, onClick: () => onAller(p.sceneId) }, "Voir")))), onglet === "dependances" && /* @__PURE__ */ import_react.default.createElement("div", { "data-dependances": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Pour chaque objet et chaque variable : o\xF9 le joueur l'obtient \u2192 ce qu'il ouvre. Un \xE9l\xE9ment demand\xE9 \xE0 plusieurs endroits, ou une \xE9tape qui demande plusieurs \xE9l\xE9ments, est un goulot : tout le jeu passe par l\xE0."), Object.keys(a.demande).concat(Object.keys(a.varLue)).length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Aucune d\xE9pendance : aucun point ne demande d'objet ou de variable."), [
+      ...Object.keys(a.demande).map((id) => ({ cle: id, nom: "\u{1F392} " + a.nomO(id), de: a.donne[id] || [], vers: a.demande[id] })),
+      ...Object.keys(a.varLue).map((k) => ({ cle: "v:" + k, nom: "\u{1F523} " + k, de: a.varSet[k] || [], vers: a.varLue[k] }))
+    ].map((d) => /* @__PURE__ */ import_react.default.createElement("div", { key: d.cle, style: { display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 11.5, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { color: d.de.length ? C.text : C.danger } }, d.de.length ? Array.from(new Set(d.de)).slice(0, 4).join(" \xB7 ") : "\u26D4 nulle part"), /* @__PURE__ */ import_react.default.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { background: d.vers.length > 1 ? C.amber : C.ink2, color: d.vers.length > 1 ? C.ink : C.text, borderRadius: 99, padding: "3px 10px", whiteSpace: "nowrap" } }, "\u2192 ", d.nom, " \u2192"), d.vers.length > 1 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10, color: C.amber, marginTop: 2 } }, "goulot (", d.vers.length, ")")), /* @__PURE__ */ import_react.default.createElement("div", null, Array.from(new Set(d.vers)).slice(0, 4).join(" \xB7 "))))), onglet === "chercher" && /* @__PURE__ */ import_react.default.createElement("div", { "data-recherche": true }, /* @__PURE__ */ import_react.default.createElement("input", { value: q, onChange: (e) => setQ(e.target.value), placeholder: "Un mot, un nom d'objet, de sc\xE8ne, de variable\u2026", style: { ...input, marginTop: 0 }, autoFocus: true, "data-recherche-champ": true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6 } }, t.length >= 2 ? resultats.length + " r\xE9sultat(s)" : "Au moins deux lettres."), resultats.slice(0, 120).map((r, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 8, alignItems: "center", padding: "6px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, width: 64, flex: "none" } }, r.quoi), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, r.texte), r.sceneId && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, flex: "none" }, onClick: () => onAller(r.sceneId) }, "Aller"))), t.length >= 2 && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "Remplacer \xAB ", q, " \xBB par"), /* @__PURE__ */ import_react.default.createElement("input", { value: rempl, onChange: (e) => setRempl(e.target.value), style: { ...input, marginTop: 0, flex: 1, minWidth: 120 }, "data-remplacer-champ": true }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: primaryBtn, "data-remplacer": true, onClick: () => {
+      if (!window.confirm("Remplacer \xAB " + q + " \xBB par \xAB " + rempl + " \xBB dans tous les noms et textes du jeu ?")) return;
+      setScenes((l) => remplacerTextes(l, q, rempl));
+      setItems((l) => remplacerTextes(l, q, rempl));
+      setDialogues((l) => remplacerTextes(l, q, rempl));
+      setQ(rempl);
+    } }, "Remplacer partout"))), onglet === "tests" && /* @__PURE__ */ import_react.default.createElement("div", { "data-stats": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Chaque partie lanc\xE9e avec \xAB Tester le jeu \xBB est enregistr\xE9e sur cet appareil : le temps pass\xE9 dans chaque sc\xE8ne, ce qui a \xE9t\xE9 touch\xE9, les erreurs et les indices des \xE9nigmes, et o\xF9 le regard s'est pos\xE9 dans la 360."), !stats ? /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Aucune partie de test enregistr\xE9e pour l'instant.") : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12.5, color: C.text, marginTop: 8 } }, stats.parties || 0, " partie(s) de test"), scenes.filter((s) => stats.scenes && stats.scenes[s.id]).map((s) => /* @__PURE__ */ import_react.default.createElement("div", { key: s.id, style: { display: "flex", gap: 8, alignItems: "center", padding: "5px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, s.name || s.id), /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, temps(stats.scenes[s.id].temps || 0), " \xB7 ", stats.scenes[s.id].visites || 0, " visite(s)"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, flex: "none" }, onClick: () => setStatsScene(s.id) }, "Regard"))), puzzles.filter((p) => stats.echecs && stats.echecs[p.id] || stats.indices && stats.indices[p.id]).map((p) => /* @__PURE__ */ import_react.default.createElement("div", { key: p.id, style: { fontFamily: sans, fontSize: 12, color: C.text, padding: "5px 0", borderBottom: "1px solid " + C.line } }, "\u{1F9E9} ", p.title || p.id, " \xB7 ", stats.echecs && stats.echecs[p.id] || 0, " erreur(s) \xB7 ", stats.indices && stats.indices[p.id] || 0, " indice(s)")), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Carte de chaleur du regard (plus c'est rouge, plus on y a regard\xE9) :"), /* @__PURE__ */ import_react.default.createElement("canvas", { ref: canvasRef, width: 720, height: 360, style: { width: "100%", borderRadius: 6, marginTop: 4, background: C.ink2 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 8 }, onClick: () => {
+      try {
+        localStorage.removeItem("e360:stats:" + (gameMeta.id || gameMeta.title || "game"));
+      } catch (e) {
+      }
+      rafraichir((n) => n + 1);
+    } }, "Effacer les statistiques"))), onglet === "modeles" && /* @__PURE__ */ import_react.default.createElement("div", { "data-modeles": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Ajoute au jeu une structure qui marche d\xE9j\xE0 : des sc\xE8nes reli\xE9es, des points, des objets. Il ne reste qu'\xE0 mettre tes images et tes textes."), [
+      ["piece", "Escape room d'une pi\xE8ce", "Une note, un tiroir qui donne une cl\xE9, une porte qui demande la cl\xE9."],
+      ["enquete", "Enqu\xEAte", "Un bureau, deux pi\xE8ces \xE0 fouiller, un indice cach\xE9."],
+      ["aventure", "Aventure en plusieurs lieux", "Une place centrale et trois lieux qui en partent."]
+    ].map(([k, nom, txt]) => /* @__PURE__ */ import_react.default.createElement("div", { key: k, style: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: "1px solid " + C.line } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 13, color: C.text } }, nom), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, txt)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: primaryBtn, "data-modele": k, onClick: () => {
+      const m = modeleJeu(k);
+      setScenes((l) => [...l, ...m.scenes]);
+      setItems((l) => [...l, ...m.items]);
+      onAller(m.scenes[0].id);
+    } }, "Ajouter")))));
+  }
+  function textesDuJeu({ scenes, items, dialogues, meta }) {
+    const out = [];
+    const ajoute = (s, ou) => {
+      if (typeof s === "string" && s.trim() && !out.some((x) => x.src === s)) out.push({ src: s, ou });
+    };
+    scenes.forEach((s) => {
+      ajoute(s.name, "Sc\xE8ne");
+      ajoute(s.text, "Sc\xE8ne");
+      (s.hotspots || []).forEach((h) => {
+        ajoute(h.label, "Point");
+        ajoute(h.text, "Point");
+        ajoute(h.reponseDefaut, "Point");
+      });
+      parcourirJeu(s, (o) => {
+        if (o.type === "show_text") ajoute(o.text, "Texte affich\xE9");
+        if (o.type === "bulle") ajoute(o.texte, "Bulle");
+      });
+    });
+    items.forEach((it) => {
+      ajoute(it.name, "Objet");
+      ajoute(it.description, "Objet");
+    });
+    dialogues.forEach((d) => (d.nodes || []).forEach((n) => {
+      ajoute(n.text, "Dialogue");
+      ajoute(n.prompt, "Dialogue");
+      (n.options || []).forEach((o) => ajoute(o.text, "Choix"));
+    }));
+    (meta.objectifs || []).forEach((o) => {
+      ajoute(o.texte, "Objectif");
+      (o.indices || []).forEach((t) => ajoute(t, "Indice"));
+    });
+    return out;
+  }
+  function LanguesJeu({ meta, setMeta, scenes, items, dialogues, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const L = o.langues;
+    const [code, setCode] = (0, import_react.useState)(L.codes[0] ? L.codes[0].code : "");
+    const [nouveau, setNouveau] = (0, import_react.useState)("");
+    const [seulsManquants, setSeulsManquants] = (0, import_react.useState)(false);
+    const ecrire = (langues) => setMeta((m) => ({ ...m, options: { ...normalizeOptionsJeu(m.options), langues } }));
+    const textes = (0, import_react.useMemo)(() => textesDuJeu({ scenes, items, dialogues, meta }), [scenes, items, dialogues, meta]);
+    const dico = L.textes && L.textes[code] || {};
+    const faits = textes.filter((x) => dico[x.src]).length;
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Plusieurs langues", onClose, largeur: 640, data: "langues" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "\xC9cris le jeu dans ta langue, puis traduis ici chaque texte. Le joueur choisit sa langue dans les Options ; un texte non traduit reste dans la langue d'origine."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" } }, L.codes.map((l) => /* @__PURE__ */ import_react.default.createElement("button", { key: l.code, type: "button", onClick: () => setCode(l.code), style: { ...smallBtn, background: code === l.code ? C.amber : void 0, color: code === l.code ? C.ink : void 0 } }, l.nom)), /* @__PURE__ */ import_react.default.createElement("input", { value: nouveau, onChange: (e) => setNouveau(e.target.value), placeholder: "English", style: { ...input, marginTop: 0, width: 120 }, "data-langue-nom": true }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, "data-langue-ajout": true, onClick: () => {
+      const nom = nouveau.trim();
+      if (!nom) return;
+      const c = nom.toLowerCase().replace(/[^a-z]/g, "").slice(0, 8) || "l" + (L.codes.length + 1);
+      if (L.codes.some((x) => x.code === c)) return;
+      ecrire({ ...L, codes: [...L.codes, { code: c, nom }] });
+      setCode(c);
+      setNouveau("");
+    } }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Langue")), code && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 10, ...petitTexte } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, faits, " / ", textes.length, " textes traduits"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: seulsManquants, onChange: setSeulsManquants }, "Seulement ceux qui manquent"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => {
+      if (window.confirm("Retirer cette langue et ses traductions ?")) {
+        const t = { ...L.textes };
+        delete t[code];
+        ecrire({ codes: L.codes.filter((x) => x.code !== code), textes: t });
+        setCode("");
+      }
+    } }, "Retirer")), textes.filter((x) => !seulsManquants || !dico[x.src]).slice(0, 300).map((x, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { padding: "6px 0", borderBottom: "1px solid " + C.line }, "data-traduction": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim } }, /* @__PURE__ */ import_react.default.createElement("b", { style: { fontWeight: 500 } }, x.ou), " \xB7 ", x.src), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: dico[x.src] || "",
+        rows: 1,
+        onChange: (e) => ecrire({ ...L, textes: { ...L.textes, [code]: { ...dico, [x.src]: e.target.value } } }),
+        style: { ...input, marginTop: 4, resize: "vertical" }
+      }
+    )))));
+  }
+  function BandeAnnonce({ scenes, gameMeta, onTourner, onClose }) {
+    const avecImage = scenes.filter((s) => s.image || s.video && s.video.src);
+    const [choix, setChoix] = (0, import_react.useState)(avecImage.slice(0, 6).map((s) => s.id));
+    const [duree, setDuree] = (0, import_react.useState)(4);
+    const [titre, setTitre] = (0, import_react.useState)(gameMeta.title || "");
+    const [sousTitre, setSousTitre] = (0, import_react.useState)("Bient\xF4t");
+    (0, import_react.useEffect)(() => {
+      if (window.__e360VideoEcoute) return;
+      window.__e360VideoEcoute = true;
+      window.addEventListener("message", (e) => {
+        const d = e.data;
+        if (!d || !d.e360Video) return;
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(d.e360Video);
+        a.download = d.nom || "bande-annonce.mp4";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+    }, []);
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Bande-annonce", onClose, data: "bande-annonce" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Une courte vid\xE9o qui tourne lentement dans tes plus belles sc\xE8nes, avec le titre au d\xE9but et \xE0 la fin. Elle se filme dans le test du jeu, puis s'enregistre comme un fichier."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8nes, dans l'ordre"), avecImage.map((s) => /* @__PURE__ */ import_react.default.createElement(Coche, { key: s.id, checked: choix.indexOf(s.id) >= 0, onChange: (v) => setChoix((l) => v ? [...l, s.id] : l.filter((x) => x !== s.id)) }, s.name || s.id)), /* @__PURE__ */ import_react.default.createElement(Label, null, "R\xE9glages"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", ...petitTexte } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "2", max: "15", value: duree, onChange: (e) => setDuree(parseFloat(e.target.value) || 4), style: { ...input, width: 60, marginTop: 0 } }), " secondes par sc\xE8ne"), /* @__PURE__ */ import_react.default.createElement("input", { value: titre, onChange: (e) => setTitre(e.target.value), placeholder: "Titre", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement("input", { value: sousTitre, onChange: (e) => setSousTitre(e.target.value), placeholder: "Sous-titre de fin", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        style: { ...primaryBtn, marginTop: 12, width: "100%" },
+        disabled: !choix.length,
+        "data-tourner": true,
+        onClick: () => onTourner({ scenes: avecImage.filter((s) => choix.indexOf(s.id) >= 0).map((s) => s.id), duree, titre, sousTitre })
+      },
+      "\u{1F3AC} Tourner (",
+      Math.round(choix.length * duree + 5),
+      " s)"
+    ));
+  }
   function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -37081,6 +37732,9 @@
     const [zone, setZone] = (0, import_react.useState)(hotspot.zone);
     const [decouverte, setDecouverte] = (0, import_react.useState)(!!hotspot.decouverte);
     const [sonIndice, setSonIndice] = (0, import_react.useState)(hotspot.sonIndice);
+    const [grosPlan, setGrosPlan] = (0, import_react.useState)(hotspot.grosPlan);
+    const [anamorphose, setAnamorphose] = (0, import_react.useState)(hotspot.anamorphose);
+    const [faussePiste, setFaussePiste] = (0, import_react.useState)(!!hotspot.faussePiste);
     const sceneDuPoint = scenes.find((s) => (s.hotspots || []).some((h) => h.id === hotspot.id)) || null;
     const [newItemName, setNewItemName] = (0, import_react.useState)("");
     const [newItemDesc, setNewItemDesc] = (0, import_react.useState)("");
@@ -37108,7 +37762,10 @@
         reponseDefaut: reponseDefaut.trim() || void 0,
         zone: zone && zone.length >= 3 ? zone : void 0,
         decouverte: decouverte || void 0,
-        sonIndice: sonIndice && sonIndice.src ? sonIndice : void 0
+        sonIndice: sonIndice && sonIndice.src ? sonIndice : void 0,
+        grosPlan: grosPlan && grosPlan.image ? grosPlan : void 0,
+        anamorphose: anamorphose || void 0,
+        faussePiste: faussePiste || void 0
       });
     };
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 360, maxHeight: "92vh", overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Configurer le point cliquable"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Type d'action"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, [
@@ -37147,7 +37804,7 @@
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Son qui guide vers ce point"), /* @__PURE__ */ import_react.default.createElement(SonIndice, { valeur: sonIndice, onChange: setSonIndice, audio, setAudio }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Son qui guide vers ce point"), /* @__PURE__ */ import_react.default.createElement(SonIndice, { valeur: sonIndice, onChange: setSonIndice, audio, setAudio }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Gros plan"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginBottom: 4, lineHeight: 1.4 } }, "Toucher ce point ouvre une vue rapproch\xE9e (un tiroir, un bureau, un tableau) avec ses propres zones, objets et \xE9nigmes."), /* @__PURE__ */ import_react.default.createElement(GrosPlanEditor, { valeur: grosPlan, onChange: setGrosPlan, items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Regard pr\xE9cis et fausse piste"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!anamorphose, onChange: (v) => setAnamorphose(v ? { tolerance: 6 } : void 0), data: "anamorphose" }, "Se d\xE9clenche tout seul quand le joueur regarde exactement ce point (anamorphose : un dessin qui ne se lit que d'ici)"), anamorphose && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4, marginLeft: 22, fontFamily: sans, fontSize: 11.5, color: C.textDim } }, "Pr\xE9cision", /* @__PURE__ */ import_react.default.createElement("select", { value: String(anamorphose.tolerance || 6), onChange: (e) => setAnamorphose({ tolerance: parseFloat(e.target.value) }), style: { ...select, marginTop: 0, width: "auto" } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "3" }, "Tr\xE8s pr\xE9cise (3\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "6" }, "Pr\xE9cise (6\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Large (10\xB0)"))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "fausse-piste" }, "Fausse piste : au troisi\xE8me essai, le jeu dit au joueur qu'il n'y a rien \xE0 trouver ici"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function LevelBadge({ level, small }) {
     const L = PUZZLE_LEVELS[level] || PUZZLE_LEVELS.link;
@@ -37210,6 +37867,9 @@
     if (type === "image") return { type, image: "", texte: "" };
     if (type === "succes") return { type, succesId: "" };
     if (type === "fin") return { type, titre: "", texte: "", image: "", bilan: true };
+    if (type === "ajouter") return { type, key: "", amount: 1 };
+    if (type === "bulle") return { type, texte: "", sceneId: "", duree: 4 };
+    if (type === "fragment") return { type, texte: "", id: "fr_" + Math.random().toString(36).slice(2, 7) };
     return { type: "show_text", text: "" };
   };
   function ActionListEditor({ actions, onChange, items, scenes, variables, dialogues = [], emptyText }) {
@@ -37257,7 +37917,7 @@
       },
       /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 variable \u2014"),
       variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))
-    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(ActionLot2, { a, update: (p) => update(i, p) }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
+    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(ActionLot2, { a, update: (p) => update(i, p) }), /* @__PURE__ */ import_react.default.createElement(ActionLot678, { a, update: (p) => update(i, p), scenes, variables }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
   }
   var SectionTitle = ({ children, hint }) => /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 16, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: 0.5 } }, children), hint && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 2, lineHeight: 1.4 } }, hint));
   function PuzzleEditor({ draft, setDraft, items, scenes, variables, puzzles, dialogues = [] }) {
@@ -37420,6 +38080,8 @@
     const [usages, setUsages] = (0, import_react.useState)(item.usages || 0);
     const [usureTexte, setUsureTexte] = (0, import_react.useState)(item.usureTexte || "");
     const [demonter, setDemonter] = (0, import_react.useState)(item.demonter || []);
+    const [faces, setFaces] = (0, import_react.useState)(item.faces || []);
+    const [faussePiste, setFaussePiste] = (0, import_react.useState)(!!item.faussePiste);
     const fileRef = (0, import_react.useRef)(null);
     const pickImage = (file) => {
       const reader = new FileReader();
@@ -37437,10 +38099,12 @@
         document: pages.some((p) => p.image || (p.texte || "").trim()) ? { pages: pages.filter((p) => p.image || (p.texte || "").trim()) } : void 0,
         usages: usages > 0 ? usages : void 0,
         usureTexte: usages > 0 && usureTexte.trim() ? usureTexte.trim() : void 0,
-        demonter: demonter.filter((d) => d.itemId).length ? demonter.filter((d) => d.itemId) : void 0
+        demonter: demonter.filter((d) => d.itemId).length ? demonter.filter((d) => d.itemId) : void 0,
+        faces: faces.some((f) => f.image || (f.texte || "").trim()) ? faces : void 0,
+        faussePiste: faussePiste || void 0
       });
     };
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Document \xE0 lire"), /* @__PURE__ */ import_react.default.createElement(DocumentPages, { pages, onChange: setPages }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Usure"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "S'use apr\xE8s", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: usages, onChange: (e) => setUsages(Math.max(0, parseInt(e.target.value, 10) || 0)), style: { ...input, width: 64, marginTop: 0 }, "data-item-usages": true }), "utilisation(s) ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "(0 : jamais)")), usages > 0 && /* @__PURE__ */ import_react.default.createElement("input", { value: usureTexte, onChange: (e) => setUsureTexte(e.target.value), style: { ...input, marginTop: 6 }, placeholder: "La lampe s'\xE9teint : plus de pile." }), /* @__PURE__ */ import_react.default.createElement(Label, null, "D\xE9monter en"), /* @__PURE__ */ import_react.default.createElement(DemontageObjet, { liste: demonter, onChange: setDemonter, itemId: item.id }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Document \xE0 lire"), /* @__PURE__ */ import_react.default.createElement(DocumentPages, { pages, onChange: setPages }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Usure"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "S'use apr\xE8s", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: usages, onChange: (e) => setUsages(Math.max(0, parseInt(e.target.value, 10) || 0)), style: { ...input, width: 64, marginTop: 0 }, "data-item-usages": true }), "utilisation(s) ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "(0 : jamais)")), usages > 0 && /* @__PURE__ */ import_react.default.createElement("input", { value: usureTexte, onChange: (e) => setUsureTexte(e.target.value), style: { ...input, marginTop: 6 }, placeholder: "La lampe s'\xE9teint : plus de pile." }), /* @__PURE__ */ import_react.default.createElement(Label, null, "D\xE9monter en"), /* @__PURE__ */ import_react.default.createElement(DemontageObjet, { liste: demonter, onChange: setDemonter, itemId: item.id }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Examiner sous toutes ses faces"), /* @__PURE__ */ import_react.default.createElement(FacesObjet, { faces, onChange: setFaces }), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "objet-fausse-piste" }, "Fausse piste : si le joueur insiste, le jeu lui dit que cet objet ne sert \xE0 rien"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function ItemManager({ items, onEdit, onCreate, onClose, combos, onCombos, variables, puzzles, scenes, dialogues, projet }) {
     const [onglet, setOnglet] = (0, import_react.useState)("objets");
@@ -37867,7 +38531,47 @@
         zoomAt(Math.pow(0.9988, e.deltaY), e.clientX - r.left, e.clientY - r.top);
       };
       el.addEventListener("wheel", onWheel, { passive: false });
-      return () => el.removeEventListener("wheel", onWheel);
+      el.style.touchAction = "none";
+      let pince = null;
+      const mesure = (t) => {
+        const r = el.getBoundingClientRect();
+        const a = t[0], b = t[1];
+        return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top };
+      };
+      const tDebut = (e) => {
+        if (e.touches.length !== 2) return;
+        e.preventDefault();
+        try {
+          window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+        } catch (x) {
+        }
+        pince = mesure(e.touches);
+      };
+      const tBouge = (e) => {
+        if (!pince || e.touches.length !== 2) return;
+        e.preventDefault();
+        const m = mesure(e.touches), p0 = pince;
+        pince = m;
+        setView((v) => {
+          const z = clampZoom(v.z * m.d / p0.d), k = z / v.z;
+          const tx = v.tx + (m.x - p0.x), ty = v.ty + (m.y - p0.y);
+          return { ...v, z, tx: m.x - (m.x - tx) * k, ty: m.y - (m.y - ty) * k };
+        });
+      };
+      const tFin = (e) => {
+        if (e.touches.length < 2) pince = null;
+      };
+      el.addEventListener("touchstart", tDebut, { passive: false });
+      el.addEventListener("touchmove", tBouge, { passive: false });
+      el.addEventListener("touchend", tFin);
+      el.addEventListener("touchcancel", tFin);
+      return () => {
+        el.removeEventListener("wheel", onWheel);
+        el.removeEventListener("touchstart", tDebut);
+        el.removeEventListener("touchmove", tBouge);
+        el.removeEventListener("touchend", tFin);
+        el.removeEventListener("touchcancel", tFin);
+      };
     }, []);
     const [spaceDown, setSpaceDown] = (0, import_react.useState)(false);
     (0, import_react.useEffect)(() => {
@@ -38374,7 +39078,7 @@
         "data-node-prompt": true,
         style: { ...input, marginTop: 0, resize: "vertical", fontFamily: sans }
       }
-    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Options"), !n.options.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginBottom: 6 } }, "Aucune option : le joueur serait bloqu\xE9."), n.options.map((o, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: o.id, "data-option": o.id, style: { border: `1px solid ${C.line}`, borderRadius: 7, padding: 8, marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: o.text, onChange: (e) => setOption(i, { text: e.target.value }), style: { ...input, marginTop: 0, flex: 1 }, "data-option-text": o.id }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange({ options: n.options.filter((_, k) => k !== i) }), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 13, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(NodePicker, { label: "M\xE8ne \xE0", value: o.next, onChange: (v) => setOption(i, { next: v }), dialogue, exclude: null }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Conditions"), /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 8, fontFamily: sans, fontSize: 11.5, color: C.textDim, flexWrap: "wrap" }, "data-choix-chrono": true }, "Temps pour r\xE9pondre", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", max: "120", value: n.delai || 0, onChange: (e) => onChange({ delai: parseFloat(e.target.value) || 0 }), style: { ...input, width: 60, marginTop: 0 } }), "s (0 : pas de limite)", n.delai > 0 && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, "\xB7 sinon", /* @__PURE__ */ import_react.default.createElement("select", { value: n.defaut || 0, onChange: (e) => onChange({ defaut: parseInt(e.target.value, 10) }), style: { ...select, marginTop: 0, width: "auto", maxWidth: 200 } }, n.options.map((o, i) => /* @__PURE__ */ import_react.default.createElement("option", { key: o.id, value: i }, o.text || "option " + (i + 1)))))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Options"), !n.options.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginBottom: 6 } }, "Aucune option : le joueur serait bloqu\xE9."), n.options.map((o, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: o.id, "data-option": o.id, style: { border: `1px solid ${C.line}`, borderRadius: 7, padding: 8, marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: o.text, onChange: (e) => setOption(i, { text: e.target.value }), style: { ...input, marginTop: 0, flex: 1 }, "data-option-text": o.id }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange({ options: n.options.filter((_, k) => k !== i) }), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 13, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(NodePicker, { label: "M\xE8ne \xE0", value: o.next, onChange: (v) => setOption(i, { next: v }), dialogue, exclude: null }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Conditions"), /* @__PURE__ */ import_react.default.createElement(
       RequirementsEditor,
       {
         requirements: o.requirements,
@@ -38925,7 +39629,7 @@
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         try {
-          setHtml(buildStandaloneHTML(game, { fullscreen: true, testStart: start }));
+          setHtml(buildStandaloneHTML(game, optsTest({ fullscreen: true, testStart: start })));
           if (onReady) onReady();
         } catch (e) {
           setHtml("");
@@ -40992,6 +41696,17 @@
           style: { ...input, marginTop: 0, padding: "5px 8px" },
           "data-audio-name": e.id
         }
+      ), /* @__PURE__ */ import_react.default.createElement(
+        "input",
+        {
+          value: e.sousTitre || "",
+          maxLength: 80,
+          onChange: (ev) => patch(e.id, { sousTitre: ev.target.value }),
+          placeholder: "Sous-titre : grincement de porte",
+          style: { ...input, marginTop: 3, padding: "4px 8px", fontSize: 11 },
+          "data-audio-sous-titre": e.id,
+          title: "Affich\xE9 aux joueurs qui ont activ\xE9 les sous-titres des sons"
+        }
       ), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petit, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, audioSize(audioWeight(e.src)), ou.length ? " \u2014 utilis\xE9 dans " + ou.join(", ") : " \u2014 pas encore utilis\xE9", audioRisky(e.src) ? " \u2014 format non lu par iPhone" : "")), /* @__PURE__ */ import_react.default.createElement(
         "select",
         {
@@ -41403,6 +42118,46 @@
   .pz-lock-pad{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:280px}
   .pz-lock-key{font-size:18px;font-family:'JetBrains Mono',monospace}
   .pz-lock-key:active{background:var(--pz-accent,var(--accent));color:#0B0E14}
+  .pz-piano{display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px;width:100%;box-sizing:border-box}
+  .pz-piano-trace{display:flex;gap:6px;min-height:28px;flex-wrap:wrap;justify-content:center}
+  .pz-piano-pt{min-width:26px;height:26px;border-radius:13px;border:1px dashed rgba(255,255,255,.3);font:600 11px/26px system-ui,sans-serif;text-align:center;padding:0 4px;box-sizing:border-box}
+  .pz-piano-pt.on{border-style:solid;border-color:var(--pz-accent,var(--accent));background:rgba(232,163,61,.15)}
+  .pz-piano-clavier{display:flex;gap:4px;justify-content:center;width:100%}
+  .pz-piano-touche{flex:1 1 0;max-width:54px;height:150px;border-radius:0 0 8px 8px;border:1px solid #9aa0ad;background:linear-gradient(#fff,#e9e6dd);color:#333;font:600 11px system-ui,sans-serif;display:flex;align-items:flex-end;justify-content:center;padding:0 0 8px;cursor:pointer}
+  .pz-piano-touche.joue{animation:pz-joue .3s ease}
+  @keyframes pz-joue{0%{transform:translateY(3px);filter:brightness(.8)}100%{transform:none;filter:none}}
+  .pz-piano-cloches .pz-piano-touche{height:110px;border-radius:50% 50% 12px 12px / 40% 40% 12px 12px;background:linear-gradient(#f3d27a,#b8862b);border-color:#7a5a1c;color:#3a2a08}
+  .pz-piano-verres .pz-piano-touche{height:120px;border-radius:4px 4px 14px 14px;background:linear-gradient(to top,rgba(95,180,240,.7) var(--niveau,50%),rgba(255,255,255,.1) var(--niveau,50%));border:2px solid rgba(255,255,255,.5);color:#fff}
+  .pz-piano-efface{background:#242938;color:#E9E6DD}
+  .pz-horloge{display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px}
+  .pz-horloge-cadran{width:min(240px,70vw);height:auto;touch-action:none;cursor:grab}
+  .pz-hl-fond{fill:#F4EFE3;stroke:#3a3226;stroke-width:4}
+  .pz-hl-trait{stroke:#5a5246;stroke-width:1}
+  .pz-hl-trait.fort{stroke-width:3}
+  .pz-hl-chiffre{font:600 15px Georgia,serif;fill:#2a241b}
+  .pz-hl-heures{stroke:#1b1712;stroke-width:6;stroke-linecap:round}
+  .pz-hl-minutes{stroke:#1b1712;stroke-width:3.5;stroke-linecap:round}
+  .pz-hl-axe{fill:var(--pz-accent,var(--accent))}
+  .pz-horloge-lecture{font:600 14px 'JetBrains Mono',monospace;opacity:.7}
+  .pz-horloge-boutons{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+  .pz-horloge-btn{min-height:38px;padding:0 12px;border-radius:8px;border:1px solid #2e3446;background:#1d2230;color:#E9E6DD;cursor:pointer}
+  .pz-dechire{display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px;width:100%;box-sizing:border-box}
+  .pz-dechire-table{display:grid;gap:3px;width:min(100%,380px);padding:8px;background:#3a3020;border-radius:6px;box-sizing:border-box}
+  .pz-dechire-case{aspect-ratio:1;border:1px dashed rgba(255,255,255,.25);background:rgba(0,0,0,.2);padding:0;cursor:pointer;position:relative}
+  .pz-dechire-morceau{position:absolute;inset:0;background-repeat:no-repeat;background-color:#efe6d2;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));transition:transform .2s}
+  .pz-dechire-morceau.choisi{outline:3px solid var(--pz-accent,var(--accent))}
+  .pz-dechire-reserve{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .pz-dechire-libre{position:relative;width:64px;height:64px;padding:0;border:none;background:transparent;cursor:pointer}
+  .pz-dechire-manque,.pz-fus-aide{font:12px/1.4 system-ui,sans-serif;opacity:.75;text-align:center}
+  .pz-fusibles{display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px}
+  .pz-fus-lampe{width:60px;height:60px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#555,#1b1b1b);border:3px solid #333;transition:all .4s}
+  .pz-fus-lampe.allumee{background:radial-gradient(circle at 40% 35%,#fff7c2,#f5c542 55%,#a8781a);box-shadow:0 0 40px 10px rgba(245,197,66,.6)}
+  .pz-fus-rang{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .pz-fus-fusible{width:34px;height:56px;border-radius:6px;border:2px dashed #555;background:#141414;color:#d9a441;font-size:30px;cursor:pointer;padding:0}
+  .pz-fus-fusible.pose{border-style:solid;border-color:#d9a441;background:#2a2112}
+  .pz-fus-inter{width:40px;height:70px;border-radius:8px;border:2px solid #444;background:#1a1d24;position:relative;cursor:pointer;padding:0}
+  .pz-fus-inter span{position:absolute;left:6px;right:6px;height:26px;bottom:6px;border-radius:5px;background:#8a8f99;transition:all .15s}
+  .pz-fus-inter.haut span{bottom:38px;background:var(--pz-accent,var(--accent))}
   .pz-lock-wide{min-width:96px}
   .pz-lock-wheel{display:flex;flex-direction:column;gap:6px}
   .pz-lock-arrow{font-size:14px}
@@ -47932,7 +48687,11 @@
     ["labyrinthe", LabyrintheEditor],
     ["fabrication", FabricationEditor],
     ["scene360", SceneEditor],
-    ["constructeur", ConstructeurEditor]
+    ["constructeur", ConstructeurEditor],
+    ["piano", PianoEditor],
+    ["horloge", HorlogeEditor],
+    ["dechire", DechireEditor],
+    ["fusibles", FusiblesEditor]
   ];
   var puzEditorsAccroches = false;
   function flushPuzzleEditors() {
@@ -49772,7 +50531,47 @@
         zoomAt(Math.pow(0.9988, e.deltaY), e.clientX - r.left, e.clientY - r.top);
       };
       el.addEventListener("wheel", onWheel, { passive: false });
-      return () => el.removeEventListener("wheel", onWheel);
+      el.style.touchAction = "none";
+      let pince = null;
+      const mesure = (t) => {
+        const r = el.getBoundingClientRect();
+        const a = t[0], b = t[1];
+        return { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top };
+      };
+      const tDebut = (e) => {
+        if (e.touches.length !== 2) return;
+        e.preventDefault();
+        try {
+          window.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+        } catch (x) {
+        }
+        pince = mesure(e.touches);
+      };
+      const tBouge = (e) => {
+        if (!pince || e.touches.length !== 2) return;
+        e.preventDefault();
+        const m = mesure(e.touches), p0 = pince;
+        pince = m;
+        setView((v) => {
+          const z = clampZoom(v.z * m.d / p0.d), k = z / v.z;
+          const tx = v.tx + (m.x - p0.x), ty = v.ty + (m.y - p0.y);
+          return { ...v, z, tx: m.x - (m.x - tx) * k, ty: m.y - (m.y - ty) * k };
+        });
+      };
+      const tFin = (e) => {
+        if (e.touches.length < 2) pince = null;
+      };
+      el.addEventListener("touchstart", tDebut, { passive: false });
+      el.addEventListener("touchmove", tBouge, { passive: false });
+      el.addEventListener("touchend", tFin);
+      el.addEventListener("touchcancel", tFin);
+      return () => {
+        el.removeEventListener("wheel", onWheel);
+        el.removeEventListener("touchstart", tDebut);
+        el.removeEventListener("touchmove", tBouge);
+        el.removeEventListener("touchend", tFin);
+        el.removeEventListener("touchcancel", tFin);
+      };
     }, []);
     const zoomCenter = (f) => zoomAt(f, size.w / 2, size.h / 2);
     const [spaceDown, setSpaceDown] = (0, import_react.useState)(false);
@@ -50877,6 +51676,12 @@
         return a.succesId ? { type: a.type, succesId: String(a.succesId) } : null;
       case "fin":
         return { type: a.type, titre: String(a.titre || "Fin").slice(0, 80), texte: a.texte ? String(a.texte) : "", image: a.image ? String(a.image) : "", bilan: a.bilan !== false };
+      case "ajouter":
+        return a.key ? { type: a.type, key: slugKey(a.key), amount: isFinite(parseFloat(a.amount)) ? parseFloat(a.amount) : 1 } : null;
+      case "bulle":
+        return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 300), sceneId: a.sceneId ? String(a.sceneId) : "", yaw: isFinite(parseFloat(a.yaw)) ? parseFloat(a.yaw) : 0, pitch: isFinite(parseFloat(a.pitch)) ? parseFloat(a.pitch) : 0, duree: Math.max(1, Math.min(30, parseFloat(a.duree) || 4)) } : null;
+      case "fragment":
+        return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 160), id: a.id ? String(a.id) : "" } : null;
       case "show_text":
         return a.text ? { type: a.type, text: String(a.text) } : null;
       case "set_variable":
@@ -51273,6 +52078,8 @@
     } else if (type === "choice") {
       out.prompt = dlgStr(n.prompt).slice(0, DIALOG_MAX_TEXT);
       out.options = (Array.isArray(n.options) ? n.options : []).map(normalizeDialogChoice).slice(0, 12);
+      out.delai = Math.max(0, Math.min(120, parseFloat(n.delai) || 0));
+      out.defaut = Math.max(0, parseInt(n.defaut, 10) || 0);
     } else if (type === "condition") {
       out.requirements = normalizeRequirements(n.requirements);
       out.ifTrue = dlgStr(n.ifTrue);
@@ -52472,7 +53279,8 @@
       src,
       bus: audioBusName(s.bus),
       volume: audioNum(s.volume, 1, 0, 1),
-      loop: !!s.loop
+      loop: !!s.loop,
+      sousTitre: typeof s.sousTitre === "string" ? s.sousTitre.slice(0, 80) : ""
     };
   }
   function defaultAudioBuses() {
@@ -53770,6 +54578,712 @@
     }
     return puzStr(sol.value).toUpperCase();
   }
+  var PIANO_NOTES = ["Do", "R\xE9", "Mi", "Fa", "Sol", "La", "Si", "Do\xB2", "R\xE9\xB2", "Mi\xB2", "Fa\xB2", "Sol\xB2"];
+  var PIANO_FREQ = [261.63, 293.66, 329.63, 349.23, 392, 440, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99];
+  var pianoCtx = null;
+  function pianoSon(i, timbre) {
+    try {
+      if (!pianoCtx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        pianoCtx = new AC();
+      }
+      if (pianoCtx.state === "suspended") pianoCtx.resume();
+      var t = pianoCtx.currentTime, f = PIANO_FREQ[i % PIANO_FREQ.length] * (timbre === "cloches" ? 2 : 1);
+      var duree = timbre === "cloches" ? 2.2 : timbre === "verres" ? 1.6 : 1.1;
+      var voix = timbre === "cloches" ? [[1, 0.3], [2.76, 0.1], [5.4, 0.04]] : timbre === "verres" ? [[1, 0.28], [2, 0.05]] : [[1, 0.3], [2, 0.08], [3, 0.03]];
+      for (var k = 0; k < voix.length; k++) {
+        var o = pianoCtx.createOscillator(), g = pianoCtx.createGain();
+        o.type = timbre === "piano" && k === 0 ? "triangle" : "sine";
+        o.frequency.value = f * voix[k][0];
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(voix[k][1], t + 0.012);
+        g.gain.exponentialRampToValueAtTime(1e-4, t + duree / (k + 1));
+        o.connect(g);
+        g.connect(pianoCtx.destination);
+        o.start(t);
+        o.stop(t + duree + 0.05);
+      }
+    } catch (e) {
+    }
+  }
+  function pianoMelodie(p) {
+    var out = [], s = puzStr(p.melodie) + " ", cur = "";
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (c >= "0" && c <= "9") cur += c;
+      else {
+        if (cur) {
+          var n = parseInt(cur, 10) - 1;
+          if (n >= 0 && n < p.touches) out.push(n);
+        }
+        cur = "";
+      }
+    }
+    return out;
+  }
+  function pianoJuste(p, jouees) {
+    var m = pianoMelodie(p);
+    if (m.length < 2 || jouees.length < m.length) return false;
+    for (var i = 0; i < m.length; i++) if (jouees[jouees.length - m.length + i] !== m[i]) return false;
+    return true;
+  }
+  registerPuzzleType({
+    id: "piano",
+    name: "Piano et notes",
+    icon: "\u{1F3B9}",
+    family: "sequence",
+    description: "Rejouer une m\xE9lodie sur un clavier, des cloches ou des verres d'eau.",
+    defaults: function() {
+      return { timbre: "piano", touches: 8, melodie: "1 3 5 8", noms: true };
+    },
+    normalize: function(p) {
+      var s = p && typeof p === "object" ? p : {};
+      return {
+        timbre: ["piano", "cloches", "verres"].indexOf(s.timbre) >= 0 ? s.timbre : "piano",
+        touches: Math.round(puzNum(s.touches, 8, 3, 12)),
+        melodie: puzStr(s.melodie, "1 3 5 8").slice(0, 80),
+        noms: s.noms !== false
+      };
+    },
+    solvable: function(p) {
+      return pianoMelodie(p).length < 2 ? ["la m\xE9lodie doit compter au moins deux notes (num\xE9ros de touches s\xE9par\xE9s par des espaces)"] : [];
+    },
+    check: function(p, state) {
+      return pianoJuste(p, state && Array.isArray(state.jouees) ? state.jouees : []);
+    },
+    outline: function(p) {
+      var out = [];
+      for (var i = 0; i < p.touches; i++) out.push({ id: "n" + i, label: "Touche " + (i + 1), kind: "key" });
+      return out;
+    },
+    mount: function(host, ctx) {
+      var p = ctx.params, jouees = [];
+      host.textContent = "";
+      var wrap = document.createElement("div");
+      host.appendChild(wrap);
+      var trace = document.createElement("div");
+      var clavier = document.createElement("div");
+      function construit() {
+        wrap.className = "pz-piano pz-piano-" + p.timbre;
+        wrap.textContent = "";
+        trace.className = "pz-piano-trace";
+        wrap.appendChild(trace);
+        clavier.className = "pz-piano-clavier";
+        clavier.textContent = "";
+        wrap.appendChild(clavier);
+        for (var i = 0; i < p.touches; i++) (function(n) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pz-el pz-piano-touche";
+          b.setAttribute("data-pz-el", "n" + n);
+          b.setAttribute("data-piano", String(n));
+          b.textContent = p.noms ? PIANO_NOTES[n] : "";
+          if (p.timbre === "verres") b.style.setProperty("--niveau", Math.round(25 + 60 * (1 - n / Math.max(1, p.touches - 1))) + "%");
+          b.onclick = function() {
+            pianoSon(n, p.timbre);
+            b.classList.remove("joue");
+            void b.offsetWidth;
+            b.classList.add("joue");
+            jouees.push(n);
+            if (jouees.length > 24) jouees.shift();
+            dessine();
+            ctx.emit("progress");
+            if (pianoJuste(p, jouees)) setTimeout(function() {
+              ctx.emit("submit");
+            }, 350);
+          };
+          clavier.appendChild(b);
+        })(i);
+        var eff = document.createElement("button");
+        eff.type = "button";
+        eff.className = "pz-validate pz-piano-efface";
+        eff.textContent = "Recommencer";
+        eff.onclick = function() {
+          jouees = [];
+          dessine();
+        };
+        wrap.appendChild(eff);
+        dessine();
+      }
+      function dessine() {
+        trace.textContent = "";
+        var m = Math.max(2, pianoMelodie(p).length);
+        var der = jouees.slice(-m);
+        for (var k = 0; k < m; k++) {
+          var d = document.createElement("span");
+          d.className = "pz-piano-pt" + (k < der.length ? " on" : "");
+          d.textContent = k < der.length && p.noms ? PIANO_NOTES[der[k]] : "";
+          trace.appendChild(d);
+        }
+      }
+      construit();
+      return {
+        update: function(np) {
+          p = np;
+          construit();
+        },
+        getState: function() {
+          return { jouees: jouees.slice() };
+        },
+        setState: function(st) {
+          if (st && Array.isArray(st.jouees)) jouees = st.jouees.slice();
+          dessine();
+        },
+        solve: function() {
+          jouees = pianoMelodie(p).slice();
+          dessine();
+        },
+        reset: function() {
+          jouees = [];
+          dessine();
+        },
+        feedback: function(kind) {
+          if (kind === "wrong") {
+            jouees = [];
+            dessine();
+          }
+        },
+        destroy: function() {
+          host.textContent = "";
+        }
+      };
+    }
+  });
+  var SVG_PZ = "http://www.w3.org/2000/svg";
+  function pzSvg(tag, attrs, parent) {
+    var n = document.createElementNS(SVG_PZ, tag);
+    for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, String(attrs[k]));
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  registerPuzzleType({
+    id: "horloge",
+    name: "Horloge \xE0 r\xE9gler",
+    icon: "\u{1F570}",
+    family: "saisie",
+    description: "Tourner les aiguilles pour afficher l'heure trouv\xE9e ailleurs.",
+    defaults: function() {
+      return { heure: 3, minute: 15, pas: 5 };
+    },
+    normalize: function(p) {
+      var s = p && typeof p === "object" ? p : {};
+      var pas = [1, 5, 15].indexOf(parseInt(s.pas, 10)) >= 0 ? parseInt(s.pas, 10) : 5;
+      return { heure: Math.round(puzNum(s.heure, 3, 1, 12)), minute: Math.round(puzNum(s.minute, 15, 0, 59)), pas };
+    },
+    solvable: function(p) {
+      return p.minute % p.pas ? ["les minutes (" + p.minute + ") ne tombent pas sur un pas de " + p.pas + " minutes"] : [];
+    },
+    check: function(p, state) {
+      return !!state && state.h % 12 === p.heure % 12 && state.m === p.minute;
+    },
+    outline: function() {
+      return [{ id: "heures", label: "Aiguille des heures", kind: "dial" }, { id: "minutes", label: "Aiguille des minutes", kind: "dial" }];
+    },
+    mount: function(host, ctx) {
+      var p = ctx.params, h = 12, m = 0;
+      host.textContent = "";
+      var wrap = document.createElement("div");
+      wrap.className = "pz-horloge";
+      host.appendChild(wrap);
+      var svg = pzSvg("svg", { viewBox: "-100 -100 200 200", "class": "pz-horloge-cadran" }, wrap);
+      pzSvg("circle", { r: 94, "class": "pz-hl-fond" }, svg);
+      for (var i = 0; i < 60; i++) {
+        var a = i * Math.PI / 30, long = i % 5 === 0;
+        pzSvg("line", { x1: Math.sin(a) * (long ? 78 : 84), y1: -Math.cos(a) * (long ? 78 : 84), x2: Math.sin(a) * 90, y2: -Math.cos(a) * 90, "class": long ? "pz-hl-trait fort" : "pz-hl-trait" }, svg);
+      }
+      for (var n = 1; n <= 12; n++) {
+        var t = pzSvg("text", { x: Math.sin(n * Math.PI / 6) * 64, y: -Math.cos(n * Math.PI / 6) * 64 + 6, "class": "pz-hl-chiffre", "text-anchor": "middle" }, svg);
+        t.textContent = String(n);
+      }
+      var ah = pzSvg("line", { x1: 0, y1: 8, x2: 0, y2: -46, "class": "pz-el pz-hl-heures", "data-pz-el": "heures" }, svg);
+      var am = pzSvg("line", { x1: 0, y1: 12, x2: 0, y2: -74, "class": "pz-el pz-hl-minutes", "data-pz-el": "minutes" }, svg);
+      pzSvg("circle", { r: 5, "class": "pz-hl-axe" }, svg);
+      var lecture = document.createElement("div");
+      lecture.className = "pz-horloge-lecture";
+      wrap.appendChild(lecture);
+      function dessine() {
+        ah.setAttribute("transform", "rotate(" + (h % 12 * 30 + m / 2) + ")");
+        am.setAttribute("transform", "rotate(" + m * 6 + ")");
+        lecture.textContent = h + " h " + (m < 10 ? "0" : "") + m;
+      }
+      function bouge(dh, dm) {
+        m += dm;
+        while (m >= 60) {
+          m -= 60;
+          h++;
+        }
+        while (m < 0) {
+          m += 60;
+          h--;
+        }
+        h = (h - 1 + 1200) % 12 + 1;
+        dessine();
+        ctx.sound("interact");
+        ctx.emit("progress");
+      }
+      var aiguille = null;
+      function angle(e) {
+        var r = svg.getBoundingClientRect();
+        var x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+        var deg = Math.atan2(x, -y) * 180 / Math.PI;
+        return deg < 0 ? deg + 360 : deg;
+      }
+      svg.addEventListener("pointerdown", function(e) {
+        e.preventDefault();
+        try {
+          svg.setPointerCapture(e.pointerId);
+        } catch (x) {
+        }
+        var a2 = angle(e);
+        var dM = Math.abs((a2 - m * 6 + 540) % 360 - 180), dH = Math.abs((a2 - (h % 12 * 30 + m / 2) + 540) % 360 - 180);
+        aiguille = dM <= dH ? "m" : "h";
+      });
+      svg.addEventListener("pointermove", function(e) {
+        if (!aiguille) return;
+        var a2 = angle(e);
+        if (aiguille === "m") {
+          var nm = Math.round(a2 / 6 / p.pas) * p.pas % 60;
+          if (nm !== m) {
+            if (m > 45 && nm < 15) h = h % 12 + 1;
+            else if (m < 15 && nm > 45) h = (h + 10) % 12 + 1;
+            m = nm;
+            dessine();
+            ctx.emit("progress");
+          }
+        } else {
+          var nh = Math.round((a2 - m / 2) / 30);
+          nh = (nh % 12 + 12) % 12;
+          if (nh === 0) nh = 12;
+          if (nh !== h) {
+            h = nh;
+            dessine();
+            ctx.emit("progress");
+          }
+        }
+      });
+      var fin = function() {
+        if (aiguille) ctx.sound("interact");
+        aiguille = null;
+      };
+      svg.addEventListener("pointerup", fin);
+      svg.addEventListener("pointercancel", fin);
+      var reglages = document.createElement("div");
+      reglages.className = "pz-horloge-boutons";
+      wrap.appendChild(reglages);
+      [["\u2212 1 h", -1, 0], ["+ 1 h", 1, 0], ["\u2212 " + p.pas + " min", 0, -p.pas], ["+ " + p.pas + " min", 0, p.pas]].forEach(function(d) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "pz-el pz-horloge-btn";
+        b.textContent = d[0];
+        b.onclick = function() {
+          bouge(d[1], d[2] + d[1] * 60);
+        };
+        reglages.appendChild(b);
+      });
+      var valider = document.createElement("button");
+      valider.type = "button";
+      valider.className = "pz-validate";
+      valider.textContent = "Valider";
+      valider.onclick = function() {
+        ctx.emit("submit");
+      };
+      wrap.appendChild(valider);
+      dessine();
+      return {
+        update: function(np) {
+          p = np;
+          dessine();
+        },
+        getState: function() {
+          return { h, m };
+        },
+        setState: function(st) {
+          if (st && isFinite(st.h)) {
+            h = st.h;
+            m = st.m || 0;
+            dessine();
+          }
+        },
+        solve: function() {
+          h = p.heure;
+          m = p.minute;
+          dessine();
+        },
+        reset: function() {
+          h = 12;
+          m = 0;
+          dessine();
+        },
+        destroy: function() {
+          host.textContent = "";
+        }
+      };
+    }
+  });
+  function dechireN(p) {
+    return p.cols * p.rows;
+  }
+  function dechireBord(i) {
+    var g = (i + 1) * 9301, pts = [], hasard = function() {
+      g = (g * 9301 + 49297) % 233280;
+      return g / 233280;
+    };
+    var cote = function(x0, y0, x1, y1) {
+      for (var k = 0; k < 5; k++) {
+        var t = k / 5;
+        pts.push((x0 + (x1 - x0) * t + (hasard() - 0.5) * 3).toFixed(1) + "% " + (y0 + (y1 - y0) * t + (hasard() - 0.5) * 3).toFixed(1) + "%");
+      }
+    };
+    cote(1, 1, 99, 1);
+    cote(99, 1, 99, 99);
+    cote(99, 99, 1, 99);
+    cote(1, 99, 1, 1);
+    return "polygon(" + pts.join(",") + ")";
+  }
+  registerPuzzleType({
+    id: "dechire",
+    name: "Papier d\xE9chir\xE9",
+    icon: "\u{1F4DC}",
+    family: "image",
+    description: "Recoller les morceaux d'une lettre, ramass\xE9s un \xE0 un dans les sc\xE8nes.",
+    defaults: function() {
+      return { image: "", cols: 2, rows: 2, morceaux: [], rotation: false };
+    },
+    normalize: function(p) {
+      var s = p && typeof p === "object" ? p : {};
+      var cols = Math.round(puzNum(s.cols, 2, 2, 4)), rows = Math.round(puzNum(s.rows, 2, 1, 4));
+      var m = [];
+      for (var i = 0; i < cols * rows; i++) m.push(Array.isArray(s.morceaux) && typeof s.morceaux[i] === "string" ? s.morceaux[i] : "");
+      return { image: puzStr(s.image), cols, rows, morceaux: m, rotation: !!s.rotation };
+    },
+    solvable: function(p) {
+      return p.image ? [] : ["il manque l'image de la lettre enti\xE8re"];
+    },
+    check: function(p, state) {
+      if (!state || !Array.isArray(state.place)) return false;
+      for (var i = 0; i < dechireN(p); i++) if (state.place[i] !== i || state.rot && state.rot[i]) return false;
+      return true;
+    },
+    consumes: function(p) {
+      var out = [];
+      for (var i = 0; i < p.morceaux.length; i++) if (p.morceaux[i]) out.push({ itemId: p.morceaux[i], qty: 1 });
+      return out;
+    },
+    essai: function(p) {
+      var inv = {};
+      for (var i = 0; i < p.morceaux.length; i++) if (p.morceaux[i]) inv[p.morceaux[i]] = 1;
+      return inv;
+    },
+    outline: function(p) {
+      var out = [];
+      for (var i = 0; i < dechireN(p); i++) out.push({ id: "c" + i, label: "Emplacement " + (i + 1), kind: "target" });
+      return out;
+    },
+    mount: function(host, ctx) {
+      var p = ctx.params, n = dechireN(p);
+      var lireSac = function() {
+        return ctx.jeu ? ctx.jeu().inventory || {} : ctx.inventory || {};
+      };
+      var place = [], rot = [], choisi = null;
+      for (var i = 0; i < n; i++) {
+        place.push(-1);
+        rot.push(p.rotation ? 1 + Math.floor(Math.random() * 3) : 0);
+      }
+      var dispo = function(k) {
+        return !p.morceaux[k] || (lireSac()[p.morceaux[k]] || 0) > 0;
+      };
+      host.textContent = "";
+      var wrap = document.createElement("div");
+      wrap.className = "pz-dechire";
+      host.appendChild(wrap);
+      var table = document.createElement("div");
+      table.className = "pz-dechire-table";
+      wrap.appendChild(table);
+      var reserve = document.createElement("div");
+      reserve.className = "pz-dechire-reserve";
+      wrap.appendChild(reserve);
+      var manque = document.createElement("div");
+      manque.className = "pz-dechire-manque";
+      wrap.appendChild(manque);
+      var ordreReserve = [];
+      for (var r = 0; r < n; r++) ordreReserve.push(r);
+      ordreReserve.sort(function() {
+        return Math.random() - 0.5;
+      });
+      function morceau(k) {
+        var d = document.createElement("div");
+        d.className = "pz-dechire-morceau" + (choisi === k ? " choisi" : "");
+        d.style.backgroundImage = 'url("' + p.image + '")';
+        d.style.backgroundSize = p.cols * 100 + "% " + p.rows * 100 + "%";
+        d.style.backgroundPosition = (p.cols > 1 ? k % p.cols / (p.cols - 1) * 100 : 0) + "% " + (p.rows > 1 ? Math.floor(k / p.cols) / (p.rows - 1) * 100 : 0) + "%";
+        d.style.clipPath = dechireBord(k);
+        d.style.transform = "rotate(" + rot[k] * 90 + "deg)";
+        return d;
+      }
+      function dessine() {
+        table.textContent = "";
+        reserve.textContent = "";
+        table.style.gridTemplateColumns = "repeat(" + p.cols + ", 1fr)";
+        for (var c = 0; c < n; c++) (function(cell) {
+          var caseEl = document.createElement("button");
+          caseEl.type = "button";
+          caseEl.className = "pz-el pz-dechire-case";
+          caseEl.setAttribute("data-pz-el", "c" + cell);
+          caseEl.setAttribute("data-dechire-case", String(cell));
+          if (place[cell] >= 0) caseEl.appendChild(morceau(place[cell]));
+          caseEl.onclick = function() {
+            var ici = place[cell];
+            if (choisi === null) {
+              if (ici >= 0) {
+                choisi = ici;
+                dessine();
+              }
+              return;
+            }
+            if (ici === choisi) {
+              if (p.rotation) rot[ici] = (rot[ici] + 1) % 4;
+              choisi = null;
+              ctx.sound("interact");
+              dessine();
+              ctx.emit("progress");
+              verifie();
+              return;
+            }
+            var depuis = place.indexOf(choisi);
+            if (depuis >= 0) place[depuis] = ici;
+            else if (ici >= 0) {
+            }
+            place[cell] = choisi;
+            choisi = null;
+            ctx.sound("interact");
+            dessine();
+            ctx.emit("progress");
+            verifie();
+          };
+          table.appendChild(caseEl);
+        })(c);
+        var restants = 0;
+        ordreReserve.forEach(function(k) {
+          if (place.indexOf(k) >= 0) return;
+          if (!dispo(k)) {
+            restants++;
+            return;
+          }
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pz-el pz-dechire-libre";
+          b.setAttribute("data-dechire-morceau", String(k));
+          b.appendChild(morceau(k));
+          b.onclick = function() {
+            choisi = choisi === k ? null : k;
+            dessine();
+          };
+          reserve.appendChild(b);
+        });
+        manque.textContent = restants ? "Il manque encore " + restants + " morceau" + (restants > 1 ? "x" : "") + " : cherche-les ailleurs." : place.indexOf(-1) >= 0 ? "Touche un morceau, puis sa place." + (p.rotation ? " Touche deux fois un morceau pos\xE9 pour le tourner." : "") : "";
+      }
+      function verifie() {
+        var juste = true;
+        for (var i2 = 0; i2 < n; i2++) if (place[i2] !== i2 || rot[i2]) juste = false;
+        if (juste) setTimeout(function() {
+          ctx.emit("submit");
+        }, 300);
+      }
+      dessine();
+      return {
+        update: function(np) {
+          p = np;
+          dessine();
+        },
+        getState: function() {
+          return { place: place.slice(), rot: rot.slice() };
+        },
+        setState: function(st) {
+          if (st && Array.isArray(st.place)) {
+            place = st.place.slice();
+            if (Array.isArray(st.rot)) rot = st.rot.slice();
+            dessine();
+          }
+        },
+        solve: function() {
+          for (var i2 = 0; i2 < n; i2++) {
+            place[i2] = i2;
+            rot[i2] = 0;
+          }
+          dessine();
+        },
+        reset: function() {
+          for (var i2 = 0; i2 < n; i2++) place[i2] = -1;
+          choisi = null;
+          dessine();
+        },
+        destroy: function() {
+          host.textContent = "";
+        }
+      };
+    }
+  });
+  registerPuzzleType({
+    id: "fusibles",
+    name: "Bo\xEEte \xE0 fusibles",
+    icon: "\u26A1",
+    family: "manipulation",
+    description: "Remettre les fusibles trouv\xE9s et basculer les bons interrupteurs pour rallumer une machine.",
+    defaults: function() {
+      return { interrupteurs: "1010", fusibles: [] };
+    },
+    normalize: function(p) {
+      var s = p && typeof p === "object" ? p : {};
+      var it = puzStr(s.interrupteurs, "1010"), propre = "";
+      for (var i = 0; i < it.length && propre.length < 8; i++) {
+        var c = it.charAt(i);
+        if (c === "0" || c === "1") propre += c;
+      }
+      return { interrupteurs: propre || "10", fusibles: (Array.isArray(s.fusibles) ? s.fusibles : []).slice(0, 4).map(function(f) {
+        return typeof f === "string" ? f : "";
+      }) };
+    },
+    solvable: function(p) {
+      for (var i = 0; i < p.fusibles.length; i++) if (!p.fusibles[i]) return ["un fusible n'a pas d'objet choisi"];
+      return [];
+    },
+    check: function(p, state) {
+      if (!state || !Array.isArray(state.inter)) return false;
+      for (var i = 0; i < p.interrupteurs.length; i++) if (String(state.inter[i] ? 1 : 0) !== p.interrupteurs.charAt(i)) return false;
+      for (var k = 0; k < p.fusibles.length; k++) if (!(state.fus && state.fus[k])) return false;
+      return true;
+    },
+    consumes: function(p) {
+      var out = [];
+      for (var i = 0; i < p.fusibles.length; i++) if (p.fusibles[i]) out.push({ itemId: p.fusibles[i], qty: 1 });
+      return out;
+    },
+    essai: function(p) {
+      var inv = {};
+      for (var i = 0; i < p.fusibles.length; i++) if (p.fusibles[i]) inv[p.fusibles[i]] = (inv[p.fusibles[i]] || 0) + 1;
+      return inv;
+    },
+    outline: function(p) {
+      var out = [];
+      for (var i = 0; i < p.interrupteurs.length; i++) out.push({ id: "i" + i, label: "Interrupteur " + (i + 1), kind: "switch" });
+      return out;
+    },
+    mount: function(host, ctx) {
+      var p = ctx.params;
+      var lireSac = function() {
+        return ctx.jeu ? ctx.jeu().inventory || {} : ctx.inventory || {};
+      };
+      var objets = ctx.objets || [];
+      var nomObjet = function(id) {
+        for (var i2 = 0; i2 < objets.length; i2++) if (objets[i2].id === id) return objets[i2].name || id;
+        return "fusible";
+      };
+      var inter = [], fus = [];
+      for (var i = 0; i < p.interrupteurs.length; i++) inter.push(0);
+      for (var k = 0; k < p.fusibles.length; k++) fus.push(false);
+      host.textContent = "";
+      var wrap = document.createElement("div");
+      wrap.className = "pz-fusibles";
+      host.appendChild(wrap);
+      var lampe = document.createElement("div");
+      lampe.className = "pz-fus-lampe";
+      wrap.appendChild(lampe);
+      var rangFus = document.createElement("div");
+      rangFus.className = "pz-fus-rang";
+      wrap.appendChild(rangFus);
+      var rangInter = document.createElement("div");
+      rangInter.className = "pz-fus-rang";
+      wrap.appendChild(rangInter);
+      var aide = document.createElement("div");
+      aide.className = "pz-fus-aide";
+      wrap.appendChild(aide);
+      function juste() {
+        for (var i2 = 0; i2 < p.interrupteurs.length; i2++) if (String(inter[i2]) !== p.interrupteurs.charAt(i2)) return false;
+        for (var k2 = 0; k2 < fus.length; k2++) if (!fus[k2]) return false;
+        return true;
+      }
+      function dessine() {
+        rangFus.textContent = "";
+        rangInter.textContent = "";
+        fus.forEach(function(ok2, k2) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pz-el pz-fus-fusible" + (ok2 ? " pose" : "");
+          b.setAttribute("data-fusible", String(k2));
+          b.textContent = ok2 ? "\u25AE" : "";
+          b.title = ok2 ? "Fusible en place" : "Emplacement vide";
+          b.onclick = function() {
+            if (fus[k2]) return;
+            var id = p.fusibles[k2];
+            if (id && !((lireSac()[id] || 0) > 0)) {
+              aide.textContent = "Il te faut : " + nomObjet(id) + ".";
+              return;
+            }
+            fus[k2] = true;
+            ctx.sound("interact");
+            dessine();
+            ctx.emit("progress");
+            if (juste()) setTimeout(function() {
+              ctx.emit("submit");
+            }, 500);
+          };
+          rangFus.appendChild(b);
+        });
+        inter.forEach(function(v, i2) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pz-el pz-fus-inter" + (v ? " haut" : "");
+          b.setAttribute("data-pz-el", "i" + i2);
+          b.setAttribute("data-inter", String(i2));
+          b.setAttribute("aria-pressed", v ? "true" : "false");
+          b.innerHTML = "<span></span>";
+          b.onclick = function() {
+            inter[i2] = inter[i2] ? 0 : 1;
+            ctx.sound("interact");
+            dessine();
+            ctx.emit("progress");
+            if (juste()) setTimeout(function() {
+              ctx.emit("submit");
+            }, 500);
+          };
+          rangInter.appendChild(b);
+        });
+        var ok = juste();
+        lampe.className = "pz-fus-lampe" + (ok ? " allumee" : "");
+        if (!aide.textContent || ok) aide.textContent = fus.length && fus.indexOf(false) >= 0 ? "Remets les fusibles, puis bascule les interrupteurs." : "Bascule les interrupteurs.";
+      }
+      dessine();
+      return {
+        update: function(np) {
+          p = np;
+          dessine();
+        },
+        getState: function() {
+          return { inter: inter.slice(), fus: fus.slice() };
+        },
+        setState: function(st) {
+          if (st && Array.isArray(st.inter)) {
+            inter = st.inter.slice();
+            fus = Array.isArray(st.fus) ? st.fus.slice() : fus;
+            dessine();
+          }
+        },
+        solve: function() {
+          for (var i2 = 0; i2 < inter.length; i2++) inter[i2] = p.interrupteurs.charAt(i2) === "1" ? 1 : 0;
+          for (var k2 = 0; k2 < fus.length; k2++) fus[k2] = true;
+          dessine();
+        },
+        reset: function() {
+          for (var i2 = 0; i2 < inter.length; i2++) inter[i2] = 0;
+          dessine();
+        },
+        destroy: function() {
+          host.textContent = "";
+        }
+      };
+    }
+  });
   registerPuzzleType({
     id: "lock",
     name: "Cadenas et codes",
@@ -66678,6 +68192,42 @@
         }
         if (F.fullscreen) check("fullscreen", "Plein \xE9cran");
         check("reduceMotion", "R\xE9duire les animations");
+        check("sousTitres", "Sous-titres des sons");
+        check("sansPression", "Mode sans pression (pas de chronom\xE8tre)");
+        check("grandesCibles", "Grandes zones \xE0 toucher");
+        (function() {
+          const sel = mkEl("select", { minHeight: "36px", background: "#242938", color: "#E9E6DD", border: "none", borderRadius: "6px", padding: "0 8px" });
+          sel.setAttribute("data-opt", "couleurs");
+          [["", "Normales"], ["protan", "Rouge mal per\xE7u"], ["deutan", "Vert mal per\xE7u"], ["tritan", "Bleu mal per\xE7u"]].forEach(function(q) {
+            const o = document.createElement("option");
+            o.value = q[0];
+            o.textContent = q[1];
+            if ((settings.couleurs || "") === q[0]) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.addEventListener("change", function() {
+            change({ couleurs: sel.value });
+          });
+          row("Couleurs adapt\xE9es", sel);
+          const langues = typeof trLangues === "function" ? trLangues() : [];
+          if (langues.length) {
+            const sl = mkEl("select", { minHeight: "36px", background: "#242938", color: "#E9E6DD", border: "none", borderRadius: "6px", padding: "0 8px" });
+            sl.setAttribute("data-opt", "langue");
+            [["", "Langue d'origine"]].concat(langues.map(function(l) {
+              return [l.code, l.nom];
+            })).forEach(function(q) {
+              const o = document.createElement("option");
+              o.value = q[0];
+              o.textContent = q[1];
+              if ((settings.langue || "") === q[0]) o.selected = true;
+              sl.appendChild(o);
+            });
+            sl.addEventListener("change", function() {
+              change({ langue: sl.value });
+            });
+            row("Langue", sl);
+          }
+        })();
         if (F.video) check("video", "Vid\xE9os anim\xE9es");
         const ts = mkEl("div");
         [["A\u2212", 1], ["A", 1.25], ["A+", 1.5]].forEach(function(a) {
@@ -67624,6 +69174,7 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
       succes: normalizeSucces(s.succes || base && base.succes),
       objectifs: normalizeObjectifs(s.objectifs || base && base.objectifs),
       aide: normalizeAide(s.aide || base && base.aide),
+      options: normalizeOptionsJeu(s.options || base && base.options),
       app: {
         appName: String(a.appName || b.appName || title).slice(0, 30),
         packageId: String(a.packageId != null ? a.packageId : b.packageId || ""),
@@ -67663,7 +69214,7 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
     const m = p.meta;
     return {
       version: GAME_FORMAT_VERSION,
-      game: { id: m.id, title: m.title, author: m.author, description: m.description, succes: normalizeSucces(m.succes), objectifs: normalizeObjectifs(m.objectifs), aide: normalizeAide(m.aide) },
+      game: { id: m.id, title: m.title, author: m.author, description: m.description, succes: normalizeSucces(m.succes), objectifs: normalizeObjectifs(m.objectifs), aide: normalizeAide(m.aide), options: normalizeOptionsJeu(m.options) },
       app: { appName: m.app.appName, packageId: m.app.packageId, version: m.app.version },
       scenes: p.scenes.map(function(s) {
         return s.onEnter && s.onEnter.length ? { ...s, onEnter: normalizeActions(s.onEnter) } : s;
@@ -68480,6 +70031,21 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
     const fld = (label, el) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, label), el);
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 540, maxWidth: "94vw", maxHeight: "90vh", overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Exporter en application mobile"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.textDim, lineHeight: 1.5, marginBottom: 6 } }, "G\xE9n\xE8re un projet Capacitor (.zip) contenant le jeu \xAB ", meta.title, " \xBB, ses ressources et son player. Tu le compileras ensuite en APK/AAB (Android Studio) ou en application iOS (Xcode) : le README du ZIP d\xE9taille les \xE9tapes."), fld("Nom de l'application", /* @__PURE__ */ import_react.default.createElement("input", { value: a.appName, maxLength: 30, onChange: (e) => setApp({ appName: e.target.value }), style: input })), fld("Identifiant unique (packageId)", /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("input", { value: a.packageId, spellCheck: false, onChange: (e) => setApp({ packageId: e.target.value.trim() }), style: { ...input, flex: 1, fontFamily: mono } }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setApp({ packageId: suggestPackageId(meta.title, meta.id) }), style: smallBtn, title: "Proposer un identifiant unique" }, "\u21BB"))), idErr && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 4 } }, "\u2717 ", idErr), dup && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 4 } }, "\u2717 Un autre de tes jeux utilise d\xE9j\xE0 cet identifiant : choisis-en un diff\xE9rent."), !idErr && !dup && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: "#6FCF73", marginTop: 4 } }, "\u2713 Identifiant valide pour Android et iOS"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }, fld("Version", /* @__PURE__ */ import_react.default.createElement("input", { value: a.version, onChange: (e) => setApp({ version: e.target.value.trim() }), style: input })), verErr && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 4 } }, "\u2717 ", verErr)), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }, fld("Auteur", /* @__PURE__ */ import_react.default.createElement("input", { value: meta.author, maxLength: 80, onChange: (e) => setMeta((m) => ({ ...m, author: e.target.value })), style: input })))), fld("Description", /* @__PURE__ */ import_react.default.createElement("textarea", { value: meta.description, maxLength: 400, onChange: (e) => setMeta((m) => ({ ...m, description: e.target.value })), style: { ...input, minHeight: 50, resize: "vertical" } })), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 12, marginTop: 4 } }, [["icon", "Ic\xF4ne (carr\xE9e)", a.iconImage, 56], ["splash", "\xC9cran de lancement", a.splashImage, 56]].map(([kind, label, img, sz]) => /* @__PURE__ */ import_react.default.createElement("div", { key: kind, style: { flex: 1 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, label), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: sz, height: sz, borderRadius: 10, background: C.ink2, border: `1px solid ${C.line}`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.textDim, textAlign: "center" } }, img ? /* @__PURE__ */ import_react.default.createElement("img", { src: img, alt: "", style: { width: "100%", height: "100%", objectFit: "cover" } }) : "d\xE9faut"), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, cursor: "pointer" } }, "Choisir", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: (e) => upload(kind, e.target.files[0]) })), img && /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setApp(kind === "icon" ? { iconImage: null } : { splashImage: null }), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.danger })))))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 4 } }, "Sans image, une ic\xF4ne et un \xE9cran de lancement simples sont g\xE9n\xE9r\xE9s. L'image est recadr\xE9e/adapt\xE9e aux tailles exig\xE9es (1024 px, 2732 px)."), state.art && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 4 } }, state.art), /* @__PURE__ */ import_react.default.createElement(Label, null, "V\xE9rifications"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.textDim, lineHeight: 1.55 } }, noImage > 0 && /* @__PURE__ */ import_react.default.createElement("div", null, "\u26A0 ", noImage, " sc\xE8ne(s) sans image 360\xB0 seront vides dans l'application."), collectExportWarnings(puzzles).map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i }, "\u26A0 ", w)), homeErrors.map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "he" + i, style: { color: C.danger } }, "\u274C ", w)), (homeCheck ? homeCheck.warnings : []).map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "hw" + i }, "\u26A0 ", w)), dlgCheck.errors.map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "de" + i, "data-dlg-error": true, style: { color: C.danger } }, "\u274C ", w)), dlgCheck.warnings.map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "dw" + i, "data-dlg-warning": true }, "\u26A0 ", w)), uiCheck.errors.map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "ue" + i, "data-ui-error": true, style: { color: C.danger } }, "\u274C ", w)), uiCheck.warnings.map((w, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "uw" + i, "data-ui-warning": true }, "\u26A0 ", w)), sonCheck.items.filter((x) => x.level === "error").map((x, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "se" + i, "data-audio-error": true, style: { color: C.danger } }, "\u274C ", x.text)), sonCheck.items.filter((x) => x.level === "warning").map((x, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "sw" + i, "data-audio-warning": true }, "\u26A0 ", x.text)), sonCheck.items.filter((x) => x.level === "info").map((x, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: "si" + i, "data-audio-info": true, style: { color: C.textDim } }, "\xB7 ", x.text)), noImage === 0 && puzzles.length === 0 && homeErrors.length === 0 && !(homeCheck && homeCheck.warnings.length) && !dlgCheck.errors.length && !dlgCheck.warnings.length && !uiCheck.errors.length && !uiCheck.warnings.length && !sonCheck.items.length && /* @__PURE__ */ import_react.default.createElement("div", null, "\u2713 Aucun point d'attention.")), state.error && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.danger, marginTop: 10 } }, "\u2717 ", state.error), state.result && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: "#6FCF73", marginTop: 10, lineHeight: 1.5 } }, "\u2713 ", state.result.filename, " g\xE9n\xE9r\xE9 (", state.result.fileCount, " fichiers, dont ", state.result.assetCount, " ressource(s)). Suis le README \xE0 la racine du ZIP."), /* @__PURE__ */ import_react.default.createElement("button", { disabled: blocked || state.busy, onClick: build, style: { ...primaryBtn, width: "100%", marginTop: 14, opacity: blocked ? 0.5 : 1 } }, /* @__PURE__ */ import_react.default.createElement(Download, { size: 14 }), " ", state.busy ? "G\xE9n\xE9ration\u2026" : "G\xE9n\xE9rer le projet d'application (.zip)")));
   }
+  function partageMeta(game) {
+    const o = game && game.game && game.game.options ? game.game.options.partage || {} : {};
+    const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const titre = esc(game && (game.title || game.game && game.game.title));
+    let h = "";
+    if (titre) h += '<meta property="og:title" content="' + titre + '">';
+    if (o.resume) h += '<meta name="description" content="' + esc(o.resume) + '"><meta property="og:description" content="' + esc(o.resume) + '">';
+    if (o.imageUrl) h += '<meta property="og:image" content="' + esc(o.imageUrl) + '"><meta name="twitter:card" content="summary_large_image">';
+    if (o.icone) h += '<link rel="icon" href="' + esc(o.icone) + '"><link rel="apple-touch-icon" href="' + esc(o.icone) + '">';
+    return h;
+  }
+  function optsTest(o) {
+    const t = typeof window !== "undefined" && window.__BD360_THREE_SRC ? { threeSrc: window.__BD360_THREE_SRC } : {};
+    return { ...o || {}, ...t, diagnostic: true };
+  }
   function buildStandaloneHTML(game, opts = {}) {
     const rt = gameToRuntime(migrateGame(game));
     const hud = { ...DEFAULT_HUD, ...rt.hudSettings || {} };
@@ -68537,6 +70103,7 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
     return puzElague(game, `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8">
 <title>${(rt.title || "Jeu 360").replace(/</g, "")}</title>
+${partageMeta(game)}
 <meta name="viewport" content="width=device-width, initial-scale=1${opts.fullscreen ? ", viewport-fit=cover, user-scalable=no" : ""}">
 <style>
   :root{ --accent: ${hud.accent}; }
@@ -68549,6 +70116,67 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
   #viewer.dragging{cursor:grabbing}
   .meteo{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;display:none}
   .lampe{position:absolute;inset:0;pointer-events:none;display:none}
+  .reticule-ctx{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:28px;height:28px;border-radius:50%;display:none;align-items:center;justify-content:center;pointer-events:none;border:2px solid rgba(255,255,255,.5);font-size:15px;transition:width .15s,height .15s,background .15s;box-sizing:border-box}
+  .reticule-ctx.vise{width:44px;height:44px;background:rgba(16,19,27,.6);border-color:var(--accent,#E8A33D)}
+  .montrer-points{position:absolute;left:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:31;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(16,19,27,.8);color:#fff;font-size:18px;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .montrer-points[data-reste]:not([data-reste=""])::after{content:attr(data-reste);position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--accent,#E8A33D);color:#0B0E14;font:700 11px/18px system-ui,sans-serif;text-align:center}
+  .montrer-points:disabled{opacity:.4}
+  .hs.hs-montre{opacity:1 !important}
+  .hs.hs-montre::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:3px solid var(--accent,#E8A33D);box-shadow:0 0 18px var(--accent,#E8A33D);animation:hs-montre 1.3s ease-out 2}
+  @keyframes hs-montre{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.5);opacity:0}}
+  .annonce{position:absolute;left:50%;top:calc(64px + env(safe-area-inset-top,0px));z-index:60;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:10px 18px 10px 10px;border-radius:14px;background:rgba(16,19,27,.95);border:1px solid var(--accent,#E8A33D);box-shadow:0 12px 40px rgba(0,0,0,.5);color:#E9E6DD;animation:annonce-in .5s cubic-bezier(.2,1.4,.4,1);max-width:calc(100% - 32px);box-sizing:border-box;pointer-events:none}
+  .annonce img,.annonce-icone{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none;display:flex;align-items:center;justify-content:center;font-size:30px;background:rgba(255,255,255,.06)}
+  .annonce-txt{display:flex;flex-direction:column;min-width:0}
+  .annonce-txt small{font:600 10px system-ui,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent,#E8A33D)}
+  .annonce-txt b{font:600 15px/1.3 system-ui,sans-serif}
+  .annonce.part{animation:annonce-out .6s ease-in forwards}
+  @keyframes annonce-in{from{opacity:0;transform:translate(-50%,-30px) scale(.8)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+  @keyframes annonce-out{to{opacity:0;transform:translate(-50%,-12px) scale(.9)}}
+  .carte-ill{padding:10px;max-width:calc(100% - 24px);max-height:calc(100% - 80px);overflow:auto;box-sizing:border-box}
+  .carte-zone{position:relative}
+  .carte-zone img{display:block;width:100%;height:auto;border-radius:8px}
+  .carte-brume{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:8px;pointer-events:none}
+  .carte-lieu{position:absolute;transform:translate(-50%,-50%);border:1px solid rgba(255,255,255,.7);background:rgba(16,19,27,.88);color:#fff;border-radius:99px;padding:4px 10px;font:600 11px system-ui,sans-serif;white-space:nowrap;cursor:pointer;display:flex;gap:4px;align-items:center}
+  .carte-lieu.ici{background:var(--accent,#E8A33D);color:#0B0E14}
+  .carte-badge{font-style:normal}
+  .carte-legende{font:11px/1.4 system-ui,sans-serif;color:#8B8FA3;margin-top:8px;text-align:center}
+  .gros-plan,.examen{position:absolute;inset:0;z-index:58;background:rgba(5,7,11,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 14px 24px;box-sizing:border-box;animation:tr-apparait .25s ease;color:#E9E6DD}
+  .gp-cadre{position:relative;max-width:100%}
+  .gp-cadre img{display:block;max-width:100%;max-height:68vh;border-radius:8px}
+  .gp-zone{position:absolute;border:none;background:transparent;border-radius:6px;cursor:pointer;padding:0}
+  .gp-zone.touche{animation:gp-touche .6s ease}
+  @keyframes gp-touche{0%{box-shadow:0 0 0 0 rgba(232,163,61,.8);background:rgba(232,163,61,.25)}100%{box-shadow:0 0 0 14px rgba(232,163,61,0);background:transparent}}
+  .gp-legende,.ex-legende{min-height:1.4em;margin:12px 0 0;font:15px/1.45 system-ui,sans-serif;text-align:center;max-width:520px}
+  .gros-plan .pnl-close,.examen .pnl-close{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px}
+  .ex-titre{font:600 16px system-ui,sans-serif;margin-bottom:10px}
+  .ex-scene{perspective:900px;width:min(78%,360px);aspect-ratio:1;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+  .ex-carte{width:100%;height:100%;display:flex;align-items:center;justify-content:center;transition:transform .17s ease-in;transform-style:preserve-3d}
+  .ex-carte img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 16px 30px rgba(0,0,0,.6))}
+  .ex-vide{font-size:60px;opacity:.3}
+  .ex-nav{display:flex;align-items:center;gap:14px;margin-top:12px}
+  .ex-btn{width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:20px;cursor:pointer}
+  .ex-cpt{font:13px system-ui,sans-serif;color:#8B8FA3}
+  .bulle-360{position:absolute;z-index:3;transform:translate(-50%,calc(-100% - 14px));max-width:62%;padding:8px 12px;border-radius:14px;background:#F6F2E8;color:#1b1d24;font:14px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.4);pointer-events:none;animation:tr-apparait .3s ease}
+  .bulle-360::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:8px solid transparent;border-top-color:#F6F2E8;border-bottom:0}
+  .bulle-360.part{opacity:0;transition:opacity .4s}
+  .dlg-chrono{flex:0 0 100%;height:5px;border-radius:3px;background:rgba(255,255,255,.15);overflow:hidden}
+  .dlg-chrono i{display:block;height:100%;background:var(--accent,#E8A33D);animation:dlg-chrono linear forwards}
+  @keyframes dlg-chrono{from{width:100%}to{width:0}}
+  .dlg-choice.dlg-vu{opacity:.62}
+  .dlg-choice.dlg-vu::after{content:" \u2713";font-size:.85em}
+  .sous-titre-son{position:absolute;left:50%;bottom:calc(120px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:62;padding:6px 12px;border-radius:6px;background:rgba(0,0,0,.8);color:#fff;font:600 14px/1.35 system-ui,sans-serif;opacity:0;transition:opacity .25s;pointer-events:none;max-width:86%;text-align:center}
+  .sous-titre-son.on{opacity:1}
+  .chargement{position:absolute;inset:0;z-index:66;background:#05070b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;opacity:0;pointer-events:none;transition:opacity .3s}
+  .chargement.on{opacity:1;pointer-events:auto}
+  .chargement img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
+  .chargement-roue{position:relative;width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:var(--accent,#E8A33D);animation:chargement 1s linear infinite;box-sizing:border-box}
+  @keyframes chargement{to{transform:rotate(360deg)}}
+  .chargement-conseil{position:relative;max-width:80%;text-align:center;font:italic 15px/1.5 Georgia,serif;color:#F2EEE4;text-shadow:0 2px 8px #000}
+  #viewer.ana-ok{animation:ana-ok .8s ease}
+  @keyframes ana-ok{0%{filter:brightness(1)}30%{filter:brightness(1.6)}100%{filter:brightness(1)}}
+  .ba-depart,.ba-fin{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;align-items:center;gap:10px;padding:14px 18px;border-radius:12px;background:rgba(16,19,27,.95);color:#E9E6DD;font:13px/1.4 system-ui,sans-serif;text-align:center;width:calc(100% - 48px);box-sizing:border-box}
+  .ba-fin a{text-decoration:none}
+  body.tournage .hud-note,body.tournage .reticule-ctx,body.tournage .montrer-points{display:none !important}
   .hs{position:absolute;border-radius:50%;pointer-events:none;
       display:flex;align-items:center;justify-content:center;cursor:inherit;
       transform:translate(-50%,-50%);opacity:0;background:transparent;border:none}
@@ -68838,11 +70466,12 @@ ${opts.fullscreen ? "  html,body{display:block;background:#000}\n  body{padding:
 <div id="dlg"></div>
 </div>
 </body>
+${opts.diagnostic ? "<script>window.addEventListener('error',function(e){try{var d=document.createElement('div');d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;padding:10px 12px;border-radius:8px;background:#6b1d1d;color:#fff;font:12px/1.45 system-ui,sans-serif';d.textContent='Erreur dans le jeu : '+(e.message||e)+(e.lineno?' (ligne '+e.lineno+')':'');document.body.appendChild(d);setTimeout(function(){d.remove();},12000);}catch(x){}});<\/script>" : ""}
 <script type="application/json" id="game-data">${dataJSON}<\/script>
 <script>
 /* Three.js : d'abord celui de la page qui h\xE9berge l'aper\xE7u (\xE9diteur, hors ligne),
    et seulement s'il n'est pas l\xE0, le fichier ci-dessous. */
-try{ if(!window.THREE && window.parent && window.parent !== window && window.parent.__BD360_THREE) window.THREE = window.parent.__BD360_THREE; }catch(e){}
+try{ if(${opts.threeSrc ? "false" : "true"} && !window.THREE && window.parent && window.parent !== window && window.parent.__BD360_THREE) window.THREE = window.parent.__BD360_THREE; }catch(e){}
 if(!window.THREE) document.write('<scr' + 'ipt src="${opts.threeSrc || "https://unpkg.com/three@0.128.0/build/three.min.js"}"></scr' + 'ipt>');
 <\/script>
 <script>
@@ -68860,6 +70489,8 @@ const HUD = GAME.hudSettings || {};
 const HUD_FONTS = { serif: "'Fraunces','Georgia',serif", sans: "'Inter',system-ui,sans-serif", mono: "'JetBrains Mono',monospace", display: "'Bradley Hand','Segoe Script',cursive" };
 /* D\xE9part de test demand\xE9 par l'\xE9diteur : jamais pr\xE9sent dans un jeu export\xE9. */
 const TEST_START = ${JSON.stringify(opts.testStart || null)};
+const EN_TEST = ${opts.diagnostic ? "true" : "false"};
+const BANDE_ANNONCE = ${JSON.stringify(opts.bandeAnnonce || null)};
 const PAUSE_CFG = ${JSON.stringify(pauseCfg).replace(/</g, "\\u003c")};
 let current = GAME.scenes[0], inventory = {}, discovered = new Set([current && current.id]), yaw=0, pitch=0;
 
@@ -68994,7 +70625,13 @@ function applyActions(state, actions, game) {
     } else if (a.type === "fin") {
       vars.__fin = a.titre || "Fin";
       effects.push({ kind: "fin", action: a });
-    } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
+    } else if (a.type === "ajouter" && a.key) {
+      const avant = parseFloat(vars[a.key]);
+      vars[a.key] = (isFinite(avant) ? avant : 0) + (a.amount || 0);
+    } else if (a.type === "fragment" && a.texte) {
+      const cle = "__fragment:" + (a.id || a.texte);
+      if (!vars[cle]) { vars[cle] = a.texte; effects.push({ kind: "fragment", action: a }); }
+    } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image" || a.type === "bulle") {
       // Des effets de mise en sc\xE8ne : le jeu les joue, la fonction reste pure.
       effects.push({ kind: a.type, action: a });
     }
@@ -69241,6 +70878,7 @@ function imageDeScene(s){
 }
 let imageAffichee = null, texturePrete = true;
 function chargerImageScene(force){
+  if(videoScene()) return;
   const vImg = imageDeScene(current);
   const cle = vImg.image || null;
   if(!force && cle === imageAffichee) return;
@@ -69448,6 +71086,7 @@ function barreObjet(box){
     bouton('\u270B Utiliser sur le d\xE9cor', function(){ closeInv(); prendreEnMain(id); });
     if(it.document && it.document.pages && it.document.pages.length) bouton('\u{1F4D6} Lire', function(){ lireDocument(it); });
     if(Array.isArray(it.demonter) && it.demonter.length) bouton('\u{1F527} D\xE9monter', function(){ demonterObjet(it); });
+    if(Array.isArray(it.faces) && it.faces.length) bouton('\u{1F50D} Examiner', function(){ closeInv(); examinerObjet(it); });
   };
   box.addEventListener('click', function(e){
     const n = e.target.closest ? e.target.closest('[data-inv-item]') : null;
@@ -69477,7 +71116,7 @@ function finUtiliser(){
 }
 function utiliserObjetSur(hs, id){
   const r = (hs.reactions || []).filter(function(x){ return x && x.itemId === id; })[0];
-  if(!r){ showModal(hs.reponseDefaut || '\xC7a ne donne rien.'); return; }
+  if(!r){ if(faussePisteObjet(id)) return; showModal(hs.reponseDefaut || '\xC7a ne donne rien.'); return; }
   const acts = r.consomme === 'un' ? [{ type: 'remove_item', itemId: id, amount: 1 }] : [];
   hudRunList(acts.concat(r.actions || []));
   if(r.consomme === 'usure') userObjet(id);
@@ -69661,6 +71300,8 @@ function effetsScene(effects){
     }
     else if(e.kind === 'vibrer'){ try{ if(navigator.vibrate) navigator.vibrate(e.action.ms || 200); }catch(err){} }
     else if(e.kind === 'image') montrerImage(e.action.image, e.action.texte);
+    else if(e.kind === 'bulle') montrerBulle(e.action);
+    else if(e.kind === 'fragment'){ try{ hudPlaySound('notify'); }catch(x){} annonce('Fragment trouv\xE9', trJeu(e.action.texte), '', '\u{1F9E9}'); vibre(40); }
   });
 }
 function montrerImage(image, texte){
@@ -69671,6 +71312,653 @@ function montrerImage(image, texte){
   fond.addEventListener('click', function(){ fond.remove(); });
   document.getElementById('phone-frame').appendChild(fond);
 }
+/* ---- Lots 6 \xE0 8 : r\xE9ticule, montrer les points, annonces, vibrations,
+        carte illustr\xE9e, gros plans, vid\xE9o 360, anamorphose, objets \xE0
+        examiner, fausses pistes, bulles, choix chronom\xE9tr\xE9s, couleurs,
+        sous-titres, statistiques de test, langues, chargement,
+        bande-annonce ------------------------------------------------- */
+const OPTS = (GAME.game && GAME.game.options) || {};
+function optJeu(k){ return OPTS[k] || {}; }
+function vibre(motif){ try{ if(optJeu('confort').vibrations !== false && navigator.vibrate) navigator.vibrate(motif); }catch(e){} }
+
+/*  Langues : un texte traduit s'il existe, sinon l'original.         */
+function trLangues(){ return (optJeu('langues').codes || []); }
+function trJeu(s){
+  if(!s || typeof s !== 'string') return s;
+  let L = '';
+  try{ L = HomeSettings.get().langue || ''; }catch(e){}
+  if(!L) return s;
+  const t = (optJeu('langues').textes || {})[L];
+  return (t && t[s]) || s;
+}
+
+/*  R\xE9ticule qui change selon ce que l'on vise.                       */
+let reticuleEl = null;
+const RETICULE_ICONES = { navigate: '\u279C', pickup_item: '\u270B', puzzle: '\u{1F9E9}', external_puzzle: '\u{1F9E9}', dialogue: '\u{1F4AC}', show_text: '\u{1F441}' };
+function reticuleTick(){
+  if(!optJeu('confort').reticule || playerScreen !== 'playing'){ if(reticuleEl && reticuleEl.style.display !== 'none') reticuleEl.style.display = 'none'; return; }
+  if(!reticuleEl){ reticuleEl = mk('div', 'reticule-ctx'); reticuleEl.setAttribute('aria-hidden', 'true'); frameEl.appendChild(reticuleEl); }
+  if(reticuleEl.style.display !== 'flex') reticuleEl.style.display = 'flex';
+  const w = mount.clientWidth, h = mount.clientHeight;
+  let vise = null, best = 1e9;
+  (current.hotspots || []).forEach(function(hs, i){
+    const el = markerEls[i];
+    if(!el || el.style.display === 'none') return;
+    const d = Math.hypot(parseFloat(el.style.left) - w / 2, parseFloat(el.style.top) - h / 2);
+    if(d < Math.max(30, (hs.size || 36) / 2 + 12) && d < best){ best = d; vise = hs; }
+  });
+  const ic = !vise ? '' : objetEnMain ? '\u270B' : (vise.grosPlan && vise.grosPlan.image) ? '\u{1F50D}' : (RETICULE_ICONES[vise.type] || '\u2022');
+  if(reticuleEl._ic !== ic){ reticuleEl._ic = ic; reticuleEl.textContent = ic; reticuleEl.classList.toggle('vise', !!ic); }
+}
+
+/*  Montrer les points de la sc\xE8ne, un instant.                       */
+let montrerBtn = null;
+function montrerPointsMaj(){
+  const o = optJeu('confort');
+  const voulu = !!o.montrerPoints && playerScreen === 'playing';
+  if(!voulu){ if(montrerBtn && montrerBtn.style.display !== 'none') montrerBtn.style.display = 'none'; return; }
+  if(!montrerBtn){
+    montrerBtn = mk('button', 'montrer-points', '\u{1F441}');
+    montrerBtn.type = 'button';
+    montrerBtn.setAttribute('aria-label', 'Montrer les points');
+    montrerBtn.setAttribute('data-montrer-points', '1');
+    montrerBtn.onclick = function(e){ e.stopPropagation(); montrerPoints(); };
+    frameEl.appendChild(montrerBtn);
+  }
+  if(montrerBtn.style.display !== 'flex') montrerBtn.style.display = 'flex';
+  const max = o.montrerFois || 0;
+  const reste = max ? Math.max(0, max - (vars.__montrer || 0)) : -1;
+  const lib = reste < 0 ? '' : String(reste);
+  if(montrerBtn.getAttribute('data-reste') !== lib){ montrerBtn.setAttribute('data-reste', lib); montrerBtn.disabled = reste === 0; }
+}
+function montrerPoints(){
+  const max = optJeu('confort').montrerFois || 0;
+  if(max && (vars.__montrer || 0) >= max) return;
+  vars.__montrer = (vars.__montrer || 0) + 1;
+  markerEls.forEach(function(el){
+    if(el.getAttribute('data-cache') || el.getAttribute('data-decouvrir')) return;
+    el.classList.remove('hs-montre'); void el.offsetWidth; el.classList.add('hs-montre');
+  });
+  zonePolys.forEach(function(pg){ if(pg){ pg.classList.remove('zone-touche'); void pg.getBoundingClientRect(); pg.classList.add('zone-touche'); } });
+  setTimeout(function(){ markerEls.forEach(function(el){ el.classList.remove('hs-montre'); }); }, 2600);
+  montrerPointsMaj();
+  saveGame();
+}
+
+/*  Annonces soign\xE9es : objet obtenu, objectif qui change.            */
+function annonce(petit, grand, image, icone){
+  const c = mk('div', 'annonce');
+  if(image){ const im = document.createElement('img'); im.src = image; im.alt = ''; c.appendChild(im); }
+  else c.appendChild(mk('span', 'annonce-icone', icone || '\u2726'));
+  const t = mk('div', 'annonce-txt');
+  t.appendChild(mk('small', '', petit));
+  t.appendChild(mk('b', '', grand));
+  c.appendChild(t);
+  frameEl.appendChild(c);
+  setTimeout(function(){ c.classList.add('part'); }, 2300);
+  setTimeout(function(){ c.remove(); }, 3000);
+}
+function annonceNotif(text, kind){
+  if(optJeu('confort').annonces === false) return false;
+  const s = String(text);
+  if(kind === 'gain' && s.indexOf('+ ') === 0){
+    const nom = s.slice(2).split(' \xD7 ')[0];
+    const it = (GAME.inventory_items || []).filter(function(i){ return i.name === nom; })[0];
+    if(!it) return false;
+    vibre(30);
+    try{ hudPlaySound('notify'); }catch(e){}
+    annonce('Nouvel objet', trJeu(it.name) + (s.indexOf(' \xD7 ') > 0 ? ' \xD7 ' + s.split(' \xD7 ')[1] : ''), it.image, '\u{1F392}');
+    return true;
+  }
+  const i = s.indexOf('Objectif : ');
+  if(i >= 0 && i < 4){
+    try{ hudPlaySound('notify'); }catch(e){}
+    annonce('Nouvel objectif', trJeu(s.slice(i + 11)), '', '\u{1F9ED}');
+    return true;
+  }
+  return false;
+}
+
+/*  Carte illustr\xE9e, avec brouillard et rep\xE8res.                      */
+function enigmesOuvertes(s){
+  let n = 0;
+  (s.hotspots || []).forEach(function(h){
+    if((h.type === 'puzzle' || h.type === 'external_puzzle') && h.puzzleId && !vars[puzzleVarKey(h.puzzleId)]) n++;
+  });
+  return n;
+}
+function carteIllustree(){
+  const c = optJeu('carte');
+  if(!c.image) return false;
+  const pos = c.positions || {};
+  const m = document.getElementById('map-modal');
+  m.textContent = '';
+  const box = mk('div', 'pnl pnl-map carte-ill');
+  const zone = mk('div', 'carte-zone');
+  const im = document.createElement('img');
+  im.alt = 'Carte';
+  zone.appendChild(im);
+  const brume = document.createElement('canvas');
+  brume.className = 'carte-brume';
+  if(c.brouillard !== false) zone.appendChild(brume);
+  const dessineBrume = function(){
+    if(c.brouillard === false || !im.naturalWidth) return;
+    const W = brume.width = Math.min(1600, im.naturalWidth), H = brume.height = Math.round(W * im.naturalHeight / im.naturalWidth);
+    const g = brume.getContext('2d');
+    g.fillStyle = 'rgba(9,11,17,0.9)';
+    g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = 'destination-out';
+    GAME.scenes.forEach(function(s){
+      const q = pos[s.id];
+      if(!q || !discovered.has(s.id)) return;
+      const x = q.x / 100 * W, y = q.y / 100 * H, r = Math.max(W, H) * 0.13;
+      const gr = g.createRadialGradient(x, y, r * 0.35, x, y, r);
+      gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill();
+    });
+  };
+  im.onload = dessineBrume;
+  im.src = c.image;
+  GAME.scenes.forEach(function(s){
+    const q = pos[s.id];
+    if(!q || !discovered.has(s.id)) return;
+    const ici = current && s.id === current.id;
+    const b = mk('button', 'carte-lieu' + (ici ? ' ici' : ''));
+    b.type = 'button';
+    b.setAttribute('data-scene', s.id);
+    b.style.left = q.x + '%'; b.style.top = q.y + '%';
+    b.appendChild(mk('span', '', trJeu(s.name || s.id)));
+    const n = enigmesOuvertes(s);
+    if(n) b.appendChild(mk('i', 'carte-badge', '\u{1F9E9}' + (n > 1 ? n : '')));
+    b.onclick = function(e){ e.stopPropagation(); if(c.voyage !== false && !ici) hudGoScene(s.id); };
+    zone.appendChild(b);
+  });
+  box.appendChild(zone);
+  const leg = mk('div', 'carte-legende', (c.voyage !== false ? 'Touche un lieu visit\xE9 pour t\u2019y rendre. ' : '') + '\u{1F9E9} \xE9nigme \xE0 r\xE9soudre');
+  box.appendChild(leg);
+  m.appendChild(box);
+  const x = mk('button', 'pnl-close', '\u2715');
+  x.type = 'button'; x.id = 'map-close'; x.setAttribute('aria-label', 'Fermer');
+  x.onclick = closeMap;
+  m.appendChild(x);
+  m.style.display = 'flex';
+  m.onclick = function(e){ if(e.target === m) closeMap(); };
+  setScreen('map');
+  return true;
+}
+
+/*  Gros plan : une image plate avec ses zones \xE0 toucher.            */
+function ouvrirGrosPlan(hs){
+  const g = hs.grosPlan;
+  const fond = mk('div', 'gros-plan');
+  fond.setAttribute('data-gros-plan', hs.id);
+  const cadre = mk('div', 'gp-cadre');
+  const im = document.createElement('img'); im.src = g.image; im.alt = trJeu(hs.label || ''); cadre.appendChild(im);
+  const leg = mk('p', 'gp-legende', trJeu(hs.label || ''));
+  const depart = current;
+  (g.zones || []).forEach(function(z, k){
+    const cle = '__gp:' + hs.id + ':' + k;
+    const b = mk('button', 'gp-zone' + (vars[cle] ? ' vue' : ''));
+    b.type = 'button';
+    b.setAttribute('data-gp-zone', String(k));
+    b.setAttribute('aria-label', trJeu(z.label || 'Examiner'));
+    b.style.left = z.x + '%'; b.style.top = z.y + '%'; b.style.width = z.w + '%'; b.style.height = z.h + '%';
+    b.onclick = function(e){
+      e.stopPropagation();
+      try{ statsTap({ id: hs.id + ':' + k }); }catch(x){}
+      leg.textContent = z.texte ? trJeu(z.texte) : trJeu(z.label || '');
+      b.classList.remove('touche'); void b.offsetWidth; b.classList.add('touche', 'vue');
+      const deja = !!vars[cle];
+      vars[cle] = true;
+      if((!deja || z.uneFois === false) && z.actions && z.actions.length){
+        hudRunList(z.actions);
+        if(current !== depart) fond.remove();
+      }
+      saveGame();
+    };
+    cadre.appendChild(b);
+  });
+  fond.appendChild(cadre);
+  fond.appendChild(leg);
+  const x = mk('button', 'pnl-close', '\u2715');
+  x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
+  x.onclick = function(e){ e.stopPropagation(); fond.remove(); };
+  fond.appendChild(x);
+  frameEl.appendChild(fond);
+}
+
+/*  Vid\xE9o 360 en fond.                                                */
+let videoEl = null, videoTex = null;
+function videoScene(){
+  const v = current && current.video && current.video.src ? current.video : null;
+  if(!v){ if(videoEl && !videoEl.paused){ try{ videoEl.pause(); }catch(e){} } return false; }
+  const src = v.src;
+  if(!videoEl){
+    videoEl = document.createElement('video');
+    videoEl.loop = true; videoEl.muted = true; videoEl.playsInline = true;
+    videoEl.setAttribute('playsinline', ''); videoEl.setAttribute('webkit-playsinline', '');
+    videoEl.crossOrigin = 'anonymous';
+  }
+  if(videoEl._src !== src){
+    videoEl._src = src; videoEl.src = src;
+    if(videoTex) try{ videoTex.dispose(); }catch(e){}
+    videoTex = new THREE.VideoTexture(videoEl);
+    videoTex.minFilter = THREE.LinearFilter; videoTex.magFilter = THREE.LinearFilter;
+  }
+  videoSon();
+  const p = videoEl.play(); if(p && p.catch) p.catch(function(){});
+  mat.map = videoTex; mat.color.set(0xffffff); mat.needsUpdate = true;
+  imageAffichee = 'video:' + src.length; texturePrete = true;
+  return true;
+}
+function videoSon(){
+  if(!videoEl || !current || !current.video) return;
+  let muet = true;
+  try{ const st = HomeSettings.get(); muet = !current.video.son || st.mute || !aIsUnlocked(); }catch(e){}
+  if(videoEl.muted !== muet) videoEl.muted = muet;
+  if(videoEl.paused && current.video.src === videoEl._src){ const p = videoEl.play(); if(p && p.catch) p.catch(function(){}); }
+}
+
+/*  Anamorphose : un point qui se d\xE9clenche quand on le regarde pile. */
+let anaDebut = {};
+function anamorphoseTick(y, p){
+  if(playerScreen !== 'playing' || !current) return;
+  (current.hotspots || []).forEach(function(hs, i){
+    const a = hs.anamorphose;
+    if(!a || vars['__ana:' + hs.id] || !hs.position) return;
+    const el = markerEls[i];
+    if(el && el.getAttribute('data-cache')) return;
+    const hp = hs.position.pitch || 0;
+    const d = Math.cos(p) * Math.cos(hp) * Math.cos(y - hs.position.yaw) + Math.sin(p) * Math.sin(hp);
+    const ang = Math.acos(Math.max(-1, Math.min(1, d))) * 180 / Math.PI;
+    if(ang <= (a.tolerance || 6) && !dragging){
+      if(!anaDebut[hs.id]) anaDebut[hs.id] = performance.now();
+      else if(performance.now() - anaDebut[hs.id] > 900){
+        anaDebut[hs.id] = 0;
+        vars['__ana:' + hs.id] = true;
+        vibre([30, 40, 30]);
+        mount.classList.remove('ana-ok'); void mount.offsetWidth; mount.classList.add('ana-ok');
+        activate(hs);
+      }
+    } else anaDebut[hs.id] = 0;
+  });
+}
+
+/*  Fausses pistes : le jeu le dit vite au joueur qui insiste.        */
+function faussePistePoint(hs){
+  if(!hs.faussePiste) return false;
+  const k = '__fp:' + hs.id;
+  vars[k] = (vars[k] || 0) + 1;
+  if(vars[k] < 3) return false;
+  showModal(trJeu(hs.faussePisteTexte || "Rien d'utile ici : c'est une fausse piste."));
+  return true;
+}
+function faussePisteObjet(id){
+  const it = (GAME.inventory_items || []).filter(function(i){ return i.id === id; })[0];
+  if(!it || !it.faussePiste) return false;
+  const k = '__fpo:' + id;
+  vars[k] = (vars[k] || 0) + 1;
+  if(vars[k] < 2) return false;
+  showModal(trJeu(it.name) + ' ne sert \xE0 rien, ici ni ailleurs : c\u2019est une fausse piste.');
+  return true;
+}
+
+/*  Examiner un objet sous toutes ses faces.                          */
+function examinerObjet(it){
+  const faces = it.faces || [];
+  if(!faces.length) return;
+  let k = 0;
+  const fond = mk('div', 'examen');
+  fond.setAttribute('data-examen', it.id);
+  fond.appendChild(mk('div', 'ex-titre', trJeu(it.name || '')));
+  const scene3d = mk('div', 'ex-scene');
+  const carte = mk('div', 'ex-carte');
+  scene3d.appendChild(carte);
+  fond.appendChild(scene3d);
+  const leg = mk('p', 'ex-legende');
+  fond.appendChild(leg);
+  const nav = mk('div', 'ex-nav');
+  const prec = mk('button', 'ex-btn', '\u21B6'), cpt = mk('span', 'ex-cpt'), suiv = mk('button', 'ex-btn', '\u21B7');
+  prec.type = 'button'; suiv.type = 'button';
+  prec.setAttribute('aria-label', 'Face pr\xE9c\xE9dente'); suiv.setAttribute('aria-label', 'Face suivante');
+  nav.appendChild(prec); nav.appendChild(cpt); nav.appendChild(suiv);
+  fond.appendChild(nav);
+  const dessine = function(){
+    const f = faces[k];
+    carte.textContent = '';
+    if(f.image){ const im = document.createElement('img'); im.src = f.image; im.alt = ''; carte.appendChild(im); }
+    else carte.appendChild(mk('span', 'ex-vide', '?'));
+    leg.textContent = trJeu(f.texte || '');
+    cpt.textContent = (k + 1) + ' / ' + faces.length;
+    const cle = '__face:' + it.id + ':' + k;
+    if(!vars[cle]){
+      vars[cle] = true;
+      if(f.actions && f.actions.length){ hudRunList(f.actions); }
+      saveGame();
+    }
+  };
+  const tourne = function(sens){
+    k = (k + sens + faces.length) % faces.length;
+    if(HomeSettings.get().reduceMotion){ dessine(); return; }
+    carte.style.transform = 'rotateY(' + (sens * -90) + 'deg)';
+    setTimeout(function(){
+      dessine();
+      carte.style.transition = 'none';
+      carte.style.transform = 'rotateY(' + (sens * 90) + 'deg)';
+      void carte.offsetWidth;
+      carte.style.transition = '';
+      carte.style.transform = 'rotateY(0deg)';
+    }, 170);
+  };
+  prec.onclick = function(e){ e.stopPropagation(); tourne(-1); };
+  suiv.onclick = function(e){ e.stopPropagation(); tourne(1); };
+  let x0 = null;
+  scene3d.addEventListener('pointerdown', function(e){ x0 = e.clientX; });
+  scene3d.addEventListener('pointerup', function(e){ if(x0 !== null && Math.abs(e.clientX - x0) > 40) tourne(e.clientX < x0 ? 1 : -1); x0 = null; });
+  const x = mk('button', 'pnl-close', '\u2715');
+  x.type = 'button'; x.setAttribute('aria-label', 'Fermer');
+  x.onclick = function(e){ e.stopPropagation(); fond.remove(); };
+  fond.appendChild(x);
+  frameEl.appendChild(fond);
+  dessine();
+}
+
+/*  Bulles de parole accroch\xE9es dans la 360.                          */
+let bulles = [];
+function montrerBulle(a){
+  if(a.sceneId && current && current.id !== a.sceneId) return;
+  const el = mk('div', 'bulle-360', trJeu(a.texte || ''));
+  mount.appendChild(el);
+  const b = { el: el, yaw: a.yaw || 0, pitch: a.pitch || 0 };
+  bulles.push(b);
+  bullesTick();
+  setTimeout(function(){
+    el.classList.add('part');
+    setTimeout(function(){ el.remove(); bulles = bulles.filter(function(x){ return x !== b; }); }, 400);
+  }, Math.max(1, a.duree || 4) * 1000);
+}
+function bullesTick(){
+  if(!bulles.length) return;
+  const w = mount.clientWidth, h = mount.clientHeight;
+  bulles.forEach(function(b){
+    const ndc = yawPitchToDir(b.yaw, b.pitch).multiplyScalar(100).project(camera);
+    if(ndc.z > 1){ b.el.style.display = 'none'; return; }
+    b.el.style.display = 'block';
+    b.el.style.left = ((ndc.x * 0.5 + 0.5) * w) + 'px';
+    b.el.style.top = ((-ndc.y * 0.5 + 0.5) * h) + 'px';
+  });
+}
+
+/*  Choix chronom\xE9tr\xE9s.                                               */
+let dlgChronoT = 0;
+function dlgChrono(box){
+  if(dlgChronoT){ clearTimeout(dlgChronoT); dlgChronoT = 0; }
+  const v = dlgV;
+  if(!v || !(v.delai > 0)) return;
+  try{ if(HomeSettings.get().sansPression) return; }catch(e){}
+  const barre = mk('div', 'dlg-chrono');
+  const jauge = mk('i');
+  jauge.style.animationDuration = v.delai + 's';
+  barre.appendChild(jauge);
+  box.insertBefore(barre, box.firstChild);
+  dlgChronoT = setTimeout(function(){
+    dlgChronoT = 0;
+    if(dlgV !== v) return;
+    const tous = v.allOptions || v.options;
+    const voulu = tous[v.defaut] ? tous[v.defaut].id : '';
+    const ok = v.options.filter(function(o){ return o.enabled; });
+    const o = ok.filter(function(x){ return x.id === voulu; })[0] || ok[ok.length - 1];
+    if(o) dlgPick(o.id);
+  }, v.delai * 1000);
+}
+
+/*  Couleurs adapt\xE9es au daltonisme : on renforce les \xE9carts que l'\u0153il
+    per\xE7oit mal (correction dite \xAB daltonize \xBB).                       */
+const DAL_SIMU = {
+  protan: [0.567, 0.433, 0, 0.558, 0.442, 0, 0, 0.242, 0.758],
+  deutan: [0.625, 0.375, 0, 0.7, 0.3, 0, 0, 0.3, 0.7],
+  tritan: [0.95, 0.05, 0, 0, 0.433, 0.567, 0, 0.475, 0.525],
+};
+function matriceDalto(type){
+  const S = DAL_SIMU[type];
+  const E = type === 'tritan' ? [1, 0, 0.7, 0, 1, 0.7, 0, 0, 0] : [0, 0, 0, 0.7, 1, 0, 0.7, 0, 1];
+  const D = [];
+  for(let i = 0; i < 9; i++) D.push((i % 4 === 0 ? 1 : 0) - S[i]);
+  const M = [];
+  for(let r = 0; r < 3; r++) for(let c = 0; c < 3; c++){
+    let s = r === c ? 1 : 0;
+    for(let k = 0; k < 3; k++) s += E[r * 3 + k] * D[k * 3 + c];
+    M.push(s);
+  }
+  return M[0] + ' ' + M[1] + ' ' + M[2] + ' 0 0 ' + M[3] + ' ' + M[4] + ' ' + M[5] + ' 0 0 ' + M[6] + ' ' + M[7] + ' ' + M[8] + ' 0 0 0 0 0 1 0';
+}
+function appliquerCouleurs(type){
+  let defs = document.getElementById('e360-dalto');
+  if(!DAL_SIMU[type]){ frameEl.style.filter = ''; return; }
+  if(!defs){
+    const NS = 'http://www.w3.org/2000/svg';
+    defs = document.createElementNS(NS, 'svg');
+    defs.setAttribute('id', 'e360-dalto');
+    defs.setAttribute('width', '0'); defs.setAttribute('height', '0');
+    defs.style.position = 'absolute';
+    ['protan', 'deutan', 'tritan'].forEach(function(t){
+      const f = document.createElementNS(NS, 'filter');
+      f.setAttribute('id', 'dalto-' + t);
+      const cm = document.createElementNS(NS, 'feColorMatrix');
+      cm.setAttribute('type', 'matrix');
+      cm.setAttribute('values', matriceDalto(t));
+      f.appendChild(cm); defs.appendChild(f);
+    });
+    document.body.appendChild(defs);
+  }
+  frameEl.style.filter = 'url(#dalto-' + type + ')';
+}
+
+/*  Sous-titres des sons.                                             */
+let sousTitreT = 0;
+function sousTitre(texte){
+  if(!texte) return;
+  try{ if(!HomeSettings.get().sousTitres) return; }catch(e){ return; }
+  let el = document.getElementById('sous-titre-son');
+  if(!el){ el = mk('div', 'sous-titre-son'); el.id = 'sous-titre-son'; frameEl.appendChild(el); }
+  el.textContent = '[' + trJeu(texte) + ']';
+  el.classList.add('on');
+  clearTimeout(sousTitreT);
+  sousTitreT = setTimeout(function(){ el.classList.remove('on'); }, 2800);
+}
+function sousTitreSon(id, direction){
+  const lib = (aGameAudio && aGameAudio.library) || [];
+  const cle = String(id || '');
+  const c = lib.filter(function(x){ return x.sousTitre && (cle === x.id || cle === x.src || (cle.length > x.id.length && cle.slice(cle.length - x.id.length) === x.id)); })[0];
+  if(c) sousTitre(c.sousTitre + (direction ? ' ' + direction : ''));
+}
+
+/*  Statistiques des parties de test, lues par l'\xE9diteur (Outils).   */
+function statsCle(){ return 'e360:stats:' + GAME_ID; }
+let stats = null, statsT = 0, statsSauveT = 0, statsCompte = false;
+function statsLire(){
+  if(stats) return stats;
+  try{ stats = JSON.parse(localStorage.getItem(statsCle()) || 'null'); }catch(e){ stats = null; }
+  if(!stats || typeof stats !== 'object') stats = { parties: 0, scenes: {}, taps: {}, echecs: {}, indices: {} };
+  return stats;
+}
+function statsDe(id){ const s = statsLire(); return s.scenes[id] || (s.scenes[id] = { temps: 0, visites: 0, regard: [] }); }
+function statsSauve(){ if(!EN_TEST || !stats) return; try{ localStorage.setItem(statsCle(), JSON.stringify(stats)); }catch(e){} }
+function statsTap(hs){ if(!EN_TEST || !current) return; const s = statsLire(); const k = current.id + ':' + hs.id; s.taps[k] = (s.taps[k] || 0) + 1; }
+function statsEchec(id){ if(!EN_TEST || !id) return; const s = statsLire(); s.echecs[id] = (s.echecs[id] || 0) + 1; statsSauve(); }
+function statsIndice(id){ if(!EN_TEST || !id) return; const s = statsLire(); s.indices[id] = (s.indices[id] || 0) + 1; statsSauve(); }
+function statsTick(y, p){
+  if(!EN_TEST || playerScreen !== 'playing' || !current || BANDE_ANNONCE) return;
+  const now = performance.now();
+  if(now - statsT < 500) return;
+  const dt = statsT ? Math.min(2, (now - statsT) / 1000) : 0;
+  statsT = now;
+  const sc = statsDe(current.id);
+  sc.temps += dt;
+  /*  Le point de l'image \xE9quirectangulaire que l'on regarde.        */
+  const dx = -Math.sin(y) * Math.cos(p), dz = -Math.cos(y) * Math.cos(p);
+  let u = Math.atan2(dz, dx) / (2 * Math.PI); if(u < 0) u += 1;
+  const bu = Math.min(23, Math.floor(u * 24)), bv = Math.max(0, Math.min(11, Math.floor((0.5 - p / Math.PI) * 12)));
+  const i = bv * 24 + bu;
+  sc.regard[i] = (sc.regard[i] || 0) + 1;
+  if(now - statsSauveT > 3000){ statsSauveT = now; statsSauve(); }
+}
+
+/*  \xC9cran de chargement des sc\xE8nes lourdes.                           */
+let chargeEl = null, chargeT = 0;
+function chargementScene(){
+  const c = optJeu('chargement');
+  if(!c.image && !(c.conseils && c.conseils.length)) return;
+  clearTimeout(chargeT);
+  chargeT = setTimeout(function(){
+    if(texturePrete) return;
+    if(!chargeEl){
+      chargeEl = mk('div', 'chargement');
+      if(c.image){ const im = document.createElement('img'); im.src = c.image; im.alt = ''; chargeEl.appendChild(im); }
+      chargeEl.appendChild(mk('div', 'chargement-roue'));
+      chargeEl.appendChild(mk('p', 'chargement-conseil'));
+      frameEl.appendChild(chargeEl);
+    }
+    const cs = c.conseils || [];
+    chargeEl.querySelector('.chargement-conseil').textContent = cs.length ? trJeu(cs[Math.floor(Math.random() * cs.length)]) : '';
+    chargeEl.classList.add('on');
+    const debut = Date.now();
+    const attend = setInterval(function(){
+      if(texturePrete && Date.now() - debut > 700){ clearInterval(attend); chargeEl.classList.remove('on'); }
+    }, 100);
+  }, 250);
+}
+
+/*  \xC0 chaque sc\xE8ne, et \xE0 chaque image.                                */
+let lot678Init = false;
+function ambiance678(){
+  if(!lot678Init){
+    lot678Init = true;
+    try{ appliquerCouleurs(HomeSettings.get().couleurs); }catch(e){}
+    if(EN_TEST && !BANDE_ANNONCE){ statsLire().parties++; statsSauve(); }
+  }
+  bulles.forEach(function(b){ b.el.remove(); }); bulles = [];
+  anaDebut = {};
+  if(EN_TEST && current && !BANDE_ANNONCE){ statsDe(current.id).visites++; statsSauve(); }
+  chargementScene();
+}
+let lot678Sec = 0;
+function lot678Tick(y, p){
+  reticuleTick();
+  anamorphoseTick(y, p);
+  bullesTick();
+  statsTick(y, p);
+  if(BANDE_ANNONCE) baImage();
+  const now = performance.now();
+  if(now - lot678Sec > 1000){ lot678Sec = now; montrerPointsMaj(); videoSon(); }
+}
+
+/*  Bande-annonce : le jeu se filme lui-m\xEAme, sc\xE8ne apr\xE8s sc\xE8ne.     */
+let baCanvas = null, baCtx = null, baRec = null, baMorceaux = [], baTitre = null, baDebut = 0, baEtape = -1;
+function baImage(){
+  if(!baRec || !baCtx) return;
+  const src = renderer.domElement;
+  if(baCanvas.width !== src.width || baCanvas.height !== src.height){ baCanvas.width = src.width; baCanvas.height = src.height; }
+  const W = baCanvas.width, H = baCanvas.height;
+  baCtx.globalAlpha = 1;
+  baCtx.drawImage(src, 0, 0, W, H);
+  if(meteoCv && meteoCv.style.display === 'block') try{ baCtx.drawImage(meteoCv, 0, 0, W, H); }catch(e){}
+  if(baTitre){
+    const t = (performance.now() - baTitre.debut) / 1000;
+    const a = Math.max(0, Math.min(1, t / 0.6, (baTitre.duree - t) / 0.6));
+    if(a > 0){
+      baCtx.fillStyle = 'rgba(5,7,11,' + (baTitre.noir ? Math.min(1, a + 0.3) : a * 0.45) + ')';
+      baCtx.fillRect(0, 0, W, H);
+      baCtx.globalAlpha = a;
+      baCtx.fillStyle = '#F2EEE4';
+      baCtx.textAlign = 'center';
+      baCtx.font = '600 ' + Math.round(H * 0.06) + 'px Georgia, serif';
+      baCtx.fillText(baTitre.titre, W / 2, H * 0.48);
+      if(baTitre.sous){ baCtx.font = Math.round(H * 0.03) + 'px system-ui, sans-serif'; baCtx.fillText(baTitre.sous, W / 2, H * 0.56); }
+      baCtx.globalAlpha = 1;
+    }
+  }
+}
+function baTourner(){
+  const B = BANDE_ANNONCE;
+  const liste = (B.scenes || []).filter(function(id){ return GAME.scenes.some(function(s){ return s.id === id; }); });
+  if(!liste.length) return;
+  try{ aUnlock(); }catch(e){}
+  baCanvas = document.createElement('canvas');
+  baCtx = baCanvas.getContext('2d');
+  const hud = document.getElementById('hud'); if(hud) hud.style.visibility = 'hidden';
+  markerEls.forEach(function(el){ el.style.visibility = 'hidden'; });
+  document.body.classList.add('tournage');
+  let flux = null;
+  try{ flux = baCanvas.captureStream(30); }catch(e){}
+  if(!flux || typeof MediaRecorder === 'undefined'){ showModal("Cet appareil ne sait pas filmer la page : la bande-annonce n'est pas possible ici."); return; }
+  try{
+    if(aCtx && aMaster && aCtx.createMediaStreamDestination){
+      const dest = aCtx.createMediaStreamDestination();
+      aMaster.connect(dest);
+      dest.stream.getAudioTracks().forEach(function(t){ flux.addTrack(t); });
+    }
+  }catch(e){}
+  const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  let type = '';
+  for(let i = 0; i < types.length; i++){ try{ if(MediaRecorder.isTypeSupported(types[i])){ type = types[i]; break; } }catch(e){} }
+  try{ baRec = new MediaRecorder(flux, type ? { mimeType: type, videoBitsPerSecond: 6000000 } : undefined); }catch(e){ baRec = new MediaRecorder(flux); }
+  baMorceaux = [];
+  baRec.ondataavailable = function(e){ if(e.data && e.data.size) baMorceaux.push(e.data); };
+  const rec = baRec;
+  rec.onstop = function(){
+    const mime = (rec.mimeType || type || 'video/webm').split(';')[0];
+    const blob = new Blob(baMorceaux, { type: mime });
+    const nom = 'bande-annonce.' + (mime.indexOf('mp4') >= 0 ? 'mp4' : 'webm');
+    try{ if(window.parent && window.parent !== window) window.parent.postMessage({ e360Video: blob, nom: nom }, '*'); }catch(e){}
+    const fin = mk('div', 'ba-fin');
+    fin.appendChild(mk('p', '', 'Bande-annonce pr\xEAte (' + Math.round(blob.size / 1e5) / 10 + ' Mo).'));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nom; a.textContent = 'Enregistrer la vid\xE9o'; a.className = 'pz-validate';
+    fin.appendChild(a);
+    frameEl.appendChild(fin);
+    document.body.classList.remove('tournage');
+  };
+  baRec.start(500);
+  const D = Math.max(2, B.duree || 4) * 1000;
+  baTitre = { titre: B.titre || GAME.title || '', sous: '', debut: performance.now(), duree: 2.6 };
+  baEtape = 0;
+  const suivante = function(){
+    if(baEtape >= liste.length){
+      baTitre = { titre: B.titre || GAME.title || '', sous: B.sousTitre || '', debut: performance.now(), duree: 3, noir: true };
+      setTimeout(function(){ try{ baRec.stop(); }catch(e){} baRec = null; }, 3000);
+      return;
+    }
+    const id = liste[baEtape++];
+    if(current.id !== id) loadScene(id, { transition: 'fondu' });
+    markerEls.forEach(function(el){ el.style.visibility = 'hidden'; });
+    pitch = 0.05;
+    const y0 = yaw, debut = performance.now();
+    const pano = function(){
+      if(!baRec) return;
+      const t = (performance.now() - debut) / D;
+      if(t >= 1){ suivante(); return; }
+      yaw = y0 + t * 0.9;
+      requestAnimationFrame(pano);
+    };
+    requestAnimationFrame(pano);
+  };
+  if(current.id === liste[0]){ baEtape = 1; markerEls.forEach(function(el){ el.style.visibility = 'hidden'; }); const y0 = yaw, debut = performance.now(); const pano = function(){ if(!baRec) return; const t = (performance.now() - debut) / D; if(t >= 1){ suivante(); return; } yaw = y0 + t * 0.9; requestAnimationFrame(pano); }; requestAnimationFrame(pano); }
+  else suivante();
+}
+function baPreparer(){
+  if(!BANDE_ANNONCE) return;
+  const ov = mk('div', 'ba-depart');
+  ov.appendChild(mk('p', '', 'Bande-annonce : ' + (BANDE_ANNONCE.scenes || []).length + ' sc\xE8ne(s), environ ' + Math.round((BANDE_ANNONCE.scenes || []).length * (BANDE_ANNONCE.duree || 4) + 6) + ' secondes.'));
+  const b = mk('button', 'pz-validate', '\u{1F3AC} Tourner');
+  b.type = 'button';
+  b.setAttribute('data-ba-tourner', '1');
+  b.onclick = function(e){ e.stopPropagation(); ov.remove(); baTourner(); };
+  ov.appendChild(b);
+  frameEl.appendChild(ov);
+}
+setTimeout(baPreparer, 600);
+
 /* ---- Lot 5 : ambiance et son ------------------------------------- */
 /*  R\xE9verb\xE9ration : un envoi des bus bruitage, voix et ambiance vers
     une r\xE9ponse impulsionnelle fabriqu\xE9e (bruit qui d\xE9cro\xEEt).          */
@@ -69752,6 +72040,7 @@ function sonsIndices(yaw, pitch){
     if(!s){
       s = aStream(k, voulu[k].src, { bus: 'ambience', loop: true, volume: 0, fade: 0, yaw: h.position.yaw, pitch: h.position.pitch || 0 });
       if(!s) continue;
+      try{ const ec = Math.atan2(Math.sin(h.position.yaw - yaw), Math.cos(h.position.yaw - yaw)); sousTitreSon(h.sonIndice.src, Math.abs(ec) < 0.5 ? 'devant' : ec > 0 ? '\xE0 gauche' : '\xE0 droite'); }catch(x){}
     }
     const hp = h.position.pitch || 0;
     const d = Math.cos(pitch) * Math.cos(hp) * Math.cos(yaw - h.position.yaw) + Math.sin(pitch) * Math.sin(hp);
@@ -69945,6 +72234,7 @@ function loadScene(id, passage){
   runSceneEnter(current);
   syncBruitages(current);
   try{ ambianceScene(); }catch(e){}
+  try{ ambiance678(); }catch(e){}
   setTimeout(sceneAutoOuvre, 0);
 }
 /* Bruitages de la scene (timeline des sons) : joues une fois a l'arrivee,
@@ -70273,6 +72563,9 @@ function normalizeAction(a) {
     case "image": return a.image ? { type: a.type, image: String(a.image), texte: a.texte ? String(a.texte) : "" } : null;
     case "succes": return a.succesId ? { type: a.type, succesId: String(a.succesId) } : null;
     case "fin": return { type: a.type, titre: String(a.titre || "Fin").slice(0, 80), texte: a.texte ? String(a.texte) : "", image: a.image ? String(a.image) : "", bilan: a.bilan !== false };
+    case "ajouter": return a.key ? { type: a.type, key: slugKey(a.key), amount: isFinite(parseFloat(a.amount)) ? parseFloat(a.amount) : 1 } : null;
+    case "bulle": return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 300), sceneId: a.sceneId ? String(a.sceneId) : "", yaw: isFinite(parseFloat(a.yaw)) ? parseFloat(a.yaw) : 0, pitch: isFinite(parseFloat(a.pitch)) ? parseFloat(a.pitch) : 0, duree: Math.max(1, Math.min(30, parseFloat(a.duree) || 4)) } : null;
+    case "fragment": return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 160), id: a.id ? String(a.id) : "" } : null;
     case "show_text": return a.text ? { type: a.type, text: String(a.text) } : null;
     case "set_variable": return a.key ? { type: a.type, key: slugKey(a.key), value: cleanValue(a.value) } : null;
     case "start_dialogue": return a.dialogId ? { type: a.type, dialogId: String(a.dialogId) } : null;
@@ -70669,7 +72962,7 @@ function normalizeDialogNode(n, i) {
     out.next = dlgStr(n.next);
   } else if (type === "choice") {
     out.prompt = dlgStr(n.prompt).slice(0, DIALOG_MAX_TEXT);
-    out.options = (Array.isArray(n.options) ? n.options : []).map(normalizeDialogChoice).slice(0, 12);
+    out.options = (Array.isArray(n.options) ? n.options : []).map(normalizeDialogChoice).slice(0, 12); out.delai = Math.max(0, Math.min(120, parseFloat(n.delai) || 0)); out.defaut = Math.max(0, parseInt(n.defaut, 10) || 0);
   } else if (type === "condition") {
     out.requirements = normalizeRequirements(n.requirements);
     out.ifTrue = dlgStr(n.ifTrue);
@@ -71075,17 +73368,17 @@ function dialogView(game, state, ctx) {
   if (n.type === "choice") {
     const options = (n.options || []).map(function (o) {
       const st = dialogOptionState(o, d.id, n.id, c);
-      return { id: o.id, text: parseDialogText(o.text, c.vars), enabled: st.enabled, visible: st.visible, reason: st.reason, missing: st.missing || [] };
+      return { id: o.id, text: parseDialogText((typeof trJeu === "function" ? trJeu(o.text) : o.text), c.vars), enabled: st.enabled, visible: st.visible, reason: st.reason, missing: st.missing || [] };
     });
     return {
       type: "choice", dialogId: d.id, nodeId: n.id, style: style, cast: cast,
-      speaker: speaker, prompt: parseDialogText(n.prompt, c.vars),
+      speaker: speaker, prompt: parseDialogText((typeof trJeu === "function" ? trJeu(n.prompt) : n.prompt), c.vars), delai: n.delai || 0, defaut: n.defaut || 0,
       options: options.filter(function (o) { return o.visible; }),
       allOptions: options,
       history: state.history || [],
     };
   }
-  const parsed = parseDialogText(n.text, c.vars);
+  const parsed = parseDialogText((typeof trJeu === "function" ? trJeu(n.text) : n.text), c.vars);
   const timed = dialogLetters(parsed, style.typing);
   return {
     type: "line", dialogId: d.id, nodeId: n.id, style: style, cast: cast,
@@ -72055,6 +74348,7 @@ src: src,
 bus: audioBusName(s.bus),
 volume: audioNum(s.volume, 1, 0, 1),
 loop: !!s.loop,
+sousTitre: typeof s.sousTitre === 'string' ? s.sousTitre.slice(0, 80) : '',
 };
 }
 function defaultAudioBuses() {
@@ -73477,6 +75771,416 @@ return out;
 }
 return puzStr(sol.value).toUpperCase();
 }
+/* ------------------------------------------------------------------ */
+/*  Lot 7 : piano, horloge, papier dechire, boite a fusibles.          */
+/*  Recopie telle quelle dans le player : ni gabarit, ni antislash.    */
+/* ------------------------------------------------------------------ */
+var PIANO_NOTES = ['Do', 'R\xE9', 'Mi', 'Fa', 'Sol', 'La', 'Si', 'Do\xB2', 'R\xE9\xB2', 'Mi\xB2', 'Fa\xB2', 'Sol\xB2'];
+var PIANO_FREQ = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99];
+var pianoCtx = null;
+function pianoSon(i, timbre) {
+  try {
+    if (!pianoCtx) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; pianoCtx = new AC(); }
+    if (pianoCtx.state === 'suspended') pianoCtx.resume();
+    var t = pianoCtx.currentTime, f = PIANO_FREQ[i % PIANO_FREQ.length] * (timbre === 'cloches' ? 2 : 1);
+    var duree = timbre === 'cloches' ? 2.2 : timbre === 'verres' ? 1.6 : 1.1;
+    var voix = timbre === 'cloches' ? [[1, 0.3], [2.76, 0.1], [5.4, 0.04]] : timbre === 'verres' ? [[1, 0.28], [2, 0.05]] : [[1, 0.3], [2, 0.08], [3, 0.03]];
+    for (var k = 0; k < voix.length; k++) {
+      var o = pianoCtx.createOscillator(), g = pianoCtx.createGain();
+      o.type = timbre === 'piano' && k === 0 ? 'triangle' : 'sine';
+      o.frequency.value = f * voix[k][0];
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(voix[k][1], t + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + duree / (k + 1));
+      o.connect(g); g.connect(pianoCtx.destination);
+      o.start(t); o.stop(t + duree + 0.05);
+    }
+  } catch (e) {}
+}
+function pianoMelodie(p) {
+  var out = [], s = puzStr(p.melodie) + ' ', cur = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charAt(i);
+    if (c >= '0' && c <= '9') cur += c;
+    else { if (cur) { var n = parseInt(cur, 10) - 1; if (n >= 0 && n < p.touches) out.push(n); } cur = ''; }
+  }
+  return out;
+}
+function pianoJuste(p, jouees) {
+  var m = pianoMelodie(p);
+  if (m.length < 2 || jouees.length < m.length) return false;
+  for (var i = 0; i < m.length; i++) if (jouees[jouees.length - m.length + i] !== m[i]) return false;
+  return true;
+}
+registerPuzzleType({
+  id: 'piano',
+  name: 'Piano et notes',
+  icon: '\u{1F3B9}',
+  family: 'sequence',
+  description: "Rejouer une m\xE9lodie sur un clavier, des cloches ou des verres d'eau.",
+  defaults: function () { return { timbre: 'piano', touches: 8, melodie: '1 3 5 8', noms: true }; },
+  normalize: function (p) {
+    var s = p && typeof p === 'object' ? p : {};
+    return {
+      timbre: ['piano', 'cloches', 'verres'].indexOf(s.timbre) >= 0 ? s.timbre : 'piano',
+      touches: Math.round(puzNum(s.touches, 8, 3, 12)),
+      melodie: puzStr(s.melodie, '1 3 5 8').slice(0, 80),
+      noms: s.noms !== false,
+    };
+  },
+  solvable: function (p) { return pianoMelodie(p).length < 2 ? ['la m\xE9lodie doit compter au moins deux notes (num\xE9ros de touches s\xE9par\xE9s par des espaces)'] : []; },
+  check: function (p, state) { return pianoJuste(p, state && Array.isArray(state.jouees) ? state.jouees : []); },
+  outline: function (p) { var out = []; for (var i = 0; i < p.touches; i++) out.push({ id: 'n' + i, label: 'Touche ' + (i + 1), kind: 'key' }); return out; },
+  mount: function (host, ctx) {
+    var p = ctx.params, jouees = [];
+    host.textContent = '';
+    var wrap = document.createElement('div');
+    host.appendChild(wrap);
+    var trace = document.createElement('div');
+    var clavier = document.createElement('div');
+    function construit() {
+      wrap.className = 'pz-piano pz-piano-' + p.timbre;
+      wrap.textContent = '';
+      trace.className = 'pz-piano-trace'; wrap.appendChild(trace);
+      clavier.className = 'pz-piano-clavier'; clavier.textContent = ''; wrap.appendChild(clavier);
+      for (var i = 0; i < p.touches; i++) (function (n) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pz-el pz-piano-touche';
+        b.setAttribute('data-pz-el', 'n' + n);
+        b.setAttribute('data-piano', String(n));
+        b.textContent = p.noms ? PIANO_NOTES[n] : '';
+        if (p.timbre === 'verres') b.style.setProperty('--niveau', Math.round(25 + 60 * (1 - n / Math.max(1, p.touches - 1))) + '%');
+        b.onclick = function () {
+          pianoSon(n, p.timbre);
+          b.classList.remove('joue'); void b.offsetWidth; b.classList.add('joue');
+          jouees.push(n); if (jouees.length > 24) jouees.shift();
+          dessine();
+          ctx.emit('progress');
+          if (pianoJuste(p, jouees)) setTimeout(function () { ctx.emit('submit'); }, 350);
+        };
+        clavier.appendChild(b);
+      })(i);
+      var eff = document.createElement('button');
+      eff.type = 'button'; eff.className = 'pz-validate pz-piano-efface'; eff.textContent = 'Recommencer';
+      eff.onclick = function () { jouees = []; dessine(); };
+      wrap.appendChild(eff);
+      dessine();
+    }
+    function dessine() {
+      trace.textContent = '';
+      var m = Math.max(2, pianoMelodie(p).length);
+      var der = jouees.slice(-m);
+      for (var k = 0; k < m; k++) {
+        var d = document.createElement('span');
+        d.className = 'pz-piano-pt' + (k < der.length ? ' on' : '');
+        d.textContent = k < der.length && p.noms ? PIANO_NOTES[der[k]] : '';
+        trace.appendChild(d);
+      }
+    }
+    construit();
+    return {
+      update: function (np) { p = np; construit(); },
+      getState: function () { return { jouees: jouees.slice() }; },
+      setState: function (st) { if (st && Array.isArray(st.jouees)) jouees = st.jouees.slice(); dessine(); },
+      solve: function () { jouees = pianoMelodie(p).slice(); dessine(); },
+      reset: function () { jouees = []; dessine(); },
+      feedback: function (kind) { if (kind === 'wrong') { jouees = []; dessine(); } },
+      destroy: function () { host.textContent = ''; },
+    };
+  },
+});
+
+/* ---- Horloge a regler ---- */
+var SVG_PZ = 'http://www.w3.org/2000/svg';
+function pzSvg(tag, attrs, parent) {
+  var n = document.createElementNS(SVG_PZ, tag);
+  for (var k in attrs) if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, String(attrs[k]));
+  if (parent) parent.appendChild(n);
+  return n;
+}
+registerPuzzleType({
+  id: 'horloge',
+  name: 'Horloge \xE0 r\xE9gler',
+  icon: '\u{1F570}',
+  family: 'saisie',
+  description: "Tourner les aiguilles pour afficher l'heure trouv\xE9e ailleurs.",
+  defaults: function () { return { heure: 3, minute: 15, pas: 5 }; },
+  normalize: function (p) {
+    var s = p && typeof p === 'object' ? p : {};
+    var pas = [1, 5, 15].indexOf(parseInt(s.pas, 10)) >= 0 ? parseInt(s.pas, 10) : 5;
+    return { heure: Math.round(puzNum(s.heure, 3, 1, 12)), minute: Math.round(puzNum(s.minute, 15, 0, 59)), pas: pas };
+  },
+  solvable: function (p) { return p.minute % p.pas ? ['les minutes (' + p.minute + ') ne tombent pas sur un pas de ' + p.pas + ' minutes'] : []; },
+  check: function (p, state) { return !!state && (state.h % 12) === (p.heure % 12) && state.m === p.minute; },
+  outline: function () { return [{ id: 'heures', label: 'Aiguille des heures', kind: 'dial' }, { id: 'minutes', label: 'Aiguille des minutes', kind: 'dial' }]; },
+  mount: function (host, ctx) {
+    var p = ctx.params, h = 12, m = 0;
+    host.textContent = '';
+    var wrap = document.createElement('div'); wrap.className = 'pz-horloge'; host.appendChild(wrap);
+    var svg = pzSvg('svg', { viewBox: '-100 -100 200 200', 'class': 'pz-horloge-cadran' }, wrap);
+    pzSvg('circle', { r: 94, 'class': 'pz-hl-fond' }, svg);
+    for (var i = 0; i < 60; i++) {
+      var a = i * Math.PI / 30, long = i % 5 === 0;
+      pzSvg('line', { x1: Math.sin(a) * (long ? 78 : 84), y1: -Math.cos(a) * (long ? 78 : 84), x2: Math.sin(a) * 90, y2: -Math.cos(a) * 90, 'class': long ? 'pz-hl-trait fort' : 'pz-hl-trait' }, svg);
+    }
+    for (var n = 1; n <= 12; n++) {
+      var t = pzSvg('text', { x: Math.sin(n * Math.PI / 6) * 64, y: -Math.cos(n * Math.PI / 6) * 64 + 6, 'class': 'pz-hl-chiffre', 'text-anchor': 'middle' }, svg);
+      t.textContent = String(n);
+    }
+    var ah = pzSvg('line', { x1: 0, y1: 8, x2: 0, y2: -46, 'class': 'pz-el pz-hl-heures', 'data-pz-el': 'heures' }, svg);
+    var am = pzSvg('line', { x1: 0, y1: 12, x2: 0, y2: -74, 'class': 'pz-el pz-hl-minutes', 'data-pz-el': 'minutes' }, svg);
+    pzSvg('circle', { r: 5, 'class': 'pz-hl-axe' }, svg);
+    var lecture = document.createElement('div'); lecture.className = 'pz-horloge-lecture'; wrap.appendChild(lecture);
+    function dessine() {
+      ah.setAttribute('transform', 'rotate(' + ((h % 12) * 30 + m / 2) + ')');
+      am.setAttribute('transform', 'rotate(' + (m * 6) + ')');
+      lecture.textContent = h + ' h ' + (m < 10 ? '0' : '') + m;
+    }
+    function bouge(dh, dm) {
+      m += dm;
+      while (m >= 60) { m -= 60; h++; }
+      while (m < 0) { m += 60; h--; }
+      h = ((h - 1 + 1200) % 12) + 1;
+      dessine(); ctx.sound('interact'); ctx.emit('progress');
+    }
+    var aiguille = null;
+    function angle(e) {
+      var r = svg.getBoundingClientRect();
+      var x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+      var deg = Math.atan2(x, -y) * 180 / Math.PI;
+      return deg < 0 ? deg + 360 : deg;
+    }
+    svg.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      try { svg.setPointerCapture(e.pointerId); } catch (x) {}
+      var a = angle(e);
+      var dM = Math.abs(((a - m * 6) + 540) % 360 - 180), dH = Math.abs(((a - ((h % 12) * 30 + m / 2)) + 540) % 360 - 180);
+      aiguille = dM <= dH ? 'm' : 'h';
+    });
+    svg.addEventListener('pointermove', function (e) {
+      if (!aiguille) return;
+      var a = angle(e);
+      if (aiguille === 'm') {
+        var nm = (Math.round(a / 6 / p.pas) * p.pas) % 60;
+        if (nm !== m) { if (m > 45 && nm < 15) h = (h % 12) + 1; else if (m < 15 && nm > 45) h = ((h + 10) % 12) + 1; m = nm; dessine(); ctx.emit('progress'); }
+      } else {
+        var nh = Math.round((a - m / 2) / 30); nh = ((nh % 12) + 12) % 12; if (nh === 0) nh = 12;
+        if (nh !== h) { h = nh; dessine(); ctx.emit('progress'); }
+      }
+    });
+    var fin = function () { if (aiguille) ctx.sound('interact'); aiguille = null; };
+    svg.addEventListener('pointerup', fin);
+    svg.addEventListener('pointercancel', fin);
+    var reglages = document.createElement('div'); reglages.className = 'pz-horloge-boutons'; wrap.appendChild(reglages);
+    [['\u2212 1 h', -1, 0], ['+ 1 h', 1, 0], ['\u2212 ' + p.pas + ' min', 0, -p.pas], ['+ ' + p.pas + ' min', 0, p.pas]].forEach(function (d) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'pz-el pz-horloge-btn'; b.textContent = d[0];
+      b.onclick = function () { bouge(d[1], d[2] + d[1] * 60); };
+      reglages.appendChild(b);
+    });
+    var valider = document.createElement('button');
+    valider.type = 'button'; valider.className = 'pz-validate'; valider.textContent = 'Valider';
+    valider.onclick = function () { ctx.emit('submit'); };
+    wrap.appendChild(valider);
+    dessine();
+    return {
+      update: function (np) { p = np; dessine(); },
+      getState: function () { return { h: h, m: m }; },
+      setState: function (st) { if (st && isFinite(st.h)) { h = st.h; m = st.m || 0; dessine(); } },
+      solve: function () { h = p.heure; m = p.minute; dessine(); },
+      reset: function () { h = 12; m = 0; dessine(); },
+      destroy: function () { host.textContent = ''; },
+    };
+  },
+});
+
+/* ---- Papier dechire a recoller ---- */
+function dechireN(p) { return p.cols * p.rows; }
+function dechireBord(i) {
+  /*  Un contour irregulier, toujours le meme pour un morceau donne.  */
+  var g = (i + 1) * 9301, pts = [], hasard = function () { g = (g * 9301 + 49297) % 233280; return g / 233280; };
+  var cote = function (x0, y0, x1, y1) { for (var k = 0; k < 5; k++) { var t = k / 5; pts.push((x0 + (x1 - x0) * t + (hasard() - 0.5) * 3).toFixed(1) + '% ' + (y0 + (y1 - y0) * t + (hasard() - 0.5) * 3).toFixed(1) + '%'); } };
+  cote(1, 1, 99, 1); cote(99, 1, 99, 99); cote(99, 99, 1, 99); cote(1, 99, 1, 1);
+  return 'polygon(' + pts.join(',') + ')';
+}
+registerPuzzleType({
+  id: 'dechire',
+  name: 'Papier d\xE9chir\xE9',
+  icon: '\u{1F4DC}',
+  family: 'image',
+  description: "Recoller les morceaux d'une lettre, ramass\xE9s un \xE0 un dans les sc\xE8nes.",
+  defaults: function () { return { image: '', cols: 2, rows: 2, morceaux: [], rotation: false }; },
+  normalize: function (p) {
+    var s = p && typeof p === 'object' ? p : {};
+    var cols = Math.round(puzNum(s.cols, 2, 2, 4)), rows = Math.round(puzNum(s.rows, 2, 1, 4));
+    var m = [];
+    for (var i = 0; i < cols * rows; i++) m.push(Array.isArray(s.morceaux) && typeof s.morceaux[i] === 'string' ? s.morceaux[i] : '');
+    return { image: puzStr(s.image), cols: cols, rows: rows, morceaux: m, rotation: !!s.rotation };
+  },
+  solvable: function (p) { return p.image ? [] : ["il manque l'image de la lettre enti\xE8re"]; },
+  check: function (p, state) {
+    if (!state || !Array.isArray(state.place)) return false;
+    for (var i = 0; i < dechireN(p); i++) if (state.place[i] !== i || (state.rot && state.rot[i])) return false;
+    return true;
+  },
+  consumes: function (p) { var out = []; for (var i = 0; i < p.morceaux.length; i++) if (p.morceaux[i]) out.push({ itemId: p.morceaux[i], qty: 1 }); return out; },
+  essai: function (p) { var inv = {}; for (var i = 0; i < p.morceaux.length; i++) if (p.morceaux[i]) inv[p.morceaux[i]] = 1; return inv; },
+  outline: function (p) { var out = []; for (var i = 0; i < dechireN(p); i++) out.push({ id: 'c' + i, label: 'Emplacement ' + (i + 1), kind: 'target' }); return out; },
+  mount: function (host, ctx) {
+    var p = ctx.params, n = dechireN(p);
+    var lireSac = function () { return ctx.jeu ? (ctx.jeu().inventory || {}) : (ctx.inventory || {}); };
+    var place = [], rot = [], choisi = null;
+    for (var i = 0; i < n; i++) { place.push(-1); rot.push(p.rotation ? 1 + Math.floor(Math.random() * 3) : 0); }
+    var dispo = function (k) { return !p.morceaux[k] || (lireSac()[p.morceaux[k]] || 0) > 0; };
+    host.textContent = '';
+    var wrap = document.createElement('div'); wrap.className = 'pz-dechire'; host.appendChild(wrap);
+    var table = document.createElement('div'); table.className = 'pz-dechire-table'; wrap.appendChild(table);
+    var reserve = document.createElement('div'); reserve.className = 'pz-dechire-reserve'; wrap.appendChild(reserve);
+    var manque = document.createElement('div'); manque.className = 'pz-dechire-manque'; wrap.appendChild(manque);
+    var ordreReserve = [];
+    for (var r = 0; r < n; r++) ordreReserve.push(r);
+    ordreReserve.sort(function () { return Math.random() - 0.5; });
+    function morceau(k) {
+      var d = document.createElement('div');
+      d.className = 'pz-dechire-morceau' + (choisi === k ? ' choisi' : '');
+      d.style.backgroundImage = 'url("' + p.image + '")';
+      d.style.backgroundSize = (p.cols * 100) + '% ' + (p.rows * 100) + '%';
+      d.style.backgroundPosition = (p.cols > 1 ? (k % p.cols) / (p.cols - 1) * 100 : 0) + '% ' + (p.rows > 1 ? Math.floor(k / p.cols) / (p.rows - 1) * 100 : 0) + '%';
+      d.style.clipPath = dechireBord(k);
+      d.style.transform = 'rotate(' + (rot[k] * 90) + 'deg)';
+      return d;
+    }
+    function dessine() {
+      table.textContent = ''; reserve.textContent = '';
+      table.style.gridTemplateColumns = 'repeat(' + p.cols + ', 1fr)';
+      for (var c = 0; c < n; c++) (function (cell) {
+        var caseEl = document.createElement('button');
+        caseEl.type = 'button';
+        caseEl.className = 'pz-el pz-dechire-case';
+        caseEl.setAttribute('data-pz-el', 'c' + cell);
+        caseEl.setAttribute('data-dechire-case', String(cell));
+        if (place[cell] >= 0) caseEl.appendChild(morceau(place[cell]));
+        caseEl.onclick = function () {
+          var ici = place[cell];
+          if (choisi === null) { if (ici >= 0) { choisi = ici; dessine(); } return; }
+          if (ici === choisi) { if (p.rotation) rot[ici] = (rot[ici] + 1) % 4; choisi = null; ctx.sound('interact'); dessine(); ctx.emit('progress'); verifie(); return; }
+          var depuis = place.indexOf(choisi);
+          if (depuis >= 0) place[depuis] = ici; else if (ici >= 0) { /* l'ancien retourne a la reserve */ }
+          place[cell] = choisi; choisi = null;
+          ctx.sound('interact'); dessine(); ctx.emit('progress'); verifie();
+        };
+        table.appendChild(caseEl);
+      })(c);
+      var restants = 0;
+      ordreReserve.forEach(function (k) {
+        if (place.indexOf(k) >= 0) return;
+        if (!dispo(k)) { restants++; return; }
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'pz-el pz-dechire-libre'; b.setAttribute('data-dechire-morceau', String(k));
+        b.appendChild(morceau(k));
+        b.onclick = function () { choisi = choisi === k ? null : k; dessine(); };
+        reserve.appendChild(b);
+      });
+      manque.textContent = restants ? 'Il manque encore ' + restants + ' morceau' + (restants > 1 ? 'x' : '') + ' : cherche-les ailleurs.' : (place.indexOf(-1) >= 0 ? 'Touche un morceau, puis sa place.' + (p.rotation ? ' Touche deux fois un morceau pos\xE9 pour le tourner.' : '') : '');
+    }
+    function verifie() { var juste = true; for (var i = 0; i < n; i++) if (place[i] !== i || rot[i]) juste = false; if (juste) setTimeout(function () { ctx.emit('submit'); }, 300); }
+    dessine();
+    return {
+      update: function (np) { p = np; dessine(); },
+      getState: function () { return { place: place.slice(), rot: rot.slice() }; },
+      setState: function (st) { if (st && Array.isArray(st.place)) { place = st.place.slice(); if (Array.isArray(st.rot)) rot = st.rot.slice(); dessine(); } },
+      solve: function () { for (var i = 0; i < n; i++) { place[i] = i; rot[i] = 0; } dessine(); },
+      reset: function () { for (var i = 0; i < n; i++) place[i] = -1; choisi = null; dessine(); },
+      destroy: function () { host.textContent = ''; },
+    };
+  },
+});
+
+/* ---- Boite a fusibles ---- */
+registerPuzzleType({
+  id: 'fusibles',
+  name: 'Bo\xEEte \xE0 fusibles',
+  icon: '\u26A1',
+  family: 'manipulation',
+  description: "Remettre les fusibles trouv\xE9s et basculer les bons interrupteurs pour rallumer une machine.",
+  defaults: function () { return { interrupteurs: '1010', fusibles: [] }; },
+  normalize: function (p) {
+    var s = p && typeof p === 'object' ? p : {};
+    var it = puzStr(s.interrupteurs, '1010'), propre = '';
+    for (var i = 0; i < it.length && propre.length < 8; i++) { var c = it.charAt(i); if (c === '0' || c === '1') propre += c; }
+    return { interrupteurs: propre || '10', fusibles: (Array.isArray(s.fusibles) ? s.fusibles : []).slice(0, 4).map(function (f) { return typeof f === 'string' ? f : ''; }) };
+  },
+  solvable: function (p) { for (var i = 0; i < p.fusibles.length; i++) if (!p.fusibles[i]) return ["un fusible n'a pas d'objet choisi"]; return []; },
+  check: function (p, state) {
+    if (!state || !Array.isArray(state.inter)) return false;
+    for (var i = 0; i < p.interrupteurs.length; i++) if (String(state.inter[i] ? 1 : 0) !== p.interrupteurs.charAt(i)) return false;
+    for (var k = 0; k < p.fusibles.length; k++) if (!(state.fus && state.fus[k])) return false;
+    return true;
+  },
+  consumes: function (p) { var out = []; for (var i = 0; i < p.fusibles.length; i++) if (p.fusibles[i]) out.push({ itemId: p.fusibles[i], qty: 1 }); return out; },
+  essai: function (p) { var inv = {}; for (var i = 0; i < p.fusibles.length; i++) if (p.fusibles[i]) inv[p.fusibles[i]] = (inv[p.fusibles[i]] || 0) + 1; return inv; },
+  outline: function (p) { var out = []; for (var i = 0; i < p.interrupteurs.length; i++) out.push({ id: 'i' + i, label: 'Interrupteur ' + (i + 1), kind: 'switch' }); return out; },
+  mount: function (host, ctx) {
+    var p = ctx.params;
+    var lireSac = function () { return ctx.jeu ? (ctx.jeu().inventory || {}) : (ctx.inventory || {}); };
+    var objets = ctx.objets || [];
+    var nomObjet = function (id) { for (var i = 0; i < objets.length; i++) if (objets[i].id === id) return objets[i].name || id; return 'fusible'; };
+    var inter = [], fus = [];
+    for (var i = 0; i < p.interrupteurs.length; i++) inter.push(0);
+    for (var k = 0; k < p.fusibles.length; k++) fus.push(false);
+    host.textContent = '';
+    var wrap = document.createElement('div'); wrap.className = 'pz-fusibles'; host.appendChild(wrap);
+    var lampe = document.createElement('div'); lampe.className = 'pz-fus-lampe'; wrap.appendChild(lampe);
+    var rangFus = document.createElement('div'); rangFus.className = 'pz-fus-rang'; wrap.appendChild(rangFus);
+    var rangInter = document.createElement('div'); rangInter.className = 'pz-fus-rang'; wrap.appendChild(rangInter);
+    var aide = document.createElement('div'); aide.className = 'pz-fus-aide'; wrap.appendChild(aide);
+    function juste() {
+      for (var i = 0; i < p.interrupteurs.length; i++) if (String(inter[i]) !== p.interrupteurs.charAt(i)) return false;
+      for (var k = 0; k < fus.length; k++) if (!fus[k]) return false;
+      return true;
+    }
+    function dessine() {
+      rangFus.textContent = ''; rangInter.textContent = '';
+      fus.forEach(function (ok, k) {
+        var b = document.createElement('button'); b.type = 'button';
+        b.className = 'pz-el pz-fus-fusible' + (ok ? ' pose' : '');
+        b.setAttribute('data-fusible', String(k));
+        b.textContent = ok ? '\u25AE' : '';
+        b.title = ok ? 'Fusible en place' : 'Emplacement vide';
+        b.onclick = function () {
+          if (fus[k]) return;
+          var id = p.fusibles[k];
+          if (id && !((lireSac()[id] || 0) > 0)) { aide.textContent = 'Il te faut : ' + nomObjet(id) + '.'; return; }
+          fus[k] = true; ctx.sound('interact'); dessine(); ctx.emit('progress'); if (juste()) setTimeout(function () { ctx.emit('submit'); }, 500);
+        };
+        rangFus.appendChild(b);
+      });
+      inter.forEach(function (v, i) {
+        var b = document.createElement('button'); b.type = 'button';
+        b.className = 'pz-el pz-fus-inter' + (v ? ' haut' : '');
+        b.setAttribute('data-pz-el', 'i' + i);
+        b.setAttribute('data-inter', String(i));
+        b.setAttribute('aria-pressed', v ? 'true' : 'false');
+        b.innerHTML = '<span></span>';
+        b.onclick = function () { inter[i] = inter[i] ? 0 : 1; ctx.sound('interact'); dessine(); ctx.emit('progress'); if (juste()) setTimeout(function () { ctx.emit('submit'); }, 500); };
+        rangInter.appendChild(b);
+      });
+      var ok = juste();
+      lampe.className = 'pz-fus-lampe' + (ok ? ' allumee' : '');
+      if (!aide.textContent || ok) aide.textContent = fus.length && fus.indexOf(false) >= 0 ? 'Remets les fusibles, puis bascule les interrupteurs.' : 'Bascule les interrupteurs.';
+    }
+    dessine();
+    return {
+      update: function (np) { p = np; dessine(); },
+      getState: function () { return { inter: inter.slice(), fus: fus.slice() }; },
+      setState: function (st) { if (st && Array.isArray(st.inter)) { inter = st.inter.slice(); fus = Array.isArray(st.fus) ? st.fus.slice() : fus; dessine(); } },
+      solve: function () { for (var i = 0; i < inter.length; i++) inter[i] = p.interrupteurs.charAt(i) === '1' ? 1 : 0; for (var k = 0; k < fus.length; k++) fus[k] = true; dessine(); },
+      reset: function () { for (var i = 0; i < inter.length; i++) inter[i] = 0; dessine(); },
+      destroy: function () { host.textContent = ''; },
+    };
+  },
+});
+
 registerPuzzleType({
 id: 'lock',
 name: 'Cadenas et codes',
@@ -83470,6 +86174,24 @@ const OptionsPanel = {
       }
       if (F.fullscreen) check("fullscreen", "Plein \xE9cran");
       check("reduceMotion", "R\xE9duire les animations");
+      check("sousTitres", "Sous-titres des sons");
+      check("sansPression", "Mode sans pression (pas de chronom\xE8tre)");
+      check("grandesCibles", "Grandes zones \xE0 toucher");
+      (function () {
+        const sel = mkEl("select", { minHeight: "36px", background: "#242938", color: "#E9E6DD", border: "none", borderRadius: "6px", padding: "0 8px" });
+        sel.setAttribute("data-opt", "couleurs");
+        [["", "Normales"], ["protan", "Rouge mal per\xE7u"], ["deutan", "Vert mal per\xE7u"], ["tritan", "Bleu mal per\xE7u"]].forEach(function (q) { const o = document.createElement("option"); o.value = q[0]; o.textContent = q[1]; if ((settings.couleurs || "") === q[0]) o.selected = true; sel.appendChild(o); });
+        sel.addEventListener("change", function () { change({ couleurs: sel.value }); });
+        row("Couleurs adapt\xE9es", sel);
+        const langues = typeof trLangues === "function" ? trLangues() : [];
+        if (langues.length) {
+          const sl = mkEl("select", { minHeight: "36px", background: "#242938", color: "#E9E6DD", border: "none", borderRadius: "6px", padding: "0 8px" });
+          sl.setAttribute("data-opt", "langue");
+          [["", "Langue d'origine"]].concat(langues.map(function (l) { return [l.code, l.nom]; })).forEach(function (q) { const o = document.createElement("option"); o.value = q[0]; o.textContent = q[1]; if ((settings.langue || "") === q[0]) o.selected = true; sl.appendChild(o); });
+          sl.addEventListener("change", function () { change({ langue: sl.value }); });
+          row("Langue", sl);
+        }
+      })();
       if (F.video) check("video", "Vid\xE9os anim\xE9es");
       const ts = mkEl("div");
       [["A\u2212", 1], ["A", 1.25], ["A+", 1.5]].forEach(function (a) { const b = PlayerUI.button(a[0], function () { change({ textScale: a[1] }); render(); }, settings.textScale === a[1]); b.style.minWidth = "44px"; b.style.padding = "0 10px"; ts.appendChild(b); });
@@ -84084,6 +86806,7 @@ function pixelRatioFor(q){
 function applyUserSettings(){
   const st = HomeSettings.get();
   document.body.classList.toggle('reduce-motion', !!st.reduceMotion);
+  try{ appliquerCouleurs(st.couleurs); }catch(e){}
   hudReset();
   try{ renderer.setPixelRatio(pixelRatioFor(st.quality)); resize(); }catch(e){}
   syncMusic();
@@ -84190,6 +86913,14 @@ function openJournal(){
     lines.forEach(function(t){ l.appendChild(mk('div','pnl-row', t)); });
     box.appendChild(l);
   };
+  const frs = Object.keys(vars).filter(function(k){ return k.indexOf('__fragment:') === 0; });
+  if(frs.length) section('Fragments \xB7 ' + frs.length, frs.map(function(k){ return '\u{1F9E9} ' + trJeu(String(vars[k])); }));
+  const rels = (optJeu('relations').length ? optJeu('relations') : (OPTS.relations || [])).filter(function(r){ return r && r.variable; });
+  if(rels.length) section('Relations', rels.map(function(r){
+    const v = Math.max(0, Math.min(r.max || 10, parseFloat(vars[r.variable]) || 0));
+    const plein = Math.round(5 * v / (r.max || 10));
+    return (r.nom || '?') + '  ' + '\u2665\u2665\u2665\u2665\u2665'.slice(0, plein) + '\u2661\u2661\u2661\u2661\u2661'.slice(0, 5 - plein);
+  }));
   const obEnCours = objectifEnCours();
   if(objectifsDuJeu().length){
     section('Objectif', obEnCours && obEnCours.texte ? [obEnCours.texte] : []);
@@ -84375,7 +87106,7 @@ function showHome(returning){
 
 
 function mk(tag, cls, text){ const n=document.createElement(tag); if(cls) n.className=cls; if(text!=null) n.textContent=text; return n; }
-function showModal(text){ document.getElementById('modal-text').textContent = text; document.getElementById('modal').style.display='flex'; }
+function showModal(text){ document.getElementById('modal-text').textContent = trJeu(text); document.getElementById('modal').style.display='flex'; }
 function playSoundEffects(effects){
   (effects || []).forEach(function(e){
     if(e.kind !== 'sound') return;
@@ -84384,6 +87115,7 @@ function playSoundEffects(effects){
     // Un son d\xE9clench\xE9 claque : il part tout de suite et peut se
     // superposer \xE0 lui-m\xEAme si l'action se r\xE9p\xE8te.
     aShot(p.src, { bus: p.bus, volume: (p.volume == null ? 1 : p.volume) * (e.volume == null ? 1 : e.volume) });
+    try{ sousTitreSon(e.soundId); }catch(x){}
   });
 }
 function openPuzzleEffects(effects){
@@ -84644,6 +87376,7 @@ function puzFlyToBag(itemId){
 }
 
 function nativeFail(ap, raison){
+  try{ statsEchec(ap && ap.p && ap.p.id); }catch(e){}
   ap.live.attempts = (ap.live.attempts || 0) + 1;
   const regle = ap.p.rules && ap.p.rules.attempts ? ap.p.rules.attempts : null;
   bus.emit(PUZZLE_EVENTS.failed, { puzzleId: ap.p.id, reason: raison });
@@ -84876,7 +87609,7 @@ function startPuzzleClock(ap){
     ap.live.elapsed = (ap.live.elapsed || 0) + (t - dernier) / 1000;
     dernier = t;
     const reste = puzSecondesRestantes(ap.p, ap.live);
-    if(reste === 0 && !ap.timedOut){ ap.timedOut = true; puzzleTimeout(ap); return; }
+    if(reste === 0 && !ap.timedOut && !HomeSettings.get().sansPression){ ap.timedOut = true; puzzleTimeout(ap); return; }
     indicesAuto(ap);
     refreshPuzzleStatus();
   }, 250);
@@ -84916,6 +87649,7 @@ function indicesAuto(ap){
   });
 }
 function donnePuzzleHint(ap, h){
+  try{ statsIndice(ap && ap.p && ap.p.id); }catch(e){}
   ap.live.hintsOpen = (ap.live.hintsOpen || []).concat([h.id]);
   ap.live.hintsUsed = (ap.live.hintsUsed || 0) + 1;
   vars.__indices = (vars.__indices || 0) + 1;
@@ -85447,6 +88181,7 @@ function dlgShowChoices(){
     b.className = 'dlg-choice' + (i === 0 ? ' sel' : '');
     b.setAttribute('data-choice', o.id);
     b.textContent = o.text.plain;
+    if(vars['__choix:' + dlgV.dialogId + ':' + o.id]) b.classList.add('dlg-vu');
     b.style.background = S.choices.background;
     b.style.color = S.choices.color;
     b.style.borderColor = S.choices.border;
@@ -85460,6 +88195,7 @@ function dlgShowChoices(){
     b.onclick = function(e){ e.stopPropagation(); dlgPick(o.id); };
     box.appendChild(b);
   });
+  dlgChrono(box);
   const first = box.querySelector('.dlg-choice:not([disabled])');
   if(first && first.focus) try{ first.focus(); }catch(e){}
 }
@@ -85517,6 +88253,8 @@ function dlgNext(){
 }
 function dlgPick(optId){
   if(!dlgState) return;
+  if(dlgChronoT){ clearTimeout(dlgChronoT); dlgChronoT = 0; }
+  if(dlgV && dlgV.dialogId){ const kc = '__choix:' + dlgV.dialogId + ':' + optId; vars[kc] = (vars[kc] || 0) + 1; }
   const g = dialogGame();
   const next = dialogChoose(g, dlgState, dialogCtxOf(), dialogApply, optId);
   if(next === dlgState) return;
@@ -86634,6 +89372,8 @@ function hudNotesPlace(){
 }
 function hudNotify(text, kind){
   if(!text) return;
+  if(annonceNotif(text, kind)) return;
+  text = trJeu(text);
   hudPlaySound('notify');
   const ui = uiGame();
   const n = ui.notifications;
@@ -86669,6 +89409,7 @@ function hudNotifySaved(ok){
   hudNotify(ok ? 'Partie enregistr\xE9e' : "L'enregistrement a \xE9chou\xE9", 'save');
 }
 function hudNotifyPuzzle(name){
+  vibre([40, 60, 40]);
   if(!uiGame().notifications.events.puzzleSolved) return;
   hudNotify((name || '\xC9nigme') + ' \u2014 r\xE9solue', 'puzzle');
 }
@@ -86827,13 +89568,17 @@ try{
 
 function activate(hs){
   if(playerScreen!=='playing') return;
+  try{ statsTap(hs); }catch(e){}
   if(objetEnMain){ const enMain = objetEnMain; finUtiliser(); utiliserObjetSur(hs, enMain); return; }
+  if(faussePistePoint(hs)) return;
   const reqs = getRequirements(hs);
   const missing = missingRequirements(hs, inventory, vars);
   if(missing.length){
+    vibre(120);
     showModal('Il te manque : '+describeMissing(missing, GAME, inventory));
     return;
   }
+  if(hs.grosPlan && hs.grosPlan.image){ ouvrirGrosPlan(hs); return; }
   if(hs.type==='navigate' && hs.target){
     const tgt = GAME.scenes.find(function(s){ return s.id===hs.target; });
     if(tgt && isSceneLocked(tgt, vars)){ showModal('Cette sc\xE8ne est verrouill\xE9e pour le moment.'); return; }
@@ -86865,7 +89610,7 @@ function activate(hs){
       if(uiGame().notifications.events.itemGained) hudNotify('+ ' + ((it&&it.name)||hs.item) + ((hs.amount||1)>1 ? ' \xD7 '+(hs.amount||1) : ''), 'gain');
     }catch(e){}
   } else if(hs.type==='show_text'){
-    document.getElementById('modal-text').textContent = hs.text||'';
+    document.getElementById('modal-text').textContent = trJeu(hs.text||'');
     document.getElementById('modal').style.display='flex';
   }
 }
@@ -87043,6 +89788,7 @@ function computeTreeLayout(scenes){
 
 function openMap(){
   if(playerScreen!=='playing') return;
+  if(carteIllustree()) return;
   const cfg = uiGame().panels.map;
   const theme = uiGame().theme;
   const scenes=GAME.scenes;
@@ -87161,7 +89907,7 @@ window.addEventListener('pointerup',e=>{
       if(dansPolygone(px, py, el._poly)){ const d0 = Math.hypot(px - parseFloat(el.style.left), py - parseFloat(el.style.top)); if(d0 < bestDist){ hit = hs; bestDist = d0; } }
       return;
     }
-    const sz=hs.size||36;
+    const sz=Math.max(hs.size||36, HomeSettings.get().grandesCibles ? 64 : 0);
     const sx=parseFloat(el.style.left), sy=parseFloat(el.style.top);
     const d=Math.hypot(px-sx, py-sy);
     if(d<=sz/2 && d<bestDist){ hit=hs; bestDist=d; }
@@ -87184,6 +89930,7 @@ function project(){
   // sons accroch\xE9s au panorama : ne travaille que si la t\xEAte a boug\xE9
   try{ if(aHasSpatial()) aSpatialTick(yaw, pitch); }catch(e){}
   try{ lot5Tick(yaw, pitch); }catch(e){}
+  try{ lot678Tick(yaw, pitch); }catch(e){}
   (current.hotspots||[]).forEach((hs,i)=>{
     const dir=yawPitchToDir(hs.position.yaw,hs.position.pitch);
     const p=dir.clone().multiplyScalar(100);
@@ -87944,6 +90691,7 @@ loop();
     const [puzzleManager, setPuzzleManager] = (0, import_react.useState)(null);
     const [showSucces, setShowSucces] = (0, import_react.useState)(false);
     const [showObjectifs, setShowObjectifs] = (0, import_react.useState)(false);
+    const [fenetre678, setFenetre678] = (0, import_react.useState)("");
     const puzzleBus = (0, import_react.useRef)(null);
     if (!puzzleBus.current) puzzleBus.current = createEventBus();
     const gameRef = (0, import_react.useRef)({});
@@ -88041,6 +90789,7 @@ loop();
     });
     COMBO_EDITEUR = { recipes: combinations.recipes, items };
     SUCCES_EDITEUR = gameMeta.succes || [];
+    PROJET_EDITEUR = { scenes, variables, dialogues, items };
     SCENES_EDITEUR = scenes;
     SONS_EDITEUR = audio && audio.library || [];
     const serializeProject = () => ({
@@ -88727,12 +91476,12 @@ loop();
         setNoticeMsg("Ajoute au moins une sc\xE8ne pour tester le jeu.");
         return;
       }
-      setTestHtml(buildStandaloneHTML(gameFileFromProject(projetJeu())));
+      setTestHtml(buildStandaloneHTML(gameFileFromProject(projetJeu()), optsTest()));
     };
     const openTestFrom = (sceneId) => setTestFrom({ sceneId, inventory: {}, vars: {} });
     const testDialogFrom = (dialogId, nodeId) => {
       const file = gameFileFromProject(projetJeu());
-      setTestHtml(buildStandaloneHTML(file, { testStart: { sceneId: startSceneId || (scenes[0] || {}).id, inventory: {}, vars: {}, dialogue: { dialogId, nodeId } } }));
+      setTestHtml(buildStandaloneHTML(file, optsTest({ testStart: { sceneId: startSceneId || (scenes[0] || {}).id, inventory: {}, vars: {}, dialogue: { dialogId, nodeId } } })));
     };
     const runTestFrom = () => {
       const file = gameFileFromProject(projetJeu());
@@ -88740,7 +91489,7 @@ loop();
       Object.keys(testFrom.inventory).forEach((k) => {
         if (testFrom.inventory[k] > 0) inv[k] = testFrom.inventory[k];
       });
-      setTestHtml(buildStandaloneHTML(file, { testStart: { sceneId: testFrom.sceneId, inventory: inv, vars: testFrom.vars } }));
+      setTestHtml(buildStandaloneHTML(file, optsTest({ testStart: { sceneId: testFrom.sceneId, inventory: inv, vars: testFrom.vars } })));
       setTestFrom(null);
     };
     const clearTestSave = () => {
@@ -88934,7 +91683,7 @@ loop();
         /* @__PURE__ */ import_react.default.createElement("span", { style: { flexShrink: 0 } }, natif ? t ? t.icon : "\u{1F9E9}" : providerOrGeneric(p.provider).icon),
         /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.title || "\xC9nigme sans nom")
       );
-    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
+    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), [["options", "\u2728 Options du jeu"], ["carte", "\u{1F5FA} Carte illustr\xE9e"], ["outils", "\u{1F6E0} V\xE9rifier, rechercher, mod\xE8les"], ["langues", "\u{1F30D} Langues"], ["bande", "\u{1F3AC} Bande-annonce"]].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: k, onClick: () => setFenetre678(k), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-678": k }, l)), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
       const pose = c.poses.find((p) => p.id === c.defaultPose) || c.poses[0] || {};
       return /* @__PURE__ */ import_react.default.createElement(
         "div",
@@ -89203,7 +91952,7 @@ loop();
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement(VideoScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         type: "range",
@@ -89426,7 +92175,37 @@ loop();
         onChange: setCharacters,
         onClose: () => setShowCharManager(false)
       }
-    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), showObjectifs && /* @__PURE__ */ import_react.default.createElement(ObjectifsManager, { meta: gameMeta, setMeta: setGameMeta, items, variables, puzzles, scenes, onClose: () => setShowObjectifs(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
+    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), fenetre678 === "options" && /* @__PURE__ */ import_react.default.createElement(OptionsJeu, { meta: gameMeta, setMeta: setGameMeta, characters, variables, onClose: () => setFenetre678("") }), fenetre678 === "carte" && /* @__PURE__ */ import_react.default.createElement(CarteIllustree, { meta: gameMeta, setMeta: setGameMeta, scenes, onClose: () => setFenetre678("") }), fenetre678 === "outils" && /* @__PURE__ */ import_react.default.createElement(
+      OutilsJeu,
+      {
+        scenes,
+        setScenes,
+        items,
+        setItems,
+        puzzles,
+        dialogues,
+        setDialogues,
+        variables,
+        startSceneId,
+        gameMeta,
+        onAller: (id) => {
+          setCurrentSceneId(id);
+          setFenetre678("");
+        },
+        onClose: () => setFenetre678("")
+      }
+    ), fenetre678 === "langues" && /* @__PURE__ */ import_react.default.createElement(LanguesJeu, { meta: gameMeta, setMeta: setGameMeta, scenes, items, dialogues, onClose: () => setFenetre678("") }), fenetre678 === "bande" && /* @__PURE__ */ import_react.default.createElement(
+      BandeAnnonce,
+      {
+        scenes,
+        gameMeta,
+        onClose: () => setFenetre678(""),
+        onTourner: (o) => {
+          setFenetre678("");
+          setTestHtml(buildStandaloneHTML(gameFileFromProject(projetJeu()), optsTest({ bandeAnnonce: o, testStart: { sceneId: o.scenes[0], inventory: {}, vars: {} } })));
+        }
+      }
+    ), showObjectifs && /* @__PURE__ */ import_react.default.createElement(ObjectifsManager, { meta: gameMeta, setMeta: setGameMeta, items, variables, puzzles, scenes, onClose: () => setShowObjectifs(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
       PuzzleManager,
       {
         dialogues,

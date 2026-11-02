@@ -26,6 +26,10 @@
       b.querySelector("pre").textContent = (e.error && e.error.stack) || e.message || String(e);
     });
   </script>
+  <script>
+    // Le jeu testé charge cette copie de Three.js (voir optsTest dans le moteur).
+    window.__BD360_THREE_SRC = new URL("three.min.js", location.href).href;
+  </script>
   <script src="editor.js"></script>
   <script src="habillage.js"></script>
 </body>
