@@ -35849,38 +35849,47 @@
       });
       return d ? d.name || d.id : id;
     };
-    (actions || []).forEach(function(a) {
-      if (!a || !a.type) return;
-      const n = Math.max(1, parseInt(a.amount, 10) || 1);
-      if (a.type === "give_item" && a.itemId) {
-        inventory[a.itemId] = (inventory[a.itemId] || 0) + n;
-        effects.push({ kind: "gain", itemId: a.itemId, name: itemName(a.itemId), amount: n });
-      } else if (a.type === "remove_item" && a.itemId) {
-        const have = inventory[a.itemId] || 0;
-        const m = Math.min(have, n);
-        if (m > 0) {
-          inventory[a.itemId] = have - m;
-          effects.push({ kind: "loss", itemId: a.itemId, name: itemName(a.itemId), amount: m });
+    const traite = function(liste) {
+      (liste || []).forEach(function(a) {
+        if (!a || !a.type) return;
+        const n = Math.max(1, parseInt(a.amount, 10) || 1);
+        if (a.type === "give_item" && a.itemId) {
+          inventory[a.itemId] = (inventory[a.itemId] || 0) + n;
+          effects.push({ kind: "gain", itemId: a.itemId, name: itemName(a.itemId), amount: n });
+        } else if (a.type === "remove_item" && a.itemId) {
+          const have = inventory[a.itemId] || 0;
+          const m = Math.min(have, n);
+          if (m > 0) {
+            inventory[a.itemId] = have - m;
+            effects.push({ kind: "loss", itemId: a.itemId, name: itemName(a.itemId), amount: m });
+          }
+        } else if (a.type === "unlock_scene" && a.sceneId) {
+          vars[sceneUnlockKey(a.sceneId)] = true;
+          if (discovered.indexOf(a.sceneId) < 0) discovered.push(a.sceneId);
+          effects.push({ kind: "unlock", sceneId: a.sceneId, name: sceneName(a.sceneId) });
+        } else if (a.type === "navigate" && a.target) {
+          effects.push({ kind: "navigate", target: a.target, name: sceneName(a.target), regard: a.regard || null, transition: a.transition || "" });
+        } else if (a.type === "show_text") {
+          if (a.text) effects.push({ kind: "text", text: String(a.text) });
+        } else if (a.type === "set_variable" && a.key) {
+          vars[a.key] = cleanValue(a.value);
+          effects.push({ kind: "variable", key: a.key, value: vars[a.key] });
+        } else if (a.type === "start_dialogue" && a.dialogId) {
+          effects.push({ kind: "dialogue", dialogId: a.dialogId, name: dialogName(a.dialogId) });
+        } else if (a.type === "play_sound" && a.soundId) {
+          effects.push({ kind: "sound", soundId: a.soundId, volume: a.volume == null ? 1 : a.volume });
+        } else if (a.type === "open_puzzle" && a.puzzleId) {
+          effects.push({ kind: "puzzle", puzzleId: a.puzzleId });
+        } else if (a.type === "si") {
+          traite(reqMissing(a.conditions || [], inventory, vars).length ? a.sinon : a.alors);
+        } else if (a.type === "hasard") {
+          traite(Math.random() * 100 < (a.chance == null ? 50 : a.chance) ? a.alors : a.sinon);
+        } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
+          effects.push({ kind: a.type, action: a });
         }
-      } else if (a.type === "unlock_scene" && a.sceneId) {
-        vars[sceneUnlockKey(a.sceneId)] = true;
-        if (discovered.indexOf(a.sceneId) < 0) discovered.push(a.sceneId);
-        effects.push({ kind: "unlock", sceneId: a.sceneId, name: sceneName(a.sceneId) });
-      } else if (a.type === "navigate" && a.target) {
-        effects.push({ kind: "navigate", target: a.target, name: sceneName(a.target) });
-      } else if (a.type === "show_text") {
-        if (a.text) effects.push({ kind: "text", text: String(a.text) });
-      } else if (a.type === "set_variable" && a.key) {
-        vars[a.key] = cleanValue(a.value);
-        effects.push({ kind: "variable", key: a.key, value: vars[a.key] });
-      } else if (a.type === "start_dialogue" && a.dialogId) {
-        effects.push({ kind: "dialogue", dialogId: a.dialogId, name: dialogName(a.dialogId) });
-      } else if (a.type === "play_sound" && a.soundId) {
-        effects.push({ kind: "sound", soundId: a.soundId, volume: a.volume == null ? 1 : a.volume });
-      } else if (a.type === "open_puzzle" && a.puzzleId) {
-        effects.push({ kind: "puzzle", puzzleId: a.puzzleId });
-      }
-    });
+      });
+    };
+    traite(actions);
     return { inventory, vars, discovered, effects };
   }
   function summarizeEffects(effects) {
@@ -36055,7 +36064,14 @@
     ["set_variable", "Modifier une variable"],
     ["start_dialogue", "Lancer un dialogue"],
     ["play_sound", "Jouer un son"],
-    ["open_puzzle", "Ouvrir une \xE9nigme"]
+    ["open_puzzle", "Ouvrir une \xE9nigme"],
+    ["si", "Si\u2026 alors\u2026 sinon\u2026"],
+    ["hasard", "Au hasard"],
+    ["attendre", "Attendre"],
+    ["regarder", "Tourner la cam\xE9ra"],
+    ["secouer", "Secouer l'\xE9cran"],
+    ["vibrer", "Faire vibrer"],
+    ["image", "Montrer une image en grand"]
   ];
   var VARIABLE_TYPES = [["boolean", "Vrai / Faux"], ["number", "Nombre"], ["text", "Texte"]];
   var puzzleProviders = /* @__PURE__ */ new Map();
@@ -36656,6 +36672,131 @@
       `)
     );
   }
+  var TRANSITIONS_SCENE = [
+    ["", "Fondu encha\xEEn\xE9 (par d\xE9faut)"],
+    ["aucune", "Aucune, coupe franche"],
+    ["noir", "Fondu au noir"],
+    ["blanc", "Fondu au blanc"],
+    ["zoom", "Avancer vers le point"],
+    ["flou", "Flou"]
+  ];
+  var REPERES_POINT = [["invisible", "Invisible : le d\xE9cor suffit"], ["discret", "Anneau discret qui pulse"]];
+  var degres = (r) => Math.round((r * 180 / Math.PI % 360 + 360) % 360);
+  function texteRegard(v, vide) {
+    if (!v) return vide;
+    const haut = Math.abs(v.pitch) > 0.08 ? v.pitch > 0 ? ", un peu vers le haut" : ", un peu vers le bas" : "";
+    return "Regarde vers " + degres(v.yaw) + "\xB0" + haut;
+  }
+  function RegardChoix({ scene, value, onChange, vide = "Garde la direction actuelle" }) {
+    const [ouvert, setOuvert] = (0, import_react.useState)(false);
+    const pret = !!(scene && scene.image);
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-regard-choix": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11.5, color: value ? C.text : C.textDim, flex: 1, minWidth: 120 }, "data-regard-texte": true }, texteRegard(value, vide)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setOuvert(true), disabled: !pret, style: smallBtn, "data-regard-viser": true }, "\u25CE Viser dans la 360"), value && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(void 0), style: iconBtn, title: "Revenir \xE0 la direction par d\xE9faut" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), !pret && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 3 } }, "Choisis d'abord une sc\xE8ne qui a une image."), ouvert && pret && /* @__PURE__ */ import_react.default.createElement(
+      ScenePlacement,
+      {
+        scene,
+        unique: true,
+        reperes: value ? [{ id: "regard", yaw: value.yaw, pitch: value.pitch, taille: 30, label: "" }] : [],
+        onPose: (cible, yaw, pitch) => {
+          onChange({ yaw, pitch });
+          setOuvert(false);
+        },
+        onFerme: () => setOuvert(false)
+      }
+    ));
+  }
+  function TransitionChoix({ value, onChange }) {
+    return /* @__PURE__ */ import_react.default.createElement("select", { value: value || "", onChange: (e) => onChange(e.target.value || void 0), style: select, "data-transition": true }, TRANSITIONS_SCENE.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, l)));
+  }
+  function ImageChoix({ value, onChange, libelle = "Choisir une image" }) {
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6 } }, value && /* @__PURE__ */ import_react.default.createElement("img", { src: value, alt: "", style: { width: 54, height: 40, objectFit: "cover", borderRadius: 4, background: C.ink2 } }), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, display: "inline-flex", cursor: "pointer" } }, value ? "Remplacer" : libelle, /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*", hidden: true, onChange: async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        onChange(await prepareHomeImage(f, 2048));
+      } catch (err) {
+      }
+    } })), value && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(""), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })));
+  }
+  function VueDepartScene({ scene, onChange }) {
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 }, "data-vue-depart": true }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Vue en arrivant"), /* @__PURE__ */ import_react.default.createElement(RegardChoix, { scene, value: scene.regard, onChange, vide: "Garde la direction d'avant" }), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "4px 2px 0", lineHeight: 1.4 } }, "Chaque passage peut choisir sa propre vue ; celle-ci sert quand il ne dit rien."));
+  }
+  function VariantesScene({ scene, onChange, items, variables, puzzles, scenes }) {
+    const liste = scene.variantes || [];
+    const maj = (i, patch) => onChange(liste.map((v, k) => k === i ? { ...v, ...patch } : v));
+    const charger = (i, f) => {
+      const isHdr = /\.hdr$/i.test(f.name);
+      const r = new FileReader();
+      r.onload = () => maj(i, { image: r.result, imageFormat: isHdr ? "hdr" : void 0 });
+      r.readAsDataURL(f);
+    };
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 }, "data-variantes": true }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Variantes de la sc\xE8ne"), liste.map((v, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.id, style: { background: C.ink2, borderRadius: 6, padding: 6, marginBottom: 6 }, "data-variante": v.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: v.nom || "", onChange: (e) => maj(i, { nom: e.target.value }), style: { ...input, flex: 1, marginTop: 0 }, placeholder: "Porte ouverte" }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(liste.filter((_, k) => k !== i)), style: iconBtn, title: "Supprimer la variante" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6 } }, v.image && v.imageFormat !== "hdr" && /* @__PURE__ */ import_react.default.createElement("img", { src: v.image, alt: "", style: { width: 64, height: 32, objectFit: "cover", borderRadius: 4 } }), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...smallBtn, display: "inline-flex", cursor: "pointer" } }, v.image ? "Remplacer l'image" : "Choisir l'image 360\xB0", /* @__PURE__ */ import_react.default.createElement("input", { type: "file", accept: "image/*,.hdr", hidden: true, onChange: (e) => e.target.files[0] && charger(i, e.target.files[0]) }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "6px 0 2px" } }, "Montr\xE9e quand :"), /* @__PURE__ */ import_react.default.createElement(
+      RequirementsEditor,
+      {
+        requirements: v.conditions || [],
+        onChange: (c) => maj(i, { conditions: c }),
+        items,
+        variables,
+        puzzles,
+        scenes
+      }
+    ))), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => onChange([...liste, { id: "var_" + Math.random().toString(36).slice(2, 8), nom: "Variante " + (liste.length + 1), image: "", conditions: [] }]),
+        style: smallBtn,
+        "data-variante-ajout": true
+      },
+      /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }),
+      " Ajouter une variante"
+    ), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "4px 2px 0", lineHeight: 1.4 } }, "La premi\xE8re variante dont les conditions sont remplies remplace l'image. Les points restent les m\xEAmes."));
+  }
+  function ActionLot1({ a, update, items, scenes, variables, dialogues }) {
+    const sceneDe = (id) => scenes.find((s) => s.id === id) || null;
+    const champ = { ...input, width: 70, marginTop: 0 };
+    if (a.type === "si" || a.type === "hasard") {
+      const sous = (cle, titre) => /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6, paddingLeft: 8, borderLeft: `2px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginBottom: 4 } }, titre), /* @__PURE__ */ import_react.default.createElement(
+        ActionListEditor,
+        {
+          actions: a[cle] || [],
+          onChange: (l) => update({ [cle]: l }),
+          items,
+          scenes,
+          variables,
+          dialogues,
+          emptyText: "Rien."
+        }
+      ));
+      return /* @__PURE__ */ import_react.default.createElement("div", { "data-action-bloc": a.type }, a.type === "si" ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginBottom: 4 } }, "Si :"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: a.conditions || [], onChange: (c) => update({ conditions: c }), items, variables, puzzles: [], scenes })) : /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontFamily: sans, fontSize: 11.5 } }, "Chance : ", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", max: "100", value: a.chance == null ? 50 : a.chance, onChange: (e) => update({ chance: parseFloat(e.target.value) || 0 }), style: champ }), " %"), sous("alors", a.type === "si" ? "Alors :" : "Si le hasard dit oui :"), sous("sinon", "Sinon :"));
+    }
+    if (a.type === "attendre") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontFamily: sans, fontSize: 11.5 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0.1", step: "0.1", value: a.secondes || 1, onChange: (e) => update({ secondes: parseFloat(e.target.value) || 1 }), style: champ }), " seconde(s), puis la suite");
+    }
+    if (a.type === "regarder") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: a.sceneId || "", onChange: (e) => update({ sceneId: e.target.value }), style: { ...select, marginTop: 0 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 sc\xE8ne o\xF9 viser \u2014"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id))), /* @__PURE__ */ import_react.default.createElement(
+        RegardChoix,
+        {
+          scene: sceneDe(a.sceneId),
+          value: a.yaw == null ? void 0 : { yaw: a.yaw, pitch: a.pitch || 0 },
+          onChange: (v) => update(v ? { yaw: v.yaw, pitch: v.pitch } : { yaw: void 0, pitch: void 0 }),
+          vide: "Aucune direction choisie"
+        }
+      ), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontFamily: sans, fontSize: 11.5 } }, "En ", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", step: "0.1", value: a.duree == null ? 1.2 : a.duree, onChange: (e) => update({ duree: parseFloat(e.target.value) || 0 }), style: champ }), " s"));
+    }
+    if (a.type === "secouer") {
+      return /* @__PURE__ */ import_react.default.createElement("select", { value: a.force || "leger", onChange: (e) => update({ force: e.target.value }), style: { ...select, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "leger" }, "Secousse l\xE9g\xE8re"), /* @__PURE__ */ import_react.default.createElement("option", { value: "fort" }, "Grosse secousse"));
+    }
+    if (a.type === "vibrer") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontFamily: sans, fontSize: 11.5 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "10", max: "2000", step: "10", value: a.ms || 200, onChange: (e) => update({ ms: parseInt(e.target.value, 10) || 200 }), style: champ }), " millisecondes (t\xE9l\xE9phone)");
+    }
+    if (a.type === "image") {
+      return /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: a.image, onChange: (image) => update({ image }), libelle: "Choisir l'image" }), /* @__PURE__ */ import_react.default.createElement("input", { value: a.texte || "", onChange: (e) => update({ texte: e.target.value }), placeholder: "L\xE9gende (facultative)", style: { ...input, marginTop: 6 } }));
+    }
+    if (a.type === "navigate") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 4 } }, "Regard \xE0 l'arriv\xE9e"), /* @__PURE__ */ import_react.default.createElement(RegardChoix, { scene: sceneDe(a.target), value: a.regard, onChange: (regard) => update({ regard }), vide: "Vue de d\xE9part de la sc\xE8ne" }), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 6 } }, "Transition"), /* @__PURE__ */ import_react.default.createElement(TransitionChoix, { value: a.transition, onChange: (transition) => update({ transition }) }));
+    }
+    return null;
+  }
   function HotspotEditor({ hotspot, scenes, items, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -36666,6 +36807,10 @@
     const [puzzleId, setPuzzleId] = (0, import_react.useState)(hotspot.puzzleId || "");
     const [dialogId, setDialogId] = (0, import_react.useState)(hotspot.dialogId || "");
     const [size, setSize] = (0, import_react.useState)(hotspot.size || 36);
+    const [regard, setRegard] = (0, import_react.useState)(hotspot.regard);
+    const [transition, setTransition] = (0, import_react.useState)(hotspot.transition);
+    const [repere, setRepere] = (0, import_react.useState)(hotspot.repere || "invisible");
+    const [visibleSi, setVisibleSi] = (0, import_react.useState)(hotspot.visibleSi || []);
     const [newItemName, setNewItemName] = (0, import_react.useState)("");
     const [newItemDesc, setNewItemDesc] = (0, import_react.useState)("");
     const selectedPuzzle = puzzles.find((p) => p.id === puzzleId);
@@ -36683,7 +36828,11 @@
         // remplacé par requirements (voir getRequirements)
         puzzleId: type === "external_puzzle" || type === "puzzle" ? puzzleId : void 0,
         requirements: requirements.filter((r) => isVarReq(r) ? !!r.key : !!r.itemId),
-        size
+        size,
+        regard: type === "navigate" ? regard : void 0,
+        transition: type === "navigate" ? transition : void 0,
+        repere: repere === "invisible" ? void 0 : repere,
+        visibleSi: visibleSi.filter((r) => isVarReq(r) ? !!r.key : !!r.itemId)
       });
     };
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 360, maxHeight: "92vh", overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Configurer le point cliquable"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Type d'action"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, [
@@ -36693,7 +36842,7 @@
       ["dialogue", "Dialogue", SpeechIcon],
       ["puzzle", "\xC9nigme", Puzzle],
       ["external_puzzle", "\xC9nigme externe", Puzzle]
-    ].map(([v, l, Icon]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, onClick: () => setType(v), style: pillBtn(type === v) }, /* @__PURE__ */ import_react.default.createElement(Icon, { size: 13 }), " ", l))), type === "navigate" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8ne de destination"), /* @__PURE__ */ import_react.default.createElement("select", { value: target, onChange: (e) => setTarget(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id)))), type === "pickup_item" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Objet \xE0 ramasser"), /* @__PURE__ */ import_react.default.createElement("select", { value: itemId, onChange: (e) => setItemId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), items.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Quantit\xE9 obtenue"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", value: amount, onChange: (e) => setAmount(parseInt(e.target.value) || 1), style: { ...input, width: 90 } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Ou cr\xE9er un nouvel objet"), /* @__PURE__ */ import_react.default.createElement("input", { placeholder: "Nom", value: newItemName, onChange: (e) => setNewItemName(e.target.value), style: input }), /* @__PURE__ */ import_react.default.createElement("textarea", { placeholder: "Description", value: newItemDesc, onChange: (e) => setNewItemDesc(e.target.value), style: { ...input, minHeight: 44, resize: "vertical" } }), /* @__PURE__ */ import_react.default.createElement(
+    ].map(([v, l, Icon]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, onClick: () => setType(v), style: pillBtn(type === v) }, /* @__PURE__ */ import_react.default.createElement(Icon, { size: 13 }), " ", l))), type === "navigate" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8ne de destination"), /* @__PURE__ */ import_react.default.createElement("select", { value: target, onChange: (e) => setTarget(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Regard \xE0 l'arriv\xE9e"), /* @__PURE__ */ import_react.default.createElement(RegardChoix, { scene: scenes.find((s) => s.id === target) || null, value: regard, onChange: setRegard, vide: "Vue de d\xE9part de la sc\xE8ne" }), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Transition"), /* @__PURE__ */ import_react.default.createElement(TransitionChoix, { value: transition, onChange: setTransition })), type === "pickup_item" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Objet \xE0 ramasser"), /* @__PURE__ */ import_react.default.createElement("select", { value: itemId, onChange: (e) => setItemId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), items.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Quantit\xE9 obtenue"), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", value: amount, onChange: (e) => setAmount(parseInt(e.target.value) || 1), style: { ...input, width: 90 } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Ou cr\xE9er un nouvel objet"), /* @__PURE__ */ import_react.default.createElement("input", { placeholder: "Nom", value: newItemName, onChange: (e) => setNewItemName(e.target.value), style: input }), /* @__PURE__ */ import_react.default.createElement("textarea", { placeholder: "Description", value: newItemDesc, onChange: (e) => setNewItemDesc(e.target.value), style: { ...input, minHeight: 44, resize: "vertical" } }), /* @__PURE__ */ import_react.default.createElement(
       "button",
       {
         style: { ...smallBtn, marginTop: 6 },
@@ -36710,7 +36859,7 @@
     ))), type === "dialogue" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Dialogue \xE0 lancer"), /* @__PURE__ */ import_react.default.createElement("select", { value: dialogId, onChange: (e) => setDialogId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), dialogues.map((d) => /* @__PURE__ */ import_react.default.createElement("option", { key: d.id, value: d.id }, d.name || d.id))), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "6px 2px 0" } }, "Les dialogues s'\xE9crivent dans \xAB Dialogues \xBB. Le mode de r\xE9p\xE9tition \u2014 une seule fois, \xE0 chaque fois \u2014 se r\xE8gle sur le dialogue lui-m\xEAme.")), type === "show_text" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Texte affich\xE9"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), style: { ...input, minHeight: 70, resize: "vertical" } })), type === "puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select, "data-hs-puzzle": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter(puzzleIsNative).map((p) => {
       const t = getPuzzleType(p.kind);
       return /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, (t ? t.icon + " " : "") + (p.title || "\xC9nigme sans nom"));
-    })), !puzzles.some(puzzleIsNative) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 6, lineHeight: 1.5 }, "data-hs-nopuzzle": true }, "Aucune \xE9nigme pour l'instant. Elles se fabriquent dans l'onglet \xAB \xC9nigmes \xBB."), puzzleId && !puzzles.some((p) => p.id === puzzleId) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6, fontFamily: sans } }, "Cette \xE9nigme n'existe plus : choisis-en une autre.")), type === "external_puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme externe"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter((p) => !puzzleIsNative(p)).map((p) => /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, p.title || "\xC9nigme sans nom"))), selectedPuzzle && selectedProvider && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6, fontFamily: sans, fontSize: 12 } }, /* @__PURE__ */ import_react.default.createElement("div", null, selectedProvider.icon, " ", selectedProvider.name), /* @__PURE__ */ import_react.default.createElement(LevelBadge, { level: selectedProvider.level, small: true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim, fontSize: 11, marginTop: 3 } }, PUZZLE_DISPLAY_MODES[selectedPuzzle.displayMode], selectedPuzzle.resultMode === "code" ? " \xB7 validation par code" : selectedPuzzle.resultMode === "provider" ? " \xB7 r\xE9sultat renvoy\xE9 par l'application" : " \xB7 sans validation"), !validateUrl(resolvePuzzleUrl(selectedPuzzle)).ok && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 3 } }, "\u26A0 Adresse \xE0 renseigner dans \xAB Configurer \xBB.")), puzzleId && !selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6 } }, "Cette \xE9nigme n'existe plus : choisis-en une autre."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleId(onCreatePuzzle()), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Nouvelle \xE9nigme"), selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onManagePuzzle(puzzleId), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 12 }), " Configurer"))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille de la zone cliquable \u2014 ", size, "px"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "16", max: "1000", step: "10", value: size, onChange: (e) => setSize(parseInt(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    })), !puzzles.some(puzzleIsNative) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 6, lineHeight: 1.5 }, "data-hs-nopuzzle": true }, "Aucune \xE9nigme pour l'instant. Elles se fabriquent dans l'onglet \xAB \xC9nigmes \xBB."), puzzleId && !puzzles.some((p) => p.id === puzzleId) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6, fontFamily: sans } }, "Cette \xE9nigme n'existe plus : choisis-en une autre.")), type === "external_puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme externe"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter((p) => !puzzleIsNative(p)).map((p) => /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, p.title || "\xC9nigme sans nom"))), selectedPuzzle && selectedProvider && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6, fontFamily: sans, fontSize: 12 } }, /* @__PURE__ */ import_react.default.createElement("div", null, selectedProvider.icon, " ", selectedProvider.name), /* @__PURE__ */ import_react.default.createElement(LevelBadge, { level: selectedProvider.level, small: true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim, fontSize: 11, marginTop: 3 } }, PUZZLE_DISPLAY_MODES[selectedPuzzle.displayMode], selectedPuzzle.resultMode === "code" ? " \xB7 validation par code" : selectedPuzzle.resultMode === "provider" ? " \xB7 r\xE9sultat renvoy\xE9 par l'application" : " \xB7 sans validation"), !validateUrl(resolvePuzzleUrl(selectedPuzzle)).ok && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 3 } }, "\u26A0 Adresse \xE0 renseigner dans \xAB Configurer \xBB.")), puzzleId && !selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6 } }, "Cette \xE9nigme n'existe plus : choisis-en une autre."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleId(onCreatePuzzle()), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Nouvelle \xE9nigme"), selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onManagePuzzle(puzzleId), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 12 }), " Configurer"))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille de la zone cliquable \u2014 ", size, "px"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "16", max: "1000", step: "10", value: size, onChange: (e) => setSize(parseInt(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Rep\xE8re dans le jeu"), /* @__PURE__ */ import_react.default.createElement("select", { value: repere, onChange: (e) => setRepere(e.target.value), style: select, "data-hs-repere": true }, REPERES_POINT.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, l))), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "4px 2px 0", lineHeight: 1.4 } }, "L'anneau se calme une fois le lieu visit\xE9, montre un cadenas tant que c'est ferm\xE9 et une coche une fois l'\xE9nigme r\xE9solue."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Visible seulement si (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: visibleSi, onChange: setVisibleSi, items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function LevelBadge({ level, small }) {
     const L = PUZZLE_LEVELS[level] || PUZZLE_LEVELS.link;
@@ -36764,6 +36913,13 @@
     if (type === "start_dialogue") return { type, dialogId: "" };
     if (type === "play_sound") return { type, soundId: "", volume: 1 };
     if (type === "open_puzzle") return { type, puzzleId: "" };
+    if (type === "si") return { type, conditions: [], alors: [], sinon: [] };
+    if (type === "hasard") return { type, chance: 50, alors: [], sinon: [] };
+    if (type === "attendre") return { type, secondes: 1 };
+    if (type === "regarder") return { type, sceneId: "", duree: 1.2 };
+    if (type === "secouer") return { type, force: "leger" };
+    if (type === "vibrer") return { type, ms: 200 };
+    if (type === "image") return { type, image: "", texte: "" };
     return { type: "show_text", text: "" };
   };
   function ActionListEditor({ actions, onChange, items, scenes, variables, dialogues = [], emptyText }) {
@@ -36811,7 +36967,7 @@
       },
       /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 variable \u2014"),
       variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))
-    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
+    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
   }
   var SectionTitle = ({ children, hint }) => /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 16, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: 0.5 } }, children), hint && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 2, lineHeight: 1.4 } }, hint));
   function PuzzleEditor({ draft, setDraft, items, scenes, variables, puzzles, dialogues = [] }) {
@@ -48961,7 +49117,7 @@
       return v ? (v.label || "") + " " + k : k;
     };
     const reqText = (reqs) => (reqs || []).forEach((r) => out.push(isVarReq(r) ? varName(r.key) : itemName(r.itemId)));
-    const actText = (acts) => (acts || []).forEach((a) => {
+    const actText = (acts) => aplatirActions(acts).forEach((a) => {
       if (a.type === "give_item" || a.type === "remove_item") out.push(itemName(a.itemId));
       else if (a.type === "set_variable") out.push(varName(a.key));
       else if (a.type === "show_text") out.push(a.text);
@@ -48995,7 +49151,7 @@
         if (r.consume) takes++;
       }
     });
-    const acts = (list) => (list || []).forEach((a) => {
+    const acts = (list) => aplatirActions(list).forEach((a) => {
       if (!a) return;
       if (ref.kind === "item") {
         if (a.type === "give_item" && a.itemId === ref.id) gives++;
@@ -50346,6 +50502,29 @@
       ));
     })));
   }
+  function normRegard(r) {
+    if (!r || typeof r !== "object") return void 0;
+    const y = parseFloat(r.yaw), p = parseFloat(r.pitch);
+    return isFinite(y) ? { yaw: y, pitch: isFinite(p) ? Math.max(-1.55, Math.min(1.55, p)) : 0 } : void 0;
+  }
+  var TRANSITIONS_OK = { aucune: 1, fondu: 1, noir: 1, blanc: 1, zoom: 1, flou: 1 };
+  function normTransition(t) {
+    return TRANSITIONS_OK[t] ? t : void 0;
+  }
+  function aplatirActions(liste) {
+    const out = [];
+    (liste || []).forEach(function(a) {
+      if (!a) return;
+      out.push(a);
+      if (Array.isArray(a.alors)) aplatirActions(a.alors).forEach(function(x) {
+        out.push(x);
+      });
+      if (Array.isArray(a.sinon)) aplatirActions(a.sinon).forEach(function(x) {
+        out.push(x);
+      });
+    });
+    return out;
+  }
   function normalizeAction(a) {
     if (!a || typeof a !== "object") return null;
     const amount = Math.max(1, parseInt(a.amount, 10) || 1);
@@ -50356,7 +50535,23 @@
       case "unlock_scene":
         return a.sceneId ? { type: a.type, sceneId: String(a.sceneId) } : null;
       case "navigate":
-        return a.target ? { type: a.type, target: String(a.target) } : null;
+        return a.target ? { type: a.type, target: String(a.target), regard: normRegard(a.regard), transition: normTransition(a.transition) } : null;
+      case "si":
+        return { type: a.type, conditions: normalizeRequirements(a.conditions), alors: normalizeActions(a.alors), sinon: normalizeActions(a.sinon) };
+      case "hasard":
+        return { type: a.type, chance: isFinite(parseFloat(a.chance)) ? Math.max(0, Math.min(100, parseFloat(a.chance))) : 50, alors: normalizeActions(a.alors), sinon: normalizeActions(a.sinon) };
+      case "attendre":
+        return { type: a.type, secondes: Math.max(0.1, Math.min(600, parseFloat(a.secondes) || 1)) };
+      case "regarder": {
+        const r = normRegard(a);
+        return r ? { type: a.type, yaw: r.yaw, pitch: r.pitch, sceneId: a.sceneId ? String(a.sceneId) : "", duree: Math.max(0, Math.min(20, isFinite(parseFloat(a.duree)) ? parseFloat(a.duree) : 1.2)) } : null;
+      }
+      case "secouer":
+        return { type: a.type, force: a.force === "fort" ? "fort" : "leger" };
+      case "vibrer":
+        return { type: a.type, ms: Math.max(10, Math.min(2e3, parseInt(a.ms, 10) || 200)) };
+      case "image":
+        return a.image ? { type: a.type, image: String(a.image), texte: a.texte ? String(a.texte) : "" } : null;
       case "show_text":
         return a.text ? { type: a.type, text: String(a.text) } : null;
       case "set_variable":
@@ -68024,6 +68219,34 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
   .hs{position:absolute;border-radius:50%;pointer-events:none;
       display:flex;align-items:center;justify-content:center;cursor:inherit;
       transform:translate(-50%,-50%);opacity:0;background:transparent;border:none}
+  .hs.hs-discret{opacity:1}
+  .hs.hs-discret::before{content:"";box-sizing:border-box;width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 3px rgba(0,0,0,.25),0 0 14px rgba(255,255,255,.35);animation:hs-pulse 2.4s ease-in-out infinite;display:flex;align-items:center;justify-content:center;font:700 14px/1 system-ui,sans-serif;color:#fff}
+  .hs.hs-discret.hs-vu::before{animation:none;opacity:.5}
+  .hs.hs-discret.hs-fait::before{content:"\u2713";animation:none;opacity:.7;background:rgba(0,0,0,.35)}
+  .hs.hs-discret.locked::before{content:"\u{1F512}";animation:none;font-size:13px;background:rgba(0,0,0,.45)}
+  @keyframes hs-pulse{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.22);opacity:.55}}
+  .tr-voile{position:absolute;inset:0;z-index:20;pointer-events:none;overflow:hidden}
+  .tr-image{position:absolute;inset:0;width:100%;height:100%}
+  .tr-couleur{position:absolute;inset:0;background:#000;opacity:0}
+  .tr-blanc .tr-couleur{background:#fff}
+  .tr-fondu.tr-go{transition:opacity .6s ease;opacity:0}
+  .tr-noir.tr-go,.tr-blanc.tr-go{animation:tr-fin .9s ease forwards}
+  .tr-noir.tr-go .tr-couleur,.tr-blanc.tr-go .tr-couleur{animation:tr-couvre .9s ease forwards}
+  @keyframes tr-couvre{0%{opacity:0}45%{opacity:1}100%{opacity:1}}
+  @keyframes tr-fin{0%,50%{opacity:1}100%{opacity:0}}
+  .tr-zoom .tr-image{transition:transform .7s cubic-bezier(.5,0,.75,0),opacity .7s ease}
+  .tr-zoom.tr-go .tr-image{transform:scale(2.4);opacity:0}
+  .tr-flou .tr-image{transition:filter .7s ease,opacity .7s ease}
+  .tr-flou.tr-go .tr-image{filter:blur(16px);opacity:0}
+  #viewer.tr-secoue{animation:tr-secoue .45s ease}
+  #viewer.tr-secoue-fort{animation:tr-secoue-fort .7s ease}
+  @keyframes tr-secoue{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
+  @keyframes tr-secoue-fort{0%,100%{transform:none}15%{transform:translate(-16px,8px) rotate(-1deg)}30%{transform:translate(14px,-10px) rotate(1deg)}45%{transform:translate(-12px,6px)}60%{transform:translate(9px,-5px)}80%{transform:translate(-4px,2px)}}
+  .img-grande{position:absolute;inset:0;z-index:60;background:rgba(5,7,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;box-sizing:border-box;animation:tr-apparait .25s ease}
+  .img-grande img{max-width:100%;max-height:78%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .img-grande p{margin:0;color:#E9E6DD;font:15px/1.5 system-ui,sans-serif;text-align:center;max-width:520px}
+  .img-grande span{color:#8B8FA3;font:13px system-ui,sans-serif}
+  @keyframes tr-apparait{from{opacity:0}to{opacity:1}}
   .ly{position:absolute;transform:translate(-50%,-100%);pointer-events:none;
       filter:drop-shadow(0 6px 14px rgba(0,0,0,.5))}
   #narration{max-width:460px}
@@ -68349,7 +68572,7 @@ function applyActions(state, actions, game) {
   const sceneName = function (id) { const s = scenes.find(function (x) { return x.id === id; }); return s ? (s.name || s.id) : id; };
   const dialogs = (game && game.dialogues) || [];
   const dialogName = function (id) { const d = dialogs.find(function (x) { return x.id === id; }); return d ? (d.name || d.id) : id; };
-  (actions || []).forEach(function (a) {
+  const traite = function (liste) { (liste || []).forEach(function (a) {
     if (!a || !a.type) return;
     const n = Math.max(1, parseInt(a.amount, 10) || 1);
     if (a.type === "give_item" && a.itemId) {
@@ -68364,7 +68587,7 @@ function applyActions(state, actions, game) {
       if (discovered.indexOf(a.sceneId) < 0) discovered.push(a.sceneId);
       effects.push({ kind: "unlock", sceneId: a.sceneId, name: sceneName(a.sceneId) });
     } else if (a.type === "navigate" && a.target) {
-      effects.push({ kind: "navigate", target: a.target, name: sceneName(a.target) });
+      effects.push({ kind: "navigate", target: a.target, name: sceneName(a.target), regard: a.regard || null, transition: a.transition || "" });
     } else if (a.type === "show_text") {
       if (a.text) effects.push({ kind: "text", text: String(a.text) });
     } else if (a.type === "set_variable" && a.key) {
@@ -68379,8 +68602,16 @@ function applyActions(state, actions, game) {
     } else if (a.type === "open_puzzle" && a.puzzleId) {
       // M\xEAme principe : on d\xE9crit l'intention, le player l'ex\xE9cute.
       effects.push({ kind: "puzzle", puzzleId: a.puzzleId });
+    } else if (a.type === "si") {
+      traite(reqMissing(a.conditions || [], inventory, vars).length ? a.sinon : a.alors);
+    } else if (a.type === "hasard") {
+      traite(Math.random() * 100 < (a.chance == null ? 50 : a.chance) ? a.alors : a.sinon);
+    } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
+      // Des effets de mise en sc\xE8ne : le jeu les joue, la fonction reste pure.
+      effects.push({ kind: a.type, action: a });
     }
-  });
+  }); };
+  traite(actions);
   return { inventory: inventory, vars: vars, discovered: discovered, effects: effects };
 }
 function summarizeEffects(effects) {
@@ -68610,25 +68841,133 @@ function decodeHDRToCanvas(dataUrl, exposure){
   ctx.putImageData(img,0,0); return canvas;
 }
 
-function loadScene(id){
-  if(activeP && activeP.mode === 'scene' && activeP.p.params && activeP.p.params.sceneId !== id) closePuzzle();
-  if(current && current.id !== id) sceneAbandons = {};
-  current = GAME.scenes.find(s=>s.id===id) || current;
-  discovered.add(current.id);
-  if(current.image){
-    const onOk = tex=>{ mat.map=tex; mat.color.set(0xffffff); mat.needsUpdate=true; };
-    const onFail = ()=>{ mat.map=null; mat.color.set(0x2a2f3f); mat.needsUpdate=true; };
-    if(current.imageFormat==='hdr'){
-      const hdrSrc = current.image;
+/*  Lot 1. Une variante remplace l'image quand ses conditions sont
+    remplies ; la premiere qui convient l'emporte.                    */
+function imageDeScene(s){
+  const vs = (s && s.variantes) || [];
+  for(let i = 0; i < vs.length; i++){
+    const v = vs[i];
+    if(v && v.image && !reqMissing(v.conditions || [], inventory, vars).length) return v;
+  }
+  return s || {};
+}
+let imageAffichee = null, texturePrete = true;
+function chargerImageScene(force){
+  const vImg = imageDeScene(current);
+  const cle = vImg.image || null;
+  if(!force && cle === imageAffichee) return;
+  imageAffichee = cle;
+  texturePrete = false;
+  if(vImg.image){
+    const onOk = tex=>{ texturePrete = true; mat.map=tex; mat.color.set(0xffffff); mat.needsUpdate=true; };
+    const onFail = ()=>{ texturePrete = true; mat.map=null; mat.color.set(0x2a2f3f); mat.needsUpdate=true; };
+    if(vImg.imageFormat==='hdr'){
+      const hdrSrc = vImg.image;
       const asData = hdrSrc.indexOf('data:')===0 ? Promise.resolve(hdrSrc)
         : fetch(hdrSrc).then(r=>r.blob()).then(b=>new Promise((ok,ko)=>{ const fr=new FileReader(); fr.onload=()=>ok(fr.result); fr.onerror=ko; fr.readAsDataURL(b); }));
-      asData.then(d=>{ if(current.image!==hdrSrc) return; try{ onOk(new THREE.CanvasTexture(decodeHDRToCanvas(d,1))); }catch(e){ console.error(e); onFail(); } }).catch(onFail);
+      asData.then(d=>{ if(imageAffichee!==hdrSrc) return; try{ onOk(new THREE.CanvasTexture(decodeHDRToCanvas(d,1))); }catch(e){ console.error(e); onFail(); } }).catch(onFail);
     } else {
-      loader.load(current.image, onOk, undefined, onFail);
+      loader.load(vImg.image, onOk, undefined, onFail);
     }
   } else {
     mat.map=null; mat.color.set(0x2a2f3f); mat.needsUpdate=true;
   }
+  if(!vImg.image) texturePrete = true;
+}
+/*  Le passage demande par une action \xAB Aller vers une scene \xBB.       */
+let passageDemande = null;
+/*  Ou regarder en arrivant, et le champ de vision propre a la scene. */
+let vueFaite = false;
+function appliquerVue(passage, change){
+  const premier = !vueFaite; vueFaite = true;
+  const rg = (passage && passage.regard) || ((change || premier) ? current.regard : null);
+  if(rg && isFinite(rg.yaw)){ yaw = rg.yaw; pitch = rg.pitch || 0; }
+  const f = current.fov || HUD.cameraFov || 75;
+  if(change && passage && passage.transition === 'zoom') animerFov(f * 0.62, f, 700);
+  else { camera.fov = f; camera.updateProjectionMatrix(); }
+}
+/*  Les petites animations de camera, jouees a chaque image.          */
+var animsCamera = [];
+function adoucir(k){ return k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
+function animerFov(de, a, ms){
+  const t0 = performance.now();
+  camera.fov = de; camera.updateProjectionMatrix();
+  animsCamera.push(function(t){
+    const k = Math.min(1, (t - t0) / ms);
+    camera.fov = de + (a - de) * adoucir(k); camera.updateProjectionMatrix(); needsRedraw();
+    return k >= 1;
+  });
+}
+function animerRegard(cible, secondes){
+  const y0 = yaw, p0 = pitch;
+  let dy = cible.yaw - y0; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  const ms = Math.max(0, secondes || 0) * 1000, t0 = performance.now();
+  if(ms <= 0){ yaw = y0 + dy; pitch = cible.pitch || 0; needsRedraw(); return; }
+  animsCamera.push(function(t){
+    const k = Math.min(1, (t - t0) / ms), e = adoucir(k);
+    yaw = y0 + dy * e; pitch = p0 + ((cible.pitch || 0) - p0) * e; needsRedraw();
+    return k >= 1;
+  });
+}
+/*  Transitions : on fige l'image d'avant dans un calque pose dessus,
+    la nouvelle scene se charge dessous, puis le calque s'efface.     */
+function faireTransition(type, ox, oy){
+  if(!type || type === 'aucune') return;
+  try{ if(HomeSettings.get().reduceMotion) type = 'fondu'; }catch(e){}
+  const cv = document.createElement('canvas');
+  cv.width = renderer.domElement.width; cv.height = renderer.domElement.height;
+  try{ renderer.render(scene, camera); cv.getContext('2d').drawImage(renderer.domElement, 0, 0); }catch(e){ return; }
+  const voile = document.createElement('div');
+  voile.className = 'tr-voile tr-' + type;
+  cv.className = 'tr-image';
+  voile.appendChild(cv);
+  if(type === 'noir' || type === 'blanc') voile.appendChild(mk('div', 'tr-couleur'));
+  if(type === 'zoom'){
+    const w = mount.clientWidth || 1, h = mount.clientHeight || 1;
+    cv.style.transformOrigin = (ox == null ? 50 : ox / w * 100) + '% ' + (oy == null ? 50 : oy / h * 100) + '%';
+  }
+  mount.appendChild(voile);
+  const debut = Date.now();
+  const lance = function(){
+    if(!texturePrete && Date.now() - debut < 1500){ setTimeout(lance, 40); return; }
+    voile.classList.add('tr-go');
+    setTimeout(function(){ try{ voile.remove(); }catch(e){} }, 1300);
+  };
+  setTimeout(lance, 30);
+}
+/*  Les effets de mise en scene rendus par les actions.               */
+function effetsScene(effects){
+  (effects || []).forEach(function(e){
+    if(e.kind === 'navigate') passageDemande = { cible: e.target, regard: e.regard || null, transition: e.transition || '' };
+    else if(e.kind === 'regarder') animerRegard(e.action, e.action.duree);
+    else if(e.kind === 'secouer'){
+      const c = e.action.force === 'fort' ? 'tr-secoue-fort' : 'tr-secoue';
+      mount.classList.remove('tr-secoue', 'tr-secoue-fort'); void mount.offsetWidth; mount.classList.add(c);
+      setTimeout(function(){ mount.classList.remove(c); }, 800);
+    }
+    else if(e.kind === 'vibrer'){ try{ if(navigator.vibrate) navigator.vibrate(e.action.ms || 200); }catch(err){} }
+    else if(e.kind === 'image') montrerImage(e.action.image, e.action.texte);
+  });
+}
+function montrerImage(image, texte){
+  const fond = mk('div', 'img-grande');
+  const im = document.createElement('img'); im.src = image; im.alt = texte || ''; fond.appendChild(im);
+  if(texte) fond.appendChild(mk('p', '', texte));
+  fond.appendChild(mk('span', '', 'Touche pour fermer'));
+  fond.addEventListener('click', function(){ fond.remove(); });
+  document.getElementById('phone-frame').appendChild(fond);
+}
+function loadScene(id, passage){
+  if(!passage && passageDemande && passageDemande.cible === id) passage = passageDemande;
+  passageDemande = null;
+  const change = !!(current && current.id !== id);
+  if(change && playerScreen === 'playing') faireTransition(passage && passage.transition ? passage.transition : 'fondu', passage && passage.ox, passage && passage.oy);
+  if(activeP && activeP.mode === 'scene' && activeP.p.params && activeP.p.params.sceneId !== id) closePuzzle();
+  if(current && current.id !== id) sceneAbandons = {};
+  current = GAME.scenes.find(s=>s.id===id) || current;
+  discovered.add(current.id);
+  chargerImageScene(true);
+  appliquerVue(passage, change);
   renderHotspots();
   renderLayers();
   syncMusic();
@@ -68678,7 +69017,11 @@ function renderHotspots(){
   (current.hotspots||[]).forEach(hs=>{
     const el=document.createElement('div');
     const locked = missingRequirements(hs, inventory, vars).length > 0;
-    el.className='hs'+(locked?' locked':'');
+    let cls = 'hs' + (locked ? ' locked' : '') + ' hs-' + (hs.repere || 'invisible');
+    if((hs.type === 'puzzle' || hs.type === 'external_puzzle') && hs.puzzleId && vars[puzzleVarKey(hs.puzzleId)]) cls += ' hs-fait';
+    else if(hs.type === 'navigate' && hs.target && discovered.has(hs.target)) cls += ' hs-vu';
+    el.className = cls;
+    if(hs.visibleSi && hs.visibleSi.length && reqMissing(hs.visibleSi, inventory, vars).length) el.setAttribute('data-cache', '1');
     const sz = hs.size || 36;
     el.style.width = sz+'px'; el.style.height = sz+'px';
     mount.appendChild(el); markerEls.push(el);
@@ -68909,6 +69252,25 @@ function syncAmbience(){
 /*  Deplace ici pour etre disponible aussi dans le player : les       */
 /*  dialogues en ont besoin au moment ou ils sont ouverts.            */
 /* ------------------------------------------------------------------ */
+/*  Lot 1 : une direction de regard, une transition, et la liste \xE0 plat
+    des actions (celles rang\xE9es dans \xAB si \xBB et \xAB au hasard \xBB comprises). */
+function normRegard(r) {
+  if (!r || typeof r !== "object") return undefined;
+  const y = parseFloat(r.yaw), p = parseFloat(r.pitch);
+  return isFinite(y) ? { yaw: y, pitch: isFinite(p) ? Math.max(-1.55, Math.min(1.55, p)) : 0 } : undefined;
+}
+const TRANSITIONS_OK = { aucune: 1, fondu: 1, noir: 1, blanc: 1, zoom: 1, flou: 1 };
+function normTransition(t) { return TRANSITIONS_OK[t] ? t : undefined; }
+function aplatirActions(liste) {
+  const out = [];
+  (liste || []).forEach(function (a) {
+    if (!a) return;
+    out.push(a);
+    if (Array.isArray(a.alors)) aplatirActions(a.alors).forEach(function (x) { out.push(x); });
+    if (Array.isArray(a.sinon)) aplatirActions(a.sinon).forEach(function (x) { out.push(x); });
+  });
+  return out;
+}
 function normalizeAction(a) {
   if (!a || typeof a !== "object") return null;
   const amount = Math.max(1, parseInt(a.amount, 10) || 1);
@@ -68916,7 +69278,17 @@ function normalizeAction(a) {
     case "give_item":
     case "remove_item": return a.itemId ? { type: a.type, itemId: String(a.itemId), amount: amount } : null;
     case "unlock_scene": return a.sceneId ? { type: a.type, sceneId: String(a.sceneId) } : null;
-    case "navigate": return a.target ? { type: a.type, target: String(a.target) } : null;
+    case "navigate": return a.target ? { type: a.type, target: String(a.target), regard: normRegard(a.regard), transition: normTransition(a.transition) } : null;
+    case "si": return { type: a.type, conditions: normalizeRequirements(a.conditions), alors: normalizeActions(a.alors), sinon: normalizeActions(a.sinon) };
+    case "hasard": return { type: a.type, chance: isFinite(parseFloat(a.chance)) ? Math.max(0, Math.min(100, parseFloat(a.chance))) : 50, alors: normalizeActions(a.alors), sinon: normalizeActions(a.sinon) };
+    case "attendre": return { type: a.type, secondes: Math.max(0.1, Math.min(600, parseFloat(a.secondes) || 1)) };
+    case "regarder": {
+      const r = normRegard(a);
+      return r ? { type: a.type, yaw: r.yaw, pitch: r.pitch, sceneId: a.sceneId ? String(a.sceneId) : "", duree: Math.max(0, Math.min(20, isFinite(parseFloat(a.duree)) ? parseFloat(a.duree) : 1.2)) } : null;
+    }
+    case "secouer": return { type: a.type, force: a.force === "fort" ? "fort" : "leger" };
+    case "vibrer": return { type: a.type, ms: Math.max(10, Math.min(2000, parseInt(a.ms, 10) || 200)) };
+    case "image": return a.image ? { type: a.type, image: String(a.image), texte: a.texte ? String(a.texte) : "" } : null;
     case "show_text": return a.text ? { type: a.type, text: String(a.text) } : null;
     case "set_variable": return a.key ? { type: a.type, key: slugKey(a.key), value: cleanValue(a.value) } : null;
     case "start_dialogue": return a.dialogId ? { type: a.type, dialogId: String(a.dialogId) } : null;
@@ -82975,12 +83347,31 @@ function openPuzzleEffects(effects){
   (effects || []).forEach(function(e){ if(e.kind === 'puzzle') ouvert = e.puzzleId; });
   if(ouvert && !activeP) openPuzzle({ puzzleId: ouvert }, []);
 }
+/*  \xAB Attendre \xBB coupe la liste : la suite part apres le delai, comme
+    si elle avait ete declenchee a ce moment-la.                      */
 function runActions(actions){
+  const liste = actions || [];
+  let k = -1;
+  for(let i = 0; i < liste.length; i++){ if(liste[i] && liste[i].type === 'attendre'){ k = i; break; } }
+  if(k < 0) return runActionsNow(liste);
+  const eff = runActionsNow(liste.slice(0, k));
+  const reste = liste.slice(k + 1), ms = Math.round((liste[k].secondes || 1) * 1000);
+  setTimeout(function(){
+    const e2 = runActions(reste);
+    const d = pickDialogue(e2);
+    if(d && playerScreen === 'playing') openDialogue(d);
+    const nav = pickNavigate(e2, null);
+    if(nav && (!current || nav !== current.id)) loadScene(nav);
+  }, ms);
+  return eff;
+}
+function runActionsNow(actions){
   const res = applyActions({ inventory: inventory, vars: vars, discovered: Array.from(discovered) }, actions, dialogGame());
   inventory = res.inventory; vars = res.vars;
   res.discovered.forEach(function(id){ discovered.add(id); });
   try{ playSoundEffects(res.effects); }catch(e){}
   try{ openPuzzleEffects(res.effects); }catch(e){}
+  try{ effetsScene(res.effects); chargerImageScene(false); }catch(e){}
   renderHotspots();
   hudSync();
   try{ hudNotifyEffects(res.effects); }catch(e){}
@@ -85411,7 +85802,10 @@ function activate(hs){
   }
   reqs.forEach(r=>{ if(!isVarReq(r) && r.consume) inventory[r.itemId] = Math.max(0, (inventory[r.itemId]||0) - (r.qty||1)); });
   saveGame();
-  if(hs.type==='navigate' && hs.target){ loadScene(hs.target); }
+  if(hs.type==='navigate' && hs.target){
+    const ix = (current.hotspots||[]).indexOf(hs), mel = markerEls[ix];
+    loadScene(hs.target, { regard: hs.regard || null, transition: hs.transition || '', ox: mel ? parseFloat(mel.style.left) : null, oy: mel ? parseFloat(mel.style.top) : null });
+  }
   else if(hs.type==='pickup_item' && hs.item){
     inventory[hs.item] = (inventory[hs.item]||0) + (hs.amount||1);
     saveGame();
@@ -85739,7 +86133,7 @@ function project(){
     const p=dir.clone().multiplyScalar(100);
     const ndc=p.clone().project(camera);
     const el=markerEls[i]; if(!el) return;
-    if(ndc.z>1){ el.style.display='none'; return; }
+    if(ndc.z>1 || el.getAttribute('data-cache')){ el.style.display='none'; return; }
     el.style.display='flex';
     el.style.left=((ndc.x*0.5+0.5)*w)+'px';
     el.style.top=((-ndc.y*0.5+0.5)*h)+'px';
@@ -85766,6 +86160,7 @@ function project(){
 var idleFrames = 0;
 function needsRedraw(){ idleFrames = 0; }
 function loop(){
+  if(animsCamera.length){ const t = performance.now(); animsCamera = animsCamera.filter(function(f){ return !f(t); }); }
   camera.rotation.set(pitch,yaw,0,'YXZ');
   // la scene 360 ne bouge pas pendant un dialogue : on arrete de la redessiner
   const frozen = playerScreen === 'dialogue' && idleFrames > 4;
@@ -87722,6 +88117,16 @@ loop();
       },
       /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!scene.locked, onChange: (e) => updateScene(scene.id, { locked: e.target.checked }), style: { marginTop: 2 } }),
       "Sc\xE8ne verrouill\xE9e jusqu'\xE0 son d\xE9blocage"
+    ), /* @__PURE__ */ import_react.default.createElement(VueDepartScene, { scene, onChange: (regard) => updateScene(scene.id, { regard }) }), /* @__PURE__ */ import_react.default.createElement(
+      VariantesScene,
+      {
+        scene,
+        onChange: (variantes) => updateScene(scene.id, { variantes }),
+        items,
+        variables,
+        puzzles,
+        scenes
+      }
     ), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {

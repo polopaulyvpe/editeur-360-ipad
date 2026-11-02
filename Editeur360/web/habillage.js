@@ -488,7 +488,9 @@
   function decouper(p, fin) {
     var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); });
     // Le bouton principal en bas d'une fenêtre reste toujours visible.
-    if (kids.length && kids[kids.length - 1].tagName === "BUTTON") kids.pop();
+    var dernier = kids[kids.length - 1];
+    if (dernier && (dernier.tagName === "BUTTON" || (dernier.tagName === "DIV" && dernier.children.length &&
+      Array.prototype.every.call(dernier.children, function (b) { return b.tagName === "BUTTON"; })))) kids.pop();
     var rubs = [], cur = null, premier = null;
     kids.forEach(function (k) {
       var nom = fin ? libelleDe(k) : rubriqueDe(k);
