@@ -653,7 +653,11 @@
   function garderHauteur(h) { try { localStorage.setItem(CLE_HAUTEUR, String(Math.round(h))); } catch (e) {} }
   function poserHauteur(p, h) {
     var col = p.parentElement;
-    var max = Math.max(120, (col ? col.clientHeight : window.innerHeight) - 140);
+    // La vue 360 au-dessus doit pouvoir rétrécir : sans cela elle garde la taille
+    // de son image et la barre ne remonte plus.
+    var g = p.previousElementSibling, vue = g && g.previousElementSibling;
+    if (vue && vue.style.minHeight !== "0px") { vue.style.minHeight = "0px"; vue.style.overflow = "hidden"; }
+    var max = Math.max(120, (col ? col.clientHeight : window.innerHeight) - 240);
     h = Math.max(48, Math.min(max, h));
     p.style.height = Math.round(h) + "px";
     p.style.flex = "0 0 auto";
