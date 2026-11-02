@@ -525,7 +525,8 @@
     if (kids.length !== 2) return null;
     var reglages = Array.prototype.slice.call(kids[1].children);
     var i = 0;
-    while (i < reglages.length && !/musique|ambiance/i.test(reglages[i].textContent || "")) i++;
+    // Les sons commencent au bloc « Musique d'ambiance » (son texte commence ainsi).
+    while (i < reglages.length && !/^\s*(musique|ambiances?)\b/i.test(reglages[i].textContent || "")) i++;
     var pages = [{ nom: "Narration", els: [kids[0]] }, { nom: "Réglages", els: reglages.slice(0, i) }];
     if (i < reglages.length) pages.push({ nom: "Sons", els: reglages.slice(i) });
     return { avant: kids[0], pages: pages, cle: "scene" };

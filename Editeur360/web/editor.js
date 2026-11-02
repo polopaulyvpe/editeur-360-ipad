@@ -35884,6 +35884,15 @@
           traite(reqMissing(a.conditions || [], inventory, vars).length ? a.sinon : a.alors);
         } else if (a.type === "hasard") {
           traite(Math.random() * 100 < (a.chance == null ? 50 : a.chance) ? a.alors : a.sinon);
+        } else if (a.type === "succes" && a.succesId) {
+          const cle = "__succes:" + a.succesId;
+          if (!vars[cle]) {
+            vars[cle] = true;
+            effects.push({ kind: "succes", id: a.succesId });
+          }
+        } else if (a.type === "fin") {
+          vars.__fin = a.titre || "Fin";
+          effects.push({ kind: "fin", action: a });
         } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
           effects.push({ kind: a.type, action: a });
         }
@@ -36071,7 +36080,9 @@
     ["regarder", "Tourner la cam\xE9ra"],
     ["secouer", "Secouer l'\xE9cran"],
     ["vibrer", "Faire vibrer"],
-    ["image", "Montrer une image en grand"]
+    ["image", "Montrer une image en grand"],
+    ["succes", "D\xE9bloquer un succ\xE8s"],
+    ["fin", "Terminer le jeu (une fin)"]
   ];
   var VARIABLE_TYPES = [["boolean", "Vrai / Faux"], ["number", "Nombre"], ["text", "Texte"]];
   var puzzleProviders = /* @__PURE__ */ new Map();
@@ -36797,6 +36808,63 @@
     }
     return null;
   }
+  var SUCCES_EDITEUR = [];
+  function normalizeSucces(liste) {
+    return (Array.isArray(liste) ? liste : []).filter((s) => s && typeof s === "object" && s.id).map((s) => ({
+      id: String(s.id),
+      nom: String(s.nom || "Succ\xE8s").slice(0, 60),
+      description: String(s.description || "").slice(0, 200),
+      image: s.image || "",
+      secret: !!s.secret
+    }));
+  }
+  function SuccesManager({ meta, setMeta, onClose }) {
+    const liste = meta.succes || [];
+    const ecrire = (l) => setMeta((m) => ({ ...m, succes: l }));
+    const maj = (i, patch) => ecrire(liste.map((s, k) => k === i ? { ...s, ...patch } : s));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 420, maxHeight: "86vh", overflowY: "auto" }, onClick: (e) => e.stopPropagation(), "data-succes-manager": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Succ\xE8s (", liste.length, ")"), liste.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginBottom: 6 } }, "Aucun succ\xE8s pour l'instant."), liste.map((s, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: s.id, style: { background: C.ink2, borderRadius: 6, padding: 8, marginBottom: 8 }, "data-succes": s.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("input", { value: s.nom, onChange: (e) => maj(i, { nom: e.target.value }), style: { ...input, flex: 1, marginTop: 0 }, placeholder: "Sans un seul indice" }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire(liste.filter((_, k) => k !== i)), style: iconBtn, title: "Supprimer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement("input", { value: s.description, onChange: (e) => maj(i, { description: e.target.value }), style: { ...input, marginTop: 6 }, placeholder: "Finir le jeu sans demander d'aide" }), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: s.image, onChange: (image) => maj(i, { image }), libelle: "Image du badge" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!s.secret, onChange: (e) => maj(i, { secret: e.target.checked }) }), "Secret : son nom reste cach\xE9 tant qu'il n'est pas d\xE9bloqu\xE9"))), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        onClick: () => ecrire([...liste, { id: "succes_" + Math.random().toString(36).slice(2, 8), nom: "Nouveau succ\xE8s", description: "", image: "", secret: false }]),
+        style: smallBtn,
+        "data-succes-ajout": true
+      },
+      /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }),
+      " Ajouter un succ\xE8s"
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Comment \xE7a marche"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, lineHeight: 1.55 } }, "Un succ\xE8s se d\xE9bloque avec l'action \xAB D\xE9bloquer un succ\xE8s \xBB, plac\xE9e o\xF9 tu veux : \xE0 la r\xE9ussite d'une \xE9nigme, dans un dialogue, \xE0 l'arriv\xE9e dans une sc\xE8ne\u2026 Une fin se d\xE9clenche avec l'action \xAB Terminer le jeu \xBB : elle affiche son titre, son texte et le bilan de la partie (temps, \xE9nigmes, indices, objets \xE0 collectionner, succ\xE8s). Pour un compte \xE0 rebours, ajoute un Chronom\xE8tre dans l'Interface et mets \xAB Terminer le jeu \xBB dans ses actions de fin.")));
+  }
+  function ArriveeScene({ scene, onChange, items, scenes, variables, dialogues }) {
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 }, "data-arrivee-scene": true }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "En entrant dans la sc\xE8ne"), /* @__PURE__ */ import_react.default.createElement(
+      ActionListEditor,
+      {
+        actions: scene.onEnter || [],
+        onChange: (onEnter) => onChange({ onEnter }),
+        items,
+        scenes,
+        variables,
+        dialogues,
+        emptyText: "Rien de sp\xE9cial."
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontFamily: sans, fontSize: 11.5, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!scene.onEnterUneFois, onChange: (e) => onChange({ onEnterUneFois: e.target.checked }), "data-arrivee-unefois": true }), "Seulement la premi\xE8re fois"));
+  }
+  function ActionLot2({ a, update }) {
+    if (a.type === "succes") {
+      return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("select", { value: a.succesId || "", onChange: (e) => update({ succesId: e.target.value }), style: { ...select, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 succ\xE8s \u2014"), SUCCES_EDITEUR.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.nom))), !SUCCES_EDITEUR.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 4 } }, "Cr\xE9e d'abord des succ\xE8s dans \xAB Succ\xE8s et fins \xBB, dans la colonne de gauche."));
+    }
+    if (a.type === "fin") {
+      return /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("input", { value: a.titre || "", onChange: (e) => update({ titre: e.target.value }), placeholder: "La grande \xE9vasion", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement(
+        "textarea",
+        {
+          value: a.texte || "",
+          onChange: (e) => update({ texte: e.target.value }),
+          placeholder: "Tu as retrouv\xE9 la lumi\xE8re du jour.",
+          style: { ...input, minHeight: 44, resize: "vertical", marginTop: 6 }
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: a.image, onChange: (image) => update({ image }), libelle: "Image de fond" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontFamily: sans, fontSize: 11.5, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: a.bilan !== false, onChange: (e) => update({ bilan: e.target.checked }) }), "Montrer le bilan de la partie"));
+    }
+    return null;
+  }
   function HotspotEditor({ hotspot, scenes, items, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -36920,6 +36988,8 @@
     if (type === "secouer") return { type, force: "leger" };
     if (type === "vibrer") return { type, ms: 200 };
     if (type === "image") return { type, image: "", texte: "" };
+    if (type === "succes") return { type, succesId: "" };
+    if (type === "fin") return { type, titre: "", texte: "", image: "", bilan: true };
     return { type: "show_text", text: "" };
   };
   function ActionListEditor({ actions, onChange, items, scenes, variables, dialogues = [], emptyText }) {
@@ -36967,7 +37037,7 @@
       },
       /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 variable \u2014"),
       variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))
-    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
+    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(ActionLot2, { a, update: (p) => update(i, p) }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
   }
   var SectionTitle = ({ children, hint }) => /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 16, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: 0.5 } }, children), hint && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 2, lineHeight: 1.4 } }, hint));
   function PuzzleEditor({ draft, setDraft, items, scenes, variables, puzzles, dialogues = [] }) {
@@ -37125,6 +37195,7 @@
     const [name, setName] = (0, import_react.useState)(item.name || "");
     const [description, setDescription] = (0, import_react.useState)(item.description || "");
     const [image, setImage] = (0, import_react.useState)(item.image || null);
+    const [collection, setCollection] = (0, import_react.useState)(!!item.collection);
     const fileRef = (0, import_react.useRef)(null);
     const pickImage = (file) => {
       const reader = new FileReader();
@@ -37133,9 +37204,9 @@
     };
     const save = () => {
       if (!name.trim()) return;
-      onSave({ ...item, name: name.trim(), description: description.trim(), image });
+      onSave({ ...item, name: name.trim(), description: description.trim(), image, collection: collection || void 0 });
     };
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function ItemManager({ items, onEdit, onCreate, onClose, combos, onCombos, variables, puzzles, scenes, dialogues, projet }) {
     const [onglet, setOnglet] = (0, import_react.useState)("objets");
@@ -44490,7 +44561,7 @@
   function ScenePlacement({ scene, reperes, onPose, onFerme, unique = false }) {
     const [cible, setCible] = (0, import_react.useState)("nouveau");
     const hs = reperes.map((r) => ({ id: r.id, type: "repere", position: { yaw: r.yaw, pitch: r.pitch }, size: r.taille }));
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onFerme }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: "min(92vw, 760px)" }, onClick: (e) => e.stopPropagation(), "data-sc-placement": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Placer dans \xAB ", scene.name || scene.id, " \xBB"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onFerme, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), !unique && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement(
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onFerme }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: "min(92vw, 760px)" }, onClick: (e) => e.stopPropagation(), "data-sc-placement": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, unique ? "Choisir la vue" : "Placer", " dans \xAB ", scene.name || scene.id, " \xBB"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onFerme, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), !unique && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement(
       "button",
       {
         onClick: () => setCible("nouveau"),
@@ -50552,6 +50623,10 @@
         return { type: a.type, ms: Math.max(10, Math.min(2e3, parseInt(a.ms, 10) || 200)) };
       case "image":
         return a.image ? { type: a.type, image: String(a.image), texte: a.texte ? String(a.texte) : "" } : null;
+      case "succes":
+        return a.succesId ? { type: a.type, succesId: String(a.succesId) } : null;
+      case "fin":
+        return { type: a.type, titre: String(a.titre || "Fin").slice(0, 80), texte: a.texte ? String(a.texte) : "", image: a.image ? String(a.image) : "", bilan: a.bilan !== false };
       case "show_text":
         return a.text ? { type: a.type, text: String(a.text) } : null;
       case "set_variable":
@@ -67293,6 +67368,7 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
       title,
       author: String(s.author != null ? s.author : base && base.author || "").slice(0, 80),
       description: String(s.description != null ? s.description : base && base.description || "").slice(0, 400),
+      succes: normalizeSucces(s.succes || base && base.succes),
       app: {
         appName: String(a.appName || b.appName || title).slice(0, 30),
         packageId: String(a.packageId != null ? a.packageId : b.packageId || ""),
@@ -67332,7 +67408,7 @@ patch("ios/App/App.xcodeproj/project.pbxproj", [
     const m = p.meta;
     return {
       version: GAME_FORMAT_VERSION,
-      game: { id: m.id, title: m.title, author: m.author, description: m.description },
+      game: { id: m.id, title: m.title, author: m.author, description: m.description, succes: normalizeSucces(m.succes) },
       app: { appName: m.app.appName, packageId: m.app.packageId, version: m.app.version },
       scenes: p.scenes.map(function(s) {
         return s.onEnter && s.onEnter.length ? { ...s, onEnter: normalizeActions(s.onEnter) } : s;
@@ -68242,6 +68318,22 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
   #viewer.tr-secoue-fort{animation:tr-secoue-fort .7s ease}
   @keyframes tr-secoue{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
   @keyframes tr-secoue-fort{0%,100%{transform:none}15%{transform:translate(-16px,8px) rotate(-1deg)}30%{transform:translate(14px,-10px) rotate(1deg)}45%{transform:translate(-12px,6px)}60%{transform:translate(9px,-5px)}80%{transform:translate(-4px,2px)}}
+  #fin-jeu{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;background:#05070b center/cover no-repeat;animation:tr-apparait .8s ease}
+  #fin-jeu::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,11,.55),rgba(5,7,11,.9))}
+  .fin-boite{position:relative;max-width:440px;width:100%;max-height:100%;overflow-y:auto;text-align:center;color:#E9E6DD;font-family:system-ui,sans-serif}
+  .fin-sur{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent,#E8A33D)}
+  .fin-titre{margin:6px 0 10px;font:600 30px/1.15 Georgia,serif}
+  .fin-texte{margin:0 0 18px;font-size:15px;line-height:1.55;color:#cfcabf}
+  .fin-bilan{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-bottom:14px}
+  .fin-stat{background:rgba(255,255,255,.07);border-radius:10px;padding:10px 6px;display:flex;flex-direction:column;gap:2px}
+  .fin-stat b{font-size:20px;font-variant-numeric:tabular-nums}
+  .fin-stat span{font-size:11px;color:#9a968c}
+  .fin-succes{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:16px}
+  .fin-badge{display:flex;align-items:center;gap:6px;background:rgba(232,163,61,.15);border:1px solid rgba(232,163,61,.4);border-radius:99px;padding:4px 10px 4px 4px;font-size:12px}
+  .fin-badge img{width:22px;height:22px;border-radius:50%;object-fit:cover}
+  .fin-boutons{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .fin-btn{min-height:44px;padding:0 20px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#E9E6DD;font:600 14px system-ui,sans-serif;cursor:pointer}
+  .fin-btn.fin-principal{background:var(--accent,#E8A33D);border-color:transparent;color:#14110b}
   .img-grande{position:absolute;inset:0;z-index:60;background:rgba(5,7,11,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;box-sizing:border-box;animation:tr-apparait .25s ease}
   .img-grande img{max-width:100%;max-height:78%;object-fit:contain;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
   .img-grande p{margin:0;color:#E9E6DD;font:15px/1.5 system-ui,sans-serif;text-align:center;max-width:520px}
@@ -68606,6 +68698,12 @@ function applyActions(state, actions, game) {
       traite(reqMissing(a.conditions || [], inventory, vars).length ? a.sinon : a.alors);
     } else if (a.type === "hasard") {
       traite(Math.random() * 100 < (a.chance == null ? 50 : a.chance) ? a.alors : a.sinon);
+    } else if (a.type === "succes" && a.succesId) {
+      const cle = "__succes:" + a.succesId;
+      if (!vars[cle]) { vars[cle] = true; effects.push({ kind: "succes", id: a.succesId }); }
+    } else if (a.type === "fin") {
+      vars.__fin = a.titre || "Fin";
+      effects.push({ kind: "fin", action: a });
     } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image") {
       // Des effets de mise en sc\xE8ne : le jeu les joue, la fonction reste pure.
       effects.push({ kind: a.type, action: a });
@@ -68936,8 +69034,91 @@ function faireTransition(type, ox, oy){
   setTimeout(lance, 30);
 }
 /*  Les effets de mise en scene rendus par les actions.               */
+/*  Lot 2. Le temps de jeu, les objets a collectionner, les succes et
+    l'ecran de fin. Tout se range dans les variables : la sauvegarde
+    les garde sans rien changer a son format.                         */
+setInterval(function(){
+  if(playerScreen !== 'playing' || !saveEnabled || document.getElementById('fin-jeu')) return;
+  vars.__temps = (vars.__temps || 0) + 1;
+}, 1000);
+function aCollectionner(){ return (GAME.inventory_items || []).filter(function(it){ return it && it.collection; }); }
+function noteCollecte(){
+  let neuf = null;
+  aCollectionner().forEach(function(it){
+    if(uiNumberOf(inventory[it.id]) > 0 && !vars['__collecte:' + it.id]){ vars['__collecte:' + it.id] = true; neuf = it; }
+  });
+  if(neuf){
+    const tous = aCollectionner(), n = tous.filter(function(it){ return vars['__collecte:' + it.id]; }).length;
+    try{ hudNotify('\u2726 ' + (neuf.name || neuf.id) + ' \xB7 ' + n + ' / ' + tous.length, 'gain'); }catch(e){}
+  }
+}
+function succesDuJeu(){ return (GAME.game && Array.isArray(GAME.game.succes)) ? GAME.game.succes : []; }
+function dureeLisible(s){
+  s = Math.max(0, Math.round(s || 0));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return (h ? h + ' h ' : '') + (h || m ? m + ' min ' : '') + (h ? '' : r + ' s');
+}
+function bilanJeu(){
+  const out = [[dureeLisible(vars.__temps), 'de jeu']];
+  const pz = GAME.puzzles || [];
+  if(pz.length) out.push([pz.filter(function(p){ return vars[puzzleVarKey(p.id)]; }).length + ' / ' + pz.length, '\xE9nigmes']);
+  out.push([String(vars.__indices || 0), (vars.__indices || 0) > 1 ? 'indices pris' : 'indice pris']);
+  const col = aCollectionner();
+  if(col.length) out.push([col.filter(function(it){ return vars['__collecte:' + it.id]; }).length + ' / ' + col.length, '\xE0 collectionner']);
+  const su = succesDuJeu();
+  if(su.length) out.push([su.filter(function(s){ return vars['__succes:' + s.id]; }).length + ' / ' + su.length, 'succ\xE8s']);
+  return out;
+}
+function montrerFin(a){
+  if(document.getElementById('fin-jeu')) return;
+  const fond = mk('div', '');
+  fond.id = 'fin-jeu';
+  fond.setAttribute('role', 'dialog'); fond.setAttribute('aria-modal', 'true');
+  if(a.image) fond.style.backgroundImage = 'url("' + a.image + '")';
+  const box = mk('div', 'fin-boite');
+  box.appendChild(mk('div', 'fin-sur', 'Fin'));
+  box.appendChild(mk('h2', 'fin-titre', a.titre || 'Fin'));
+  if(a.texte) box.appendChild(mk('p', 'fin-texte', a.texte));
+  if(a.bilan !== false){
+    const g = mk('div', 'fin-bilan');
+    bilanJeu().forEach(function(s){ const c = mk('div', 'fin-stat'); c.appendChild(mk('b', '', s[0])); c.appendChild(mk('span', '', s[1])); g.appendChild(c); });
+    box.appendChild(g);
+    const obtenus = succesDuJeu().filter(function(s){ return vars['__succes:' + s.id]; });
+    if(obtenus.length){
+      const l = mk('div', 'fin-succes');
+      obtenus.forEach(function(s){
+        const b = mk('div', 'fin-badge');
+        if(s.image){ const im = document.createElement('img'); im.src = s.image; im.alt = ''; b.appendChild(im); }
+        b.appendChild(mk('span', '', '\u{1F3C6} ' + s.nom));
+        l.appendChild(b);
+      });
+      box.appendChild(l);
+    }
+  }
+  const btns = mk('div', 'fin-boutons');
+  const rejouer = mk('button', 'fin-btn fin-principal', 'Rejouer');
+  rejouer.type = 'button';
+  rejouer.onclick = function(){ fond.remove(); resetProgress(startSceneId()); markSaved(); };
+  const accueil = mk('button', 'fin-btn', 'Retour \xE0 l\u2019accueil');
+  accueil.type = 'button';
+  accueil.onclick = function(){
+    fond.remove(); clearSave();
+    if(playerScreen === 'playing' || playerScreen === 'dialogue') setScreen('pause');
+    goHome();
+  };
+  btns.appendChild(rejouer); btns.appendChild(accueil);
+  box.appendChild(btns);
+  fond.appendChild(box);
+  frameEl.appendChild(fond);
+  saveGame();
+}
 function effetsScene(effects){
   (effects || []).forEach(function(e){
+    if(e.kind === 'succes'){
+      const s = succesDuJeu().filter(function(x){ return x.id === e.id; })[0];
+      try{ hudNotify('\u{1F3C6} Succ\xE8s : ' + (s ? s.nom : e.id), 'gain'); }catch(err){}
+    }
+    else if(e.kind === 'fin'){ const fa = e.action; setTimeout(function(){ montrerFin(fa); }, 350); }
     if(e.kind === 'navigate') passageDemande = { cible: e.target, regard: e.regard || null, transition: e.transition || '' };
     else if(e.kind === 'regarder') animerRegard(e.action, e.action.duree);
     else if(e.kind === 'secouer'){
@@ -69001,6 +69182,10 @@ function runSceneEnter(scene){
   if(!scene || !scene.onEnter || !scene.onEnter.length) return;
   if(!saveEnabled || playerScreen === 'home') return;
   if(enterDepth > 4) return;
+  if(scene.onEnterUneFois){
+    if(vars['__entre:' + scene.id]) return;
+    vars['__entre:' + scene.id] = true;
+  }
   enterDepth++;
   try{
     const eff = runActions(scene.onEnter);
@@ -69289,6 +69474,8 @@ function normalizeAction(a) {
     case "secouer": return { type: a.type, force: a.force === "fort" ? "fort" : "leger" };
     case "vibrer": return { type: a.type, ms: Math.max(10, Math.min(2000, parseInt(a.ms, 10) || 200)) };
     case "image": return a.image ? { type: a.type, image: String(a.image), texte: a.texte ? String(a.texte) : "" } : null;
+    case "succes": return a.succesId ? { type: a.type, succesId: String(a.succesId) } : null;
+    case "fin": return { type: a.type, titre: String(a.titre || "Fin").slice(0, 80), texte: a.texte ? String(a.texte) : "", image: a.image ? String(a.image) : "", bilan: a.bilan !== false };
     case "show_text": return a.text ? { type: a.type, text: String(a.text) } : null;
     case "set_variable": return a.key ? { type: a.type, key: slugKey(a.key), value: cleanValue(a.value) } : null;
     case "start_dialogue": return a.dialogId ? { type: a.type, dialogId: String(a.dialogId) } : null;
@@ -83211,6 +83398,12 @@ function openJournal(){
     return (it ? it.name : id) + (n > 1 ? ' \xD7' + n : '');
   }));
   section('\xC9nigmes r\xE9solues', (GAME.puzzles || []).filter(function(p){ return vars[puzzleVarKey(p.id)]; }).map(function(p){ return p.name || p.title || p.id; }));
+  const col = aCollectionner();
+  if(col.length) section('\xC0 collectionner \xB7 ' + col.filter(function(it){ return vars['__collecte:' + it.id]; }).length + ' / ' + col.length,
+    col.map(function(it){ return vars['__collecte:' + it.id] ? (it.name || it.id) : '? ? ?'; }));
+  const su = succesDuJeu();
+  if(su.length) section('Succ\xE8s \xB7 ' + su.filter(function(s){ return vars['__succes:' + s.id]; }).length + ' / ' + su.length,
+    su.map(function(s){ return vars['__succes:' + s.id] ? '\u{1F3C6} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '') : (s.secret ? '\u{1F512} Succ\xE8s secret' : '\u{1F512} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '')); }));
   const x = mk('button','pnl-close','\u2715');
   x.type = 'button'; x.id = 'journal-close'; x.setAttribute('aria-label','Fermer');
   x.onclick = closeJournal;
@@ -83298,11 +83491,15 @@ window.addEventListener('keydown', function(e){
 });
 
 /* ---- Int\xE9gration de l'accueil (d\xE9marrage, reprise, retour) ---- */
+/*  Une nouvelle partie part de l'accueil : la scene de depart est
+    chargee avant que le jeu ne commence, ses actions d'arrivee
+    attendent donc le premier instant de jeu.                        */
+let entreeAuDepart = false;
 const homeHost = {
   hasSave: function(){ const s = readSave(); return !!(s && GAME.scenes.some(function(x){ return x.id===s.scene; })); },
-  newGame: function(){ saveEnabled = true; resetProgress(startSceneId()); markSaved(); },
+  newGame: function(){ saveEnabled = true; resetProgress(startSceneId()); markSaved(); entreeAuDepart = true; },
   continueGame: function(){ const s = readSave(); saveEnabled = true; if(s) applySave(s); markSaved(); },
-  startChapter: function(sceneId){ saveEnabled = true; resetProgress(GAME.scenes.some(function(x){ return x.id===sceneId; }) ? sceneId : startSceneId()); markSaved(); },
+  startChapter: function(sceneId){ saveEnabled = true; resetProgress(GAME.scenes.some(function(x){ return x.id===sceneId; }) ? sceneId : startSceneId()); markSaved(); entreeAuDepart = true; },
   canQuit: function(){ try{ return !(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='ios'); }catch(e){ return true; } },
   quit: function(){
     try{ const C = window.Capacitor; if(C && C.Plugins && C.Plugins.App && C.Plugins.App.exitApp){ C.Plugins.App.exitApp(); return; } }catch(e){}
@@ -83315,7 +83512,10 @@ const homeHost = {
     if(open){ if(playerScreen === 'home') setScreen('options'); }
     else if(playerScreen === 'options' && optionsFrom === 'home') setScreen('home');
   },
-  afterStart: function(){ setScreen('playing'); syncMusic(); flushDialogue(); },
+  afterStart: function(){
+    setScreen('playing'); syncMusic(); flushDialogue();
+    if(entreeAuDepart){ entreeAuDepart = false; runSceneEnter(current); }
+  },
 };
 function showHome(returning){
   const c = homeConfig();
@@ -83371,7 +83571,7 @@ function runActionsNow(actions){
   res.discovered.forEach(function(id){ discovered.add(id); });
   try{ playSoundEffects(res.effects); }catch(e){}
   try{ openPuzzleEffects(res.effects); }catch(e){}
-  try{ effetsScene(res.effects); chargerImageScene(false); }catch(e){}
+  try{ effetsScene(res.effects); chargerImageScene(false); noteCollecte(); }catch(e){}
   renderHotspots();
   hudSync();
   try{ hudNotifyEffects(res.effects); }catch(e){}
@@ -83874,6 +84074,7 @@ function indicesAuto(ap){
 function donnePuzzleHint(ap, h){
   ap.live.hintsOpen = (ap.live.hintsOpen || []).concat([h.id]);
   ap.live.hintsUsed = (ap.live.hintsUsed || 0) + 1;
+  vars.__indices = (vars.__indices || 0) + 1;
   try{
     const s = (ap.p.sounds || {}).hint;
     if(s){ const pl = aPlayable(s, 'ui'); if(pl.src) aShot(pl.src, { bus: pl.bus, volume: pl.volume }); }
@@ -85528,7 +85729,7 @@ function hudTimerSync(){
   if(running && !hudTimerT) hudTimerT = setInterval(hudTimerTick, 1000);
 }
 function hudTimerTick(){
-  if(playerScreen !== 'playing') return;
+  if(playerScreen !== 'playing' || document.getElementById('fin-jeu')) return;
   let moved = false;
   const ended = [];
   Object.keys(hudBuilt).forEach(function(id){
@@ -85808,6 +86009,7 @@ function activate(hs){
   }
   else if(hs.type==='pickup_item' && hs.item){
     inventory[hs.item] = (inventory[hs.item]||0) + (hs.amount||1);
+    try{ noteCollecte(); }catch(e){}
     saveGame();
     renderHotspots();
     hudSync();
@@ -86879,6 +87081,7 @@ loop();
     const [playerVars, setPlayerVars] = (0, import_react.useState)({});
     const [activePuzzle, setActivePuzzle] = (0, import_react.useState)(null);
     const [puzzleManager, setPuzzleManager] = (0, import_react.useState)(null);
+    const [showSucces, setShowSucces] = (0, import_react.useState)(false);
     const puzzleBus = (0, import_react.useRef)(null);
     if (!puzzleBus.current) puzzleBus.current = createEventBus();
     const gameRef = (0, import_react.useRef)({});
@@ -86975,6 +87178,7 @@ loop();
       combinations
     });
     COMBO_EDITEUR = { recipes: combinations.recipes, items };
+    SUCCES_EDITEUR = gameMeta.succes || [];
     SCENES_EDITEUR = scenes;
     SONS_EDITEUR = audio && audio.library || [];
     const serializeProject = () => ({
@@ -87868,7 +88072,7 @@ loop();
         /* @__PURE__ */ import_react.default.createElement("span", { style: { flexShrink: 0 } }, natif ? t ? t.icon : "\u{1F9E9}" : providerOrGeneric(p.provider).icon),
         /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.title || "\xC9nigme sans nom")
       );
-    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
+    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
       const pose = c.poses.find((p) => p.id === c.defaultPose) || c.poses[0] || {};
       return /* @__PURE__ */ import_react.default.createElement(
         "div",
@@ -88127,6 +88331,16 @@ loop();
         puzzles,
         scenes
       }
+    ), /* @__PURE__ */ import_react.default.createElement(
+      ArriveeScene,
+      {
+        scene,
+        onChange: (patch) => updateScene(scene.id, patch),
+        items,
+        scenes,
+        variables,
+        dialogues
+      }
     ), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
@@ -88336,7 +88550,7 @@ loop();
         onChange: setCharacters,
         onClose: () => setShowCharManager(false)
       }
-    ), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
+    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
       PuzzleManager,
       {
         dialogues,
