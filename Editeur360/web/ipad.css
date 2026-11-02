@@ -30,6 +30,24 @@ html, body { background: var(--fond) !important; }
 html { -webkit-font-smoothing: antialiased; }
 * { -webkit-tap-highlight-color: transparent; }
 
+/* Aucun surlignage bleu ni loupe au toucher prolongé : on ne sélectionne
+   du texte que dans les champs où l'on écrit. */
+html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#root input, #root textarea, #root select, #root [contenteditable="true"], #root [contenteditable=""] {
+  -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+}
+
+/* Barre à glisser entre la vue 360 et les réglages de la scène :
+   plus bas, la vue grandit ; plus haut, les réglages. */
+#root [data-e360-scene] { overflow-y: auto; }
+.e360-poignee {
+  flex: 0 0 auto; height: 20px; display: flex; align-items: center; justify-content: center;
+  touch-action: none; cursor: row-resize; border-top: 1px solid var(--trait, #242938);
+}
+.e360-poignee::before { content: ""; width: 54px; height: 5px; border-radius: 3px; background: var(--bouton-appui, #3a4150); }
+.e360-poignee.e360-tire::before { background: var(--accent, #E8A33D); }
+.e360-poignee + [data-e360-scene] { border-top: none !important; }
+
 /* ---------- Police unique, couleurs neutres ---------- */
 #root, #root [style*="font-family"] { font-family: var(--police) !important; }
 

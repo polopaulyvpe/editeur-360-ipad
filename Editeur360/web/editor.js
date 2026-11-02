@@ -50994,19 +50994,21 @@
           onPointerLeave: () => setHoverCard((h) => h === node.id ? null : h),
           style: { ...base, overflow: "visible" }
         },
-        (hoverCard === node.id || link && link.from === node.id) && onCreateScene && /* @__PURE__ */ import_react.default.createElement(
+        (hoverCard === node.id || sel || link && link.from === node.id) && onCreateScene && /* @__PURE__ */ import_react.default.createElement(
           "div",
           {
             "data-link-handle": node.id,
+            "data-link-handle-touch": "",
             onPointerDown: (e) => startLink(e, node.id),
             title: "Tire vers une autre carte pour cr\xE9er le passage, ou vers le vide pour cr\xE9er la sc\xE8ne suivante",
             style: {
               position: "absolute",
-              right: -11,
-              top: CARD_H / 2 - 11,
-              width: 22,
-              height: 22,
+              right: -16,
+              top: CARD_H / 2 - 16,
+              width: 32,
+              height: 32,
               borderRadius: "50%",
+              touchAction: "none",
               background: C.amber,
               color: C.ink,
               display: "flex",
@@ -70108,6 +70110,8 @@ ${partageMeta(game)}
 <style>
   :root{ --accent: ${hud.accent}; }
   html,body{margin:0;height:100%;background:#05070b;font-family:system-ui,sans-serif;color:#E9E6DD;overflow:hidden}
+  body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  input,textarea,[contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
   body{display:flex;align-items:center;justify-content:center}
   #phone-frame{position:relative;width:min(92vw,430px);aspect-ratio:9/19.5;max-height:94vh;
       overflow:hidden;border-radius:26px;background:#0B0E14;

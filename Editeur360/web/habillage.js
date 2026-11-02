@@ -630,6 +630,7 @@
         var l0 = c0 && c0.firstElementChild;
         if (l0 && l0.style.textTransform === "uppercase" && /narration/i.test(l0.textContent || "")) {
           p.setAttribute("data-e360-scene", "");
+          poignee(p);
           vus.push([p, function () { return decouperScene(p); }]);
           return;
         }
@@ -643,6 +644,95 @@
     });
     vus.forEach(function (v) { appliquerOnglets(v[0], v[1]); });
   }
+
+  // ---------- Barre réglable entre la vue 360 et les réglages de la scène ----------
+  // Glisser vers le bas agrandit la vue, vers le haut les réglages ; deux touchers
+  // rapides replient les réglages ou les rouvrent. La hauteur est retenue.
+  var CLE_HAUTEUR = "e360:hauteur-reglages";
+  function hauteurGardee() { try { return parseFloat(localStorage.getItem(CLE_HAUTEUR)) || 0; } catch (e) { return 0; } }
+  function garderHauteur(h) { try { localStorage.setItem(CLE_HAUTEUR, String(Math.round(h))); } catch (e) {} }
+  function poserHauteur(p, h) {
+    var col = p.parentElement;
+    var max = Math.max(120, (col ? col.clientHeight : window.innerHeight) - 140);
+    h = Math.max(48, Math.min(max, h));
+    p.style.height = Math.round(h) + "px";
+    p.style.flex = "0 0 auto";
+    return h;
+  }
+  function redimensionner() { try { window.dispatchEvent(new Event("resize")); } catch (e) {} }
+  function poignee(p) {
+    document.querySelectorAll(".e360-poignee").forEach(function (x) {
+      if (!x.nextElementSibling || !x.nextElementSibling.hasAttribute("data-e360-scene")) x.remove();
+    });
+    var g = p.previousElementSibling;
+    if (g && g.classList.contains("e360-poignee")) return;
+    g = document.createElement("div");
+    g.className = "e360-poignee";
+    g.setAttribute("role", "separator");
+    g.setAttribute("aria-label", "Glisser pour agrandir la vue 360");
+    var y0 = 0, h0 = 0, tire = false, enCours = false, dernier = 0, avantRepli = 0;
+    g.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      try { g.setPointerCapture(e.pointerId); } catch (x) {}
+      y0 = e.clientY; h0 = p.offsetHeight; tire = false; enCours = true;
+    });
+    g.addEventListener("pointermove", function (e) {
+      if (!enCours) return;
+      var dy = e.clientY - y0;
+      if (!tire && Math.abs(dy) < 4) return;
+      tire = true; g.classList.add("e360-tire");
+      poserHauteur(p, h0 - dy);
+      redimensionner();
+    });
+    var fin = function () {
+      if (!enCours) return;
+      enCours = false;
+      g.classList.remove("e360-tire");
+      if (tire) { garderHauteur(p.offsetHeight); redimensionner(); return; }
+      var t = Date.now();
+      if (t - dernier < 380) {
+        if (p.offsetHeight > 70) { avantRepli = p.offsetHeight; poserHauteur(p, 48); }
+        else poserHauteur(p, avantRepli || 280);
+        garderHauteur(p.offsetHeight);
+        redimensionner();
+        dernier = 0;
+      } else dernier = t;
+    };
+    g.addEventListener("pointerup", fin);
+    g.addEventListener("pointercancel", fin);
+    p.parentNode.insertBefore(g, p);
+    var h = hauteurGardee();
+    if (h) { poserHauteur(p, h); setTimeout(redimensionner, 60); }
+  }
+
+  // ---------- Un toucher bref déclenche le bouton tout de suite ----------
+  // Safari perd parfois le clic quand la page change sous le doigt (survol simulé,
+  // rendu en cours) : un bouton ne réagissait qu'une fois sur plusieurs. On le
+  // déclenche nous-mêmes à la fin d'un toucher bref et immobile.
+  var tape = null;
+  document.addEventListener("touchstart", function (e) {
+    tape = null;
+    if (e.touches.length !== 1) return;
+    var b = e.target.closest && e.target.closest("button, .e360-q");
+    if (!b || b.disabled) return;
+    var t = e.touches[0];
+    tape = { b: b, x: t.clientX, y: t.clientY, t: Date.now() };
+  }, { passive: true, capture: true });
+  document.addEventListener("touchmove", function (e) {
+    if (!tape) return;
+    var t = e.touches[0];
+    if (Math.abs(t.clientX - tape.x) + Math.abs(t.clientY - tape.y) > 12) tape = null;
+  }, { passive: true, capture: true });
+  document.addEventListener("touchcancel", function () { tape = null; }, { capture: true });
+  document.addEventListener("touchend", function (e) {
+    var d = tape; tape = null;
+    if (!d || e.touches.length || Date.now() - d.t > 700 || !d.b.isConnected || d.b.disabled) return;
+    var t = e.changedTouches[0];
+    var sous = document.elementFromPoint(t.clientX, t.clientY);
+    if (!sous || !(sous === d.b || d.b.contains(sous))) return;
+    e.preventDefault();          // pas de clic simulé derrière : il compterait deux fois
+    d.b.click();
+  }, { passive: false, capture: true });
 
   var prevu = false;
   function passe() {
