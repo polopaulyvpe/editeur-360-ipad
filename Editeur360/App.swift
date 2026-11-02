@@ -121,6 +121,10 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
     override func viewDidLoad() {
         super.viewDidLoad()
         web.load(URLRequest(url: URL(string: "app://editeur/index.html")!))
+        // Double toucher sur l'Apple Pencil 2 : la page choisit quoi en faire (habillage.js).
+        let crayon = UIPencilInteraction()
+        crayon.delegate = self
+        view.addInteraction(crayon)
     }
 
     // window.storage.get / set / delete
@@ -194,4 +198,10 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
 
     // Si iPadOS a dû fermer la page (mémoire), on la rouvre.
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { webView.reload() }
+}
+
+extension EditeurViewController: UIPencilInteractionDelegate {
+    func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+        web.evaluateJavaScript("window.dispatchEvent(new Event('e360-crayon'))", completionHandler: nil)
+    }
 }

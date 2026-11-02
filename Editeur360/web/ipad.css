@@ -448,3 +448,53 @@ html.e360-demarrage #root { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   #root *, .e360-menu { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Petits panneaux de réglage de l'éditeur (menu •••) ---------- */
+.e360-panneau-fond { position: fixed; inset: 0; z-index: 1100; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.e360-panneau { width: min(440px, 100%); max-height: 86vh; overflow: auto; background: var(--surface); border: 1px solid var(--trait); border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.5); color: var(--texte); font: 14px var(--police); }
+.e360-panneau-titre { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--trait); font: 600 16px var(--police-titre); }
+.e360-panneau-x { width: 36px; height: 36px; border: none; border-radius: 50%; background: var(--bouton); color: var(--texte); font-size: 15px; }
+.e360-panneau-corps { padding: 6px 14px 16px; }
+.e360-p-libelle { margin: 12px 0 6px; font: 600 11px var(--police-rubrique); letter-spacing: 1px; text-transform: uppercase; color: var(--texte-2); }
+.e360-p-choix { display: flex; gap: 6px; flex-wrap: wrap; }
+.e360-p-bouton { min-height: 38px; padding: 0 12px; border-radius: var(--rayon); border: 1px solid var(--trait); background: var(--bouton); color: var(--texte); font: 500 13px var(--police); }
+.e360-p-bouton.on { border-color: var(--accent); background: var(--accent-doux); color: var(--texte); }
+.e360-p-bouton:disabled { opacity: .35; }
+.e360-p-pastille { width: 38px; padding: 0; border-radius: 50%; border-width: 3px; border-color: transparent; }
+.e360-p-pastille.on { border-color: var(--texte); }
+.e360-p-large { display: block; width: 100%; margin-top: 6px; text-align: left; }
+.e360-p-ligne { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--trait); }
+.e360-p-ligne span { flex: 1; }
+.e360-p-note { margin: 10px 0 4px; color: var(--texte-2); font-size: 12.5px; line-height: 1.45; }
+
+/* ---------- Scènes favorites ---------- */
+.e360-etoile { margin-left: auto; padding: 4px 6px; font-size: 15px; color: var(--texte-2); cursor: pointer; flex: none; }
+.e360-etoile.on { color: var(--accent); }
+.e360-favoris { padding: 6px 10px 8px; border-bottom: 1px solid var(--trait); }
+.e360-favoris-titre { font: 600 11px var(--police-rubrique); letter-spacing: 1px; text-transform: uppercase; color: var(--accent); margin: 4px 0 6px; }
+.e360-favori { display: block; width: 100%; min-height: 34px !important; margin-top: 4px; padding: 0 10px; text-align: left; border: none; border-radius: var(--rayon); background: var(--bouton); color: var(--texte); font: 500 13px var(--police); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Thèmes de l'éditeur ---------- */
+/* Clair : on inverse l'éditeur, puis on rétablit les images, la vue 360 et le jeu testé. */
+html.e360-theme-clair, html.e360-theme-clair body { background: #f1efe9 !important; }
+html.e360-theme-clair #root { filter: invert(1) hue-rotate(180deg); }
+html.e360-theme-clair #root img, html.e360-theme-clair #root canvas, html.e360-theme-clair #root video,
+html.e360-theme-clair #root iframe, html.e360-theme-clair #root [style*="background-image"] { filter: invert(1) hue-rotate(180deg); }
+html.e360-theme-clair .e360-panneau, html.e360-theme-clair .e360-menu { --surface: #fbfaf7; --bouton: #ece9e2; --trait: #dcd8cf; --texte: #1f1d19; --texte-2: #6d6a62; }
+/* Sépia : des gris chauds, couleur de vieux papier dans l'ombre. */
+html.e360-theme-sepia { --fond: #1a1510; --surface: #221c15; --surface-2: #2a231a; --bouton: #30281e; --bouton-appui: #3b3125; --trait: #3a3024; --texte: #efe4cf; --texte-2: #b3a385; }
+html.e360-theme-sepia #root { filter: sepia(.32) saturate(1.05); }
+html.e360-theme-sepia #root img, html.e360-theme-sepia #root canvas, html.e360-theme-sepia #root iframe, html.e360-theme-sepia #root video { filter: none; }
+
+/* Couleur d'accent choisie : elle remplace l'ambre de l'éditeur. */
+html[data-e360-accent] #root [style*="background: rgb(232, 163, 61)"] { background: var(--accent) !important; }
+html[data-e360-accent] #root [style*="color: rgb(232, 163, 61)"] { color: var(--accent) !important; }
+html[data-e360-accent] #root [style*="border-color: rgb(232, 163, 61)"], html[data-e360-accent] #root [style*="solid rgb(232, 163, 61)"] { border-color: var(--accent) !important; }
+
+/* Taille du texte de l'éditeur. */
+html.e360-texte-grand #root [style*="font-size: 10px"], html.e360-texte-grand #root [style*="font-size: 10.5px"], html.e360-texte-grand #root [style*="font-size: 11px"] { font-size: 13.5px !important; }
+html.e360-texte-grand #root [style*="font-size: 11.5px"], html.e360-texte-grand #root [style*="font-size: 12px"], html.e360-texte-grand #root [style*="font-size: 12.5px"] { font-size: 14.5px !important; }
+html.e360-texte-grand #root [style*="font-size: 13px"], html.e360-texte-grand #root button, html.e360-texte-grand #root input, html.e360-texte-grand #root select, html.e360-texte-grand #root textarea { font-size: 15.5px !important; }
+html.e360-texte-tres-grand #root [style*="font-size: 10px"], html.e360-texte-tres-grand #root [style*="font-size: 10.5px"], html.e360-texte-tres-grand #root [style*="font-size: 11px"] { font-size: 15px !important; }
+html.e360-texte-tres-grand #root [style*="font-size: 11.5px"], html.e360-texte-tres-grand #root [style*="font-size: 12px"], html.e360-texte-tres-grand #root [style*="font-size: 12.5px"] { font-size: 16px !important; }
+html.e360-texte-tres-grand #root [style*="font-size: 13px"], html.e360-texte-tres-grand #root button, html.e360-texte-tres-grand #root input, html.e360-texte-tres-grand #root select, html.e360-texte-tres-grand #root textarea { font-size: 17.5px !important; }

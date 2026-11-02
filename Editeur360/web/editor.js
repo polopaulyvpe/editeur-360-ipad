@@ -37084,7 +37084,8 @@
         montrerPoints: !!c.montrerPoints,
         montrerFois: Math.max(0, Math.min(99, parseInt(c.montrerFois, 10) || 0)),
         annonces: c.annonces !== false,
-        vibrations: c.vibrations !== false
+        vibrations: c.vibrations !== false,
+        icones: c.icones && typeof c.icones === "object" ? c.icones : {}
       },
       carte: {
         image: String(carte.image || ""),
@@ -37099,6 +37100,10 @@
         max: Math.max(1, Math.min(100, parseFloat(r.max) || 10))
       })),
       chargement: { image: String(ch.image || ""), conseils: (Array.isArray(ch.conseils) ? ch.conseils : []).map((t) => String(t || "").slice(0, 200)).filter(Boolean) },
+      polices: (Array.isArray(s.polices) ? s.polices : []).filter((p) => p && p.nom && p.src).map((p) => ({ nom: String(p.nom).slice(0, 40), src: String(p.src) })),
+      policeTitres: String(s.policeTitres || "").slice(0, 40),
+      generique: s.generique && typeof s.generique === "object" ? { lignes: String(s.generique.lignes || "").slice(0, 4e3), vitesse: ["lent", "normal", "rapide"].indexOf(s.generique.vitesse) >= 0 ? s.generique.vitesse : "normal", musique: String(s.generique.musique || ""), auto: !!s.generique.auto } : {},
+      profil: s.profil && typeof s.profil === "object" ? { prenom: !!s.profil.prenom, difficulte: !!s.profil.difficulte, avatars: (Array.isArray(s.profil.avatars) ? s.profil.avatars : []).filter(Boolean).slice(0, 8) } : {},
       partage: { resume: String(pa.resume || "").slice(0, 300), imageUrl: String(pa.imageUrl || "").slice(0, 500), icone: String(pa.icone || "") },
       langues: {
         codes: (Array.isArray(la.codes) ? la.codes : []).filter((l) => l && l.code).map((l) => ({ code: String(l.code).slice(0, 12), nom: String(l.nom || l.code).slice(0, 40) })),
@@ -37713,6 +37718,512 @@
       " s)"
     ));
   }
+  var quandLisible = (t) => {
+    const d = new Date(t), n = Date.now() - t;
+    if (n < 6e4) return "\xE0 l'instant";
+    if (n < 36e5) return "il y a " + Math.round(n / 6e4) + " min";
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + " \xE0 " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  };
+  function HistoriqueFenetre({ histoire, onAller, onClose }) {
+    const tout = histoire.passe.concat([histoire.dernier]).concat(histoire.futur).filter(Boolean);
+    const ici = histoire.passe.length;
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Historique du projet", onClose, data: "historique" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Chaque modification du jeu, de la plus r\xE9cente \xE0 la plus ancienne. Touche une ligne pour revenir \xE0 cet \xE9tat ; les \xE9tapes suivantes restent disponibles tant que tu ne modifies rien."), tout.map((e, i) => i).reverse().map((i) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: i,
+        type: "button",
+        onClick: () => onAller(i),
+        "data-histoire": i,
+        style: { ...smallBtn, width: "100%", marginTop: 4, justifyContent: "flex-start", background: i === ici ? C.amber : i > ici ? "transparent" : C.line, color: i === ici ? C.ink : i > ici ? C.textDim : C.text, border: i > ici ? "1px dashed " + C.line : "none" }
+      },
+      /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, textAlign: "left" } }, tout[i].quoi),
+      /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 10.5, opacity: 0.8 } }, quandLisible(tout[i].quand))
+    )));
+  }
+  async function ecrireSecours(meta, proj) {
+    if (!meta || !meta.id || !proj) return false;
+    const cleIdx = "secours-index:" + meta.id;
+    let idx = null;
+    try {
+      idx = await storageGet(cleIdx);
+    } catch (e) {
+      idx = null;
+    }
+    if (!idx || !Array.isArray(idx.liste)) idx = { suivant: 0, liste: [] };
+    const n = (idx.suivant || 0) % 10;
+    try {
+      await storageSet("secours:" + meta.id + ":" + n, proj);
+    } catch (e) {
+      return false;
+    }
+    idx.liste = idx.liste.filter((x) => x.n !== n).concat([{ n, quand: Date.now(), scenes: (proj.scenes || []).length, titre: meta.title }]);
+    idx.suivant = n + 1;
+    try {
+      await storageSet(cleIdx, idx);
+    } catch (e) {
+    }
+    return true;
+  }
+  function SecoursFenetre({ gameMeta, onCopie, onRestaurer, onClose }) {
+    const [liste, setListe] = (0, import_react.useState)(null);
+    const [msg, setMsg] = (0, import_react.useState)("");
+    const lire = async () => {
+      try {
+        const idx = await storageGet("secours-index:" + gameMeta.id);
+        setListe(idx && Array.isArray(idx.liste) ? idx.liste.slice().sort((a, b) => b.quand - a.quand) : []);
+      } catch (e) {
+        setListe([]);
+      }
+    };
+    (0, import_react.useEffect)(() => {
+      lire();
+    }, []);
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Versions de secours", onClose, data: "secours" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Une copie compl\xE8te du jeu est faite toute seule toutes les 5 minutes quand il a chang\xE9. Les 10 derni\xE8res sont gard\xE9es (sur iPad : app Fichiers \u203A Sur mon iPad \u203A \xC9diteur 360, fichiers \xAB secours \xBB)."), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        style: { ...primaryBtn, marginTop: 10 },
+        "data-secours-maintenant": true,
+        onClick: async () => {
+          setMsg("Copie en cours\u2026");
+          const ok = await onCopie();
+          setMsg(ok ? "\u2713 Copie faite." : "La copie a \xE9chou\xE9 (stockage plein ?).");
+          lire();
+        }
+      },
+      "Faire une copie maintenant"
+    ), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6, color: C.text } }, msg), liste === null && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 10 } }, "Lecture\u2026"), liste && !liste.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 10 } }, "Aucune copie pour l'instant."), liste && liste.map((v) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.n, style: { display: "flex", gap: 8, alignItems: "center", padding: "7px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 12.5, color: C.text }, "data-secours": v.n }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, quandLisible(v.quand), " \xB7 ", v.scenes, " sc\xE8ne(s)"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: async () => {
+      if (!window.confirm("Remplacer le jeu actuel par cette copie ? (Le jeu actuel est d'abord copi\xE9 \xE0 son tour.)")) return;
+      await onCopie();
+      let proj = null;
+      try {
+        proj = await storageGet("secours:" + gameMeta.id + ":" + v.n);
+      } catch (e) {
+        proj = null;
+      }
+      if (proj && proj.scenes && proj.scenes.length) {
+        onRestaurer(proj);
+        onClose();
+      } else setMsg("Cette copie est illisible.");
+    } }, "Restaurer"))));
+  }
+  var NOMS_SORTES = { point: "Point", objet: "Objet", enigme: "\xC9nigme" };
+  function lirePresse() {
+    try {
+      return JSON.parse(localStorage.getItem("e360:presse") || "null");
+    } catch (e) {
+      return null;
+    }
+  }
+  function lireBiblio() {
+    try {
+      const l = JSON.parse(localStorage.getItem("e360:biblio") || "[]");
+      return Array.isArray(l) ? l : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  function copierElement(sorte, data, nom) {
+    const e = { sorte, nom: String(nom || NOMS_SORTES[sorte]).slice(0, 60), data, quand: Date.now() };
+    try {
+      localStorage.setItem("e360:presse", JSON.stringify(e));
+      return true;
+    } catch (x) {
+      return false;
+    }
+  }
+  function CopierBouton({ sorte, data, nom }) {
+    const [fait, setFait] = (0, import_react.useState)("");
+    return /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        style: smallBtn,
+        "data-copier": sorte,
+        title: "Copier pour le coller ailleurs, dans ce jeu ou un autre",
+        onClick: () => {
+          setFait(copierElement(sorte, data, nom) ? "\u2713 Copi\xE9" : "Trop lourd");
+          setTimeout(() => setFait(""), 1600);
+        }
+      },
+      fait || "\u{1F4CB} Copier"
+    );
+  }
+  var idNeuf = (p) => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  function PressePapiers({ scene, setScenes, setItems, setPuzzles, onClose }) {
+    const [presse, setPresse] = (0, import_react.useState)(lirePresse());
+    const [biblio, setBiblio] = (0, import_react.useState)(lireBiblio());
+    const [msg, setMsg] = (0, import_react.useState)("");
+    const ecrireBiblio = (l) => {
+      try {
+        localStorage.setItem("e360:biblio", JSON.stringify(l));
+        setBiblio(l);
+        return true;
+      } catch (e) {
+        setMsg("La biblioth\xE8que est pleine : retire un \xE9l\xE9ment.");
+        return false;
+      }
+    };
+    const coller = (e) => {
+      if (!e) return;
+      if (e.sorte === "point") {
+        if (!scene) return;
+        const h = { ...JSON.parse(JSON.stringify(e.data)), id: idNeuf("hs") };
+        setScenes((ss) => ss.map((s) => s.id === scene.id ? { ...s, hotspots: [...s.hotspots || [], h] } : s));
+        setMsg("\u2713 Point coll\xE9 dans \xAB " + (scene.name || scene.id) + " \xBB, \xE0 la m\xEAme place.");
+      } else if (e.sorte === "objet") {
+        setItems((l) => [...l, { ...JSON.parse(JSON.stringify(e.data)), id: idNeuf("item") }]);
+        setMsg("\u2713 Objet ajout\xE9 au jeu.");
+      } else if (e.sorte === "enigme") {
+        setPuzzles((l) => [...l, { ...JSON.parse(JSON.stringify(e.data)), id: idNeuf("pz"), title: (e.data.title || "\xC9nigme") + " (copie)" }]);
+        setMsg("\u2713 \xC9nigme ajout\xE9e au jeu : place-la sur un point.");
+      }
+    };
+    const ligne = (e, actions) => /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", padding: "7px 0", borderBottom: "1px solid " + C.line, fontFamily: sans, fontSize: 12.5, color: C.text, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, width: 56 } }, NOMS_SORTES[e.sorte]), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, minWidth: 100 } }, e.nom), actions);
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Copier, coller, biblioth\xE8que", onClose, data: "presse" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Copie un point, un objet ou une \xE9nigme avec le bouton \xAB \u{1F4CB} Copier \xBB de sa fen\xEAtre, puis colle-le ici, dans ce jeu ou dans un autre. Ce que tu gardes dans ta biblioth\xE8que reste disponible pour tous tes jeux."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Presse-papiers"), !presse ? /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Rien de copi\xE9 pour l'instant.") : ligne(presse, /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: primaryBtn, onClick: () => coller(presse), "data-coller": true }, "Coller"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => {
+      if (ecrireBiblio([{ ...presse, quand: Date.now() }, ...biblio].slice(0, 60))) setMsg("\u2713 Gard\xE9 dans la biblioth\xE8que.");
+    }, "data-garder": true }, "Garder"))), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6, color: C.text } }, msg), /* @__PURE__ */ import_react.default.createElement(Label, null, "Ma biblioth\xE8que (", biblio.length, ")"), !biblio.length && /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Vide. \xAB Garder \xBB y range ce que tu as copi\xE9."), biblio.map((e, i) => /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, { key: i }, ligne(e, /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => coller(e) }, "Ajouter au jeu"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, title: "Retirer de la biblioth\xE8que", onClick: () => ecrireBiblio(biblio.filter((_, k) => k !== i)) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 10 }, onClick: () => {
+      setPresse(lirePresse());
+      setBiblio(lireBiblio());
+    } }, "Actualiser"));
+  }
+  function retoucherPixels(img, r, largeurMax, zones) {
+    const ratio = Math.min(1, largeurMax / img.naturalWidth, Math.sqrt(16e6 / (img.naturalWidth * img.naturalHeight)));
+    const W = Math.round(img.naturalWidth * ratio), H = Math.round(img.naturalHeight * ratio);
+    const cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const g = cv.getContext("2d");
+    const dx = Math.round((r.decalage || 0) / 100 * W);
+    g.drawImage(img, -dx, 0, W, H);
+    if (dx) g.drawImage(img, W - dx, 0, W, H);
+    if (dx < 0) g.drawImage(img, -dx - W, 0, W, H);
+    const lum = (r.lumiere || 0) * 2.55, con = 1 + (r.contraste || 0) / 100, sat = 1 + (r.saturation || 0) / 100, chaud = (r.chaleur || 0) * 0.6;
+    if (lum || con !== 1 || sat !== 1 || chaud) {
+      const d = g.getImageData(0, 0, W, H), p = d.data;
+      for (let i = 0; i < p.length; i += 4) {
+        let rr = p[i], gg = p[i + 1], bb = p[i + 2];
+        const gris = 0.299 * rr + 0.587 * gg + 0.114 * bb;
+        rr = gris + (rr - gris) * sat;
+        gg = gris + (gg - gris) * sat;
+        bb = gris + (bb - gris) * sat;
+        rr = (rr - 128) * con + 128 + lum + chaud;
+        gg = (gg - 128) * con + 128 + lum;
+        bb = (bb - 128) * con + 128 + lum - chaud;
+        p[i] = rr < 0 ? 0 : rr > 255 ? 255 : rr;
+        p[i + 1] = gg < 0 ? 0 : gg > 255 ? 255 : gg;
+        p[i + 2] = bb < 0 ? 0 : bb > 255 ? 255 : bb;
+      }
+      g.putImageData(d, 0, 0);
+    }
+    (zones || []).forEach((z) => {
+      const x = Math.round(z.x / 100 * W), y = Math.round(z.y / 100 * H), w = Math.max(2, Math.round(z.w / 100 * W)), h = Math.max(2, Math.round(z.h / 100 * H));
+      const petit = document.createElement("canvas");
+      petit.width = Math.max(1, Math.round(w / 24));
+      petit.height = Math.max(1, Math.round(h / 24));
+      const pg = petit.getContext("2d");
+      pg.imageSmoothingEnabled = true;
+      pg.drawImage(cv, x, y, w, h, 0, 0, petit.width, petit.height);
+      g.imageSmoothingEnabled = true;
+      g.drawImage(petit, 0, 0, petit.width, petit.height, x, y, w, h);
+    });
+    return cv;
+  }
+  function RetoucheScene({ scene, onChange }) {
+    const [ouvert, setOuvert] = (0, import_react.useState)(false);
+    const [r, setR] = (0, import_react.useState)({ lumiere: 0, contraste: 0, saturation: 0, chaleur: 0, decalage: 0 });
+    const [zones, setZones] = (0, import_react.useState)([]);
+    const [trace, setTrace] = (0, import_react.useState)(null);
+    const [img, setImg] = (0, import_react.useState)(null);
+    const [travail, setTravail] = (0, import_react.useState)("");
+    const apercu = (0, import_react.useRef)(null), boite = (0, import_react.useRef)(null);
+    const possible = scene.image && scene.imageFormat !== "hdr";
+    (0, import_react.useEffect)(() => {
+      if (!ouvert || !possible) return;
+      const im = new Image();
+      im.onload = () => setImg(im);
+      im.src = scene.image;
+    }, [ouvert, scene.image]);
+    (0, import_react.useEffect)(() => {
+      if (!img || !apercu.current) return;
+      const cv = retoucherPixels(img, r, 900, zones);
+      const a = apercu.current;
+      a.width = cv.width;
+      a.height = cv.height;
+      a.getContext("2d").drawImage(cv, 0, 0);
+    }, [img, r, zones]);
+    const pct = (e) => {
+      const b = boite.current.getBoundingClientRect();
+      return { x: Math.max(0, Math.min(100, (e.clientX - b.left) / b.width * 100)), y: Math.max(0, Math.min(100, (e.clientY - b.top) / b.height * 100)) };
+    };
+    const curseur = (k, nom, min, max) => /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4, ...petitTexte } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 92 } }, nom), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min, max, step: "1", value: r[k], onChange: (e) => setR({ ...r, [k]: parseFloat(e.target.value) }), style: { flex: 1 }, "data-retouche": k }), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 34, textAlign: "right" } }, r[k]));
+    if (!possible) return null;
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, width: "100%", justifyContent: "center" }, onClick: () => setOuvert(true), "data-retoucher": true }, "\u{1F3A8} Retoucher l'image 360"), ouvert && /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Retoucher l'image", onClose: () => setOuvert(false), largeur: 760, data: "retouche" }, !img ? /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Chargement de l'image\u2026") : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        ref: boite,
+        style: { position: "relative", touchAction: "none", cursor: "crosshair", borderRadius: 6, overflow: "hidden" },
+        onPointerDown: (e) => {
+          e.preventDefault();
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch (x) {
+          }
+          const p = pct(e);
+          setTrace({ x0: p.x, y0: p.y, x: p.x, y: p.y });
+        },
+        onPointerMove: (e) => {
+          if (!trace) return;
+          const p = pct(e);
+          setTrace((t) => t ? { ...t, x: p.x, y: p.y } : t);
+        },
+        onPointerUp: () => {
+          if (trace) {
+            const z = { x: Math.min(trace.x0, trace.x), y: Math.min(trace.y0, trace.y), w: Math.abs(trace.x - trace.x0), h: Math.abs(trace.y - trace.y0) };
+            if (z.w > 1 && z.h > 1) setZones((l) => [...l, z]);
+          }
+          setTrace(null);
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement("canvas", { ref: apercu, style: { width: "100%", display: "block" } }),
+      trace && /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", left: Math.min(trace.x0, trace.x) + "%", top: Math.min(trace.y0, trace.y) + "%", width: Math.abs(trace.x - trace.x0) + "%", height: Math.abs(trace.y - trace.y0) + "%", border: "2px dashed " + C.amber, pointerEvents: "none" } })
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Fais glisser sur l'image pour flouter une zone (un visage, une plaque, ton reflet).", zones.length ? " " + zones.length + " zone(s) flout\xE9e(s)." : "", zones.length > 0 && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, display: "inline-flex", marginLeft: 6 }, onClick: () => setZones(zones.slice(0, -1)) }, "Annuler la derni\xE8re")), curseur("lumiere", "Luminosit\xE9", -50, 50), curseur("contraste", "Contraste", -50, 50), curseur("saturation", "Couleurs", -100, 60), curseur("chaleur", "Chaleur", -40, 40), curseur("decalage", "Recentrer", -50, 50), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "\xAB Recentrer \xBB fait tourner l'image : le point de d\xE9part du regard change, les points d\xE9j\xE0 plac\xE9s ne bougent pas avec elle."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12 } }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => {
+      setR({ lumiere: 0, contraste: 0, saturation: 0, chaleur: 0, decalage: 0 });
+      setZones([]);
+    } }, "Tout remettre"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...primaryBtn, flex: 1 }, "data-retouche-ok": true, disabled: !!travail, onClick: () => {
+      setTravail("Retouche en cours\u2026");
+      setTimeout(() => {
+        try {
+          const cv = retoucherPixels(img, r, 16384, zones);
+          onChange({ image: cv.toDataURL("image/jpeg", 0.9) });
+          setOuvert(false);
+        } catch (e) {
+          setTravail("L'image est trop grande pour \xEAtre retouch\xE9e ici.");
+          return;
+        }
+        setTravail("");
+      }, 30);
+    } }, travail || "Appliquer \xE0 l'image")))));
+  }
+  function ImportLot({ scenes, setScenes, setCurrentSceneId, onClose }) {
+    const [fichiers, setFichiers] = (0, import_react.useState)([]);
+    const [relier, setRelier] = (0, import_react.useState)(true);
+    const [msg, setMsg] = (0, import_react.useState)("");
+    const importer = async () => {
+      setMsg("Lecture des images\u2026");
+      const lus = await Promise.all(fichiers.map((f) => new Promise((ok) => {
+        const r = new FileReader();
+        r.onload = () => ok({ nom: f.name.replace(/\.[^.]+$/, "").slice(0, 60), src: r.result, hdr: /\.hdr$/i.test(f.name) });
+        r.onerror = () => ok(null);
+        r.readAsDataURL(f);
+      })));
+      const bons = lus.filter(Boolean);
+      const y = Math.max(0, ...scenes.map((s) => s.editor && s.editor.y || 0)) + 220;
+      const neuves = bons.map((b, i) => ({ id: idNeuf("scene"), name: b.nom, image: b.src, imageFormat: b.hdr ? "hdr" : void 0, text: "", hotspots: [], layers: [], editor: { ...normalizeSceneEditor(null), x: i * 300, y } }));
+      if (relier) neuves.forEach((s, i) => {
+        if (neuves[i + 1]) s.hotspots.push({ id: idNeuf("hs"), type: "navigate", target: neuves[i + 1].id, label: "Vers " + neuves[i + 1].name, size: 44, requirements: [], position: { yaw: 0, pitch: -0.15 } });
+        if (neuves[i - 1]) s.hotspots.push({ id: idNeuf("hs"), type: "navigate", target: neuves[i - 1].id, label: "Retour", size: 44, requirements: [], position: { yaw: Math.PI, pitch: -0.15 } });
+      });
+      setScenes((l) => [...l, ...neuves]);
+      if (neuves[0]) setCurrentSceneId(neuves[0].id);
+      setMsg("\u2713 " + neuves.length + " sc\xE8ne(s) ajout\xE9e(s).");
+      setFichiers([]);
+    };
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Importer des sc\xE8nes en lot", onClose, data: "import-lot" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Choisis plusieurs images 360 d'un coup : une sc\xE8ne est cr\xE9\xE9e pour chacune, dans l'ordre de leurs noms."), /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "file",
+        accept: "image/*,.hdr",
+        multiple: true,
+        style: { display: "block", marginTop: 8, width: "100%" },
+        "data-import-lot": true,
+        onChange: (e) => setFichiers(Array.from(e.target.files || []).sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true })))
+      }
+    ), fichiers.length > 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6, color: C.text } }, fichiers.length, " image(s) : ", fichiers.slice(0, 6).map((f) => f.name).join(", "), fichiers.length > 6 ? "\u2026" : ""), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: relier, onChange: setRelier }, "Relier les sc\xE8nes dans l'ordre (un point \xAB Vers\u2026 \xBB devant, un point \xAB Retour \xBB derri\xE8re)"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...primaryBtn, marginTop: 10, width: "100%" }, disabled: !fichiers.length, onClick: importer, "data-import-ok": true }, "Cr\xE9er les sc\xE8nes"), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6, color: C.text } }, msg));
+  }
+  var THEMES_JEU = [
+    {
+      id: "polar",
+      nom: "Polar",
+      couleurs: ["#141414", "#C9A227", "#EDE6D6"],
+      ui: "epure",
+      accent: "#C9A227",
+      bulle: { bg: "#1C1C1C", bg2: "#111111", texte: "#EDE6D6", bord: "#C9A227", rayon: 4, police: "Georgia" },
+      choix: { bg: "#111111", texte: "#EDE6D6", bord: "#C9A227", rayon: 4 },
+      enigme: { surface: "#141414", ink: "#EDE6D6", line: "#333333", accent: "#C9A227" }
+    },
+    {
+      id: "fantasy",
+      nom: "Fantasy",
+      couleurs: ["#2A1E10", "#D9A441", "#F3E7C9"],
+      ui: "fantasy",
+      accent: "#D9A441",
+      bulle: { bg: "#F3E7C9", bg2: "#E2CFA0", texte: "#3B2A14", bord: "#7A5A2B", rayon: 18, police: "Georgia" },
+      choix: { bg: "#3B2A14", texte: "#F3E7C9", bord: "#C9A227", rayon: 10 },
+      enigme: { surface: "#2A1E10", ink: "#F3E7C9", line: "#5A4426", accent: "#D9A441" }
+    },
+    {
+      id: "sf",
+      nom: "Science-fiction",
+      couleurs: ["#06121A", "#2CD3E1", "#CFF8FF"],
+      ui: "scifi",
+      accent: "#2CD3E1",
+      bulle: { bg: "#0A1A24", bg2: "#06121A", texte: "#9FF3FF", bord: "#2CD3E1", rayon: 2, police: "Courier New" },
+      choix: { bg: "#06121A", texte: "#9FF3FF", bord: "#2CD3E1", rayon: 2 },
+      enigme: { surface: "#06121A", ink: "#CFF8FF", line: "#12404A", accent: "#2CD3E1" }
+    },
+    {
+      id: "enfant",
+      nom: "Enfant",
+      couleurs: ["#FFF6D8", "#FF6B6B", "#222222"],
+      ui: "bd",
+      accent: "#FF6B6B",
+      bulle: { bg: "#FFFFFF", bg2: "#FFF6D8", texte: "#222222", bord: "#222222", rayon: 24, police: "Comic Sans MS" },
+      choix: { bg: "#FFD23F", texte: "#222222", bord: "#222222", rayon: 20 },
+      enigme: { surface: "#FFF6D8", ink: "#222222", line: "#222222", accent: "#FF6B6B" }
+    },
+    {
+      id: "horreur",
+      nom: "Horreur",
+      couleurs: ["#0B0B0B", "#A31515", "#D8D0C0"],
+      ui: "epure",
+      accent: "#A31515",
+      bulle: { bg: "#0B0B0B", bg2: "#1A0505", texte: "#D8D0C0", bord: "#5A0000", rayon: 0, police: "Georgia" },
+      choix: { bg: "#120000", texte: "#D8D0C0", bord: "#5A0000", rayon: 0 },
+      enigme: { surface: "#0B0B0B", ink: "#D8D0C0", line: "#2A0A0A", accent: "#A31515" }
+    }
+  ];
+  var RETICULE_TYPES = [["navigate", "Aller ailleurs"], ["pickup_item", "Prendre"], ["puzzle", "\xC9nigme"], ["dialogue", "Parler"], ["show_text", "Regarder"], ["loupe", "Gros plan"]];
+  function ThemeJeu({ meta, setMeta, setUi, dialogTheme, setDialogTheme, setPuzzleTheme, audio, setAudio, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const [msg, setMsg] = (0, import_react.useState)("");
+    const ecrire = (patch) => setMeta((m) => ({ ...m, options: { ...normalizeOptionsJeu(m.options), ...patch } }));
+    const appliquer = (t) => {
+      const base = uiThemePreset(t.ui);
+      if (base) setUi((u) => normalizeUi({ ...u, theme: { ...base, accent: t.accent } }));
+      setDialogTheme((d) => normalizeDialogTheme({
+        ...d,
+        bubble: {
+          ...d.bubble,
+          radius: t.bulle.rayon,
+          border: { ...d.bubble.border, color: t.bulle.bord },
+          background: { ...d.bubble.background, type: "gradient", color: t.bulle.bg, color2: t.bulle.bg2, image: "" }
+        },
+        text: { ...d.text, color: t.bulle.texte, font: t.bulle.police },
+        choices: { ...d.choices, background: t.choix.bg, color: t.choix.texte, border: t.choix.bord, radius: t.choix.rayon, image: "" }
+      }));
+      setPuzzleTheme((p) => ({ ...p, colors: { ...p.colors || {}, ...t.enigme } }));
+      setMsg("\u2713 Th\xE8me \xAB " + t.nom + " \xBB appliqu\xE9 \xE0 l'interface, aux dialogues et aux \xE9nigmes.");
+    };
+    const icones = o.confort.icones || {};
+    const polices = o.polices || [];
+    const pr = o.profil || {};
+    const gen = o.generique || {};
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Th\xE8me, polices, fin et joueur", onClose, largeur: 560, data: "theme-jeu" }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Th\xE8mes de jeu"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Un clic r\xE8gle d'un coup les couleurs et les polices de l'interface, des dialogues et des \xE9nigmes. Tu peux ensuite tout retoucher."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 8, marginTop: 8 } }, THEMES_JEU.map((t) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: t.id,
+        type: "button",
+        onClick: () => appliquer(t),
+        "data-theme-jeu": t.id,
+        style: { ...smallBtn, flexDirection: "column", alignItems: "stretch", padding: 8, background: t.couleurs[0], border: "2px solid " + t.couleurs[1], color: t.couleurs[2] }
+      },
+      /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: t.bulle.police, fontSize: 14, fontWeight: 600 } }, t.nom),
+      /* @__PURE__ */ import_react.default.createElement("span", { style: { display: "flex", gap: 3, marginTop: 6 } }, t.couleurs.map((c) => /* @__PURE__ */ import_react.default.createElement("i", { key: c, style: { flex: 1, height: 8, borderRadius: 3, background: c } })))
+    ))), msg && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6, color: C.text } }, msg), /* @__PURE__ */ import_react.default.createElement(Label, null, "R\xE9ticule dessin\xE9"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Tes propres ic\xF4nes pour le r\xE9ticule qui change (\xE0 activer dans \xAB Options du jeu \xBB). Sans image, le symbole par d\xE9faut reste."), RETICULE_TYPES.map(([k, nom]) => /* @__PURE__ */ import_react.default.createElement("div", { key: k, style: { display: "flex", gap: 8, alignItems: "center", marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, width: 90 } }, nom), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: icones[k] || "", onChange: (image) => ecrire({ confort: { ...o.confort, icones: { ...icones, [k]: image } } }), libelle: icones[k] ? "Changer" : "Choisir une ic\xF4ne" })))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Polices"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Importe une police (.ttf, .otf, .woff) : elle est embarqu\xE9e dans le jeu."), polices.map((p, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4, fontFamily: p.nom, fontSize: 15, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, p.nom, " \u2014 Le vieux phare"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, onClick: () => ecrire({ polices: polices.filter((_, k) => k !== i) }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "file",
+        accept: ".ttf,.otf,.woff,.woff2,font/*",
+        style: { display: "block", marginTop: 6, width: "100%", fontSize: 11 },
+        "data-police-file": true,
+        onChange: (e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          if (f.size > 3e6) {
+            setMsg("Police trop lourde (3 Mo au plus).");
+            return;
+          }
+          const nom = f.name.replace(/\.[^.]+$/, "").replace(/[^A-Za-z0-9 _-]/g, "").slice(0, 40) || "Police";
+          const r = new FileReader();
+          r.onload = () => {
+            try {
+              const ff = new FontFace(nom, "url(" + r.result + ")");
+              ff.load().then((x) => document.fonts.add(x)).catch(() => {
+              });
+            } catch (x) {
+            }
+            ecrire({ polices: [...polices.filter((p) => p.nom !== nom), { nom, src: r.result }] });
+          };
+          r.readAsDataURL(f);
+        }
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap", ...petitTexte } }, "Dialogues", /* @__PURE__ */ import_react.default.createElement("select", { value: dialogTheme.text.font, onChange: (e) => setDialogTheme((d) => normalizeDialogTheme({ ...d, text: { ...d.text, font: e.target.value } })), style: { ...select, marginTop: 0, width: "auto" }, "data-police-dialogues": true }, ["Georgia", "system-ui", "Courier New", "Comic Sans MS", ...polices.map((p) => p.nom)].filter((v, i, l) => l.indexOf(v) === i).concat(polices.some((p) => p.nom === dialogTheme.text.font) || ["Georgia", "system-ui", "Courier New", "Comic Sans MS"].indexOf(dialogTheme.text.font) >= 0 ? [] : [dialogTheme.text.font]).map((f) => /* @__PURE__ */ import_react.default.createElement("option", { key: f, value: f }, f))), "Titres", /* @__PURE__ */ import_react.default.createElement("select", { value: o.policeTitres || "", onChange: (e) => ecrire({ policeTitres: e.target.value }), style: { ...select, marginTop: 0, width: "auto" }, "data-police-titres": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "Par d\xE9faut"), ["Georgia", "Courier New", ...polices.map((p) => p.nom)].map((f) => /* @__PURE__ */ import_react.default.createElement("option", { key: f, value: f }, f)))), /* @__PURE__ */ import_react.default.createElement(Label, null, "G\xE9n\xE9rique de fin"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Une ligne par nom. Une ligne qui commence par # devient un titre (\xAB # R\xE9alisation \xBB). Il d\xE9file depuis l'\xE9cran de fin."), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: gen.lignes || "",
+        onChange: (e) => ecrire({ generique: { ...gen, lignes: e.target.value } }),
+        rows: 5,
+        placeholder: "# Un jeu de\nPaul\n\n# Merci \xE0\nmes testeurs",
+        style: { ...input, resize: "vertical", marginTop: 6 },
+        "data-generique": true
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap", ...petitTexte } }, "Vitesse", /* @__PURE__ */ import_react.default.createElement("select", { value: gen.vitesse || "normal", onChange: (e) => ecrire({ generique: { ...gen, vitesse: e.target.value } }), style: { ...select, marginTop: 0, width: "auto" } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "lent" }, "Lente"), /* @__PURE__ */ import_react.default.createElement("option", { value: "normal" }, "Normale"), /* @__PURE__ */ import_react.default.createElement("option", { value: "rapide" }, "Rapide")), "Musique", /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, minWidth: 160 } }, /* @__PURE__ */ import_react.default.createElement(AudioPicker, { audio, value: gen.musique || "", onChange: (musique) => ecrire({ generique: { ...gen, musique } }), label: "generique" }))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!gen.auto, onChange: (v) => ecrire({ generique: { ...gen, auto: v } }) }, "Le lancer tout seul apr\xE8s l'\xE9cran de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Le joueur"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!pr.prenom, onChange: (v) => ecrire({ profil: { ...pr, prenom: v } }), data: "profil-prenom" }, "Demander son pr\xE9nom au d\xE9but (\xE0 \xE9crire ", "{prenom}", " dans les dialogues et les textes)"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!pr.difficulte, onChange: (v) => ecrire({ profil: { ...pr, difficulte: v } }), data: "profil-difficulte" }, "Lui faire choisir la difficult\xE9 : facile (plus d'aide, pas de chronom\xE8tre), normal, expert (sans indices ni aides)"), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Personnages \xE0 choisir (avatars) :"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 } }, (pr.avatars || []).map((a, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { position: "relative" } }, /* @__PURE__ */ import_react.default.createElement("img", { src: a, alt: "", style: { width: 48, height: 48, objectFit: "cover", borderRadius: 8 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...iconBtn, position: "absolute", top: -6, right: -6 }, onClick: () => ecrire({ profil: { ...pr, avatars: pr.avatars.filter((_, k) => k !== i) } }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 10, color: C.danger }))))), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: "", onChange: (image) => image && ecrire({ profil: { ...pr, avatars: [...pr.avatars || [], image].slice(0, 8) } }), libelle: "Ajouter un avatar" }));
+  }
+  var TEINTES = [["jour", "Jour"], ["aube", "Aube"], ["crepuscule", "Cr\xE9puscule"], ["nuit", "Nuit"], ["orage", "Orage"]];
+  function CycleScene({ scene, onChange, items, variables, puzzles, scenes }) {
+    const c = scene.cycle || { minutes: 0, etats: [] };
+    const etats = c.etats || [];
+    const ecrire = (patch) => {
+      const n = { ...c, ...patch };
+      onChange({ cycle: n.etats && n.etats.length ? n : void 0 });
+    };
+    const maj = (i, patch) => ecrire({ etats: etats.map((e, k) => k === i ? { ...e, ...patch } : e) });
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, ...petitTexte }, "data-cycle": true }, "Jour, nuit et m\xE9t\xE9o qui changent", etats.length > 0 && /* @__PURE__ */ import_react.default.createElement("select", { value: String(c.minutes || 0), onChange: (e) => ecrire({ minutes: parseFloat(e.target.value) }), style: { ...select, marginTop: 4, padding: "5px 8px", fontSize: 11 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Selon les conditions (le premier \xE9tat valable)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "2" }, "Chaque \xE9tat dure 2 min de jeu"), /* @__PURE__ */ import_react.default.createElement("option", { value: "5" }, "Chaque \xE9tat dure 5 min de jeu"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Chaque \xE9tat dure 10 min de jeu")), etats.map((e, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("select", { value: e.teinte || "jour", onChange: (ev) => maj(i, { teinte: ev.target.value }), style: { ...select, marginTop: 0, flex: 1, padding: "5px 8px", fontSize: 11 } }, TEINTES.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))), /* @__PURE__ */ import_react.default.createElement("select", { value: e.meteo ? e.meteo.type || "" : "-", onChange: (ev) => maj(i, { meteo: ev.target.value === "-" ? void 0 : { type: ev.target.value, force: 2 } }), style: { ...select, marginTop: 0, flex: 1, padding: "5px 8px", fontSize: 11 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "-" }, "M\xE9t\xE9o de la sc\xE8ne"), METEOS.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, onClick: () => ecrire({ etats: etats.filter((_, k) => k !== i) }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), !(c.minutes > 0) && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { margin: "4px 0 2px" } }, "Quand (vide : toujours) :"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: e.conditions || [], onChange: (conditions) => maj(i, { conditions }), items, variables, puzzles, scenes })))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 6 }, onClick: () => ecrire({ etats: [...etats, { teinte: etats.length ? "nuit" : "jour", conditions: [] }] }), "data-cycle-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter un \xE9tat"));
+  }
+  function AnimationCalque({ layer, onSave }) {
+    const frames = layer.frames || [];
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 } }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Animation image par image"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Un GIF s'anime d\xE9j\xE0 tout seul. Pour une suite d'images (PNG transparents), choisis-les toutes : elles d\xE9filent en boucle."), /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "file",
+        accept: "image/*",
+        multiple: true,
+        style: { display: "block", marginTop: 6, width: "100%", fontSize: 11 },
+        "data-calque-images": true,
+        onChange: async (e) => {
+          const fs = Array.from(e.target.files || []).sort((a, b) => a.name.localeCompare(b.name, "fr", { numeric: true }));
+          if (!fs.length) return;
+          const lus = await Promise.all(fs.map((f) => new Promise((ok) => {
+            const r = new FileReader();
+            r.onload = () => ok(r.result);
+            r.readAsDataURL(f);
+          })));
+          onSave({ frames: lus, image: lus[0], fps: layer.fps || 8 });
+        }
+      }
+    ), frames.length > 1 && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 6, ...petitTexte } }, frames.length, " images \xB7", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", max: "30", value: layer.fps || 8, onChange: (e) => onSave({ fps: parseFloat(e.target.value) || 8 }), style: { ...input, width: 56, marginTop: 0 } }), " images/s", /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => onSave({ frames: void 0 }) }, "Retirer l'animation")));
+  }
+  function pleinEcranTest(frame, on) {
+    try {
+      const d = frame && frame.contentDocument;
+      if (!d || !d.head) return;
+      let st = d.getElementById("e360-plein");
+      if (on && !st) {
+        st = d.createElement("style");
+        st.id = "e360-plein";
+        st.textContent = "html,body{display:block!important;background:#000!important}#phone-frame{width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;box-shadow:none!important;margin:0!important}";
+        d.head.appendChild(st);
+      } else if (!on && st) st.remove();
+      setTimeout(() => {
+        try {
+          frame.contentWindow.dispatchEvent(new Event("resize"));
+        } catch (e) {
+        }
+      }, 60);
+    } catch (e) {
+    }
+  }
   function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -37804,7 +38315,7 @@
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Son qui guide vers ce point"), /* @__PURE__ */ import_react.default.createElement(SonIndice, { valeur: sonIndice, onChange: setSonIndice, audio, setAudio }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Gros plan"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginBottom: 4, lineHeight: 1.4 } }, "Toucher ce point ouvre une vue rapproch\xE9e (un tiroir, un bureau, un tableau) avec ses propres zones, objets et \xE9nigmes."), /* @__PURE__ */ import_react.default.createElement(GrosPlanEditor, { valeur: grosPlan, onChange: setGrosPlan, items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Regard pr\xE9cis et fausse piste"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!anamorphose, onChange: (v) => setAnamorphose(v ? { tolerance: 6 } : void 0), data: "anamorphose" }, "Se d\xE9clenche tout seul quand le joueur regarde exactement ce point (anamorphose : un dessin qui ne se lit que d'ici)"), anamorphose && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4, marginLeft: 22, fontFamily: sans, fontSize: 11.5, color: C.textDim } }, "Pr\xE9cision", /* @__PURE__ */ import_react.default.createElement("select", { value: String(anamorphose.tolerance || 6), onChange: (e) => setAnamorphose({ tolerance: parseFloat(e.target.value) }), style: { ...select, marginTop: 0, width: "auto" } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "3" }, "Tr\xE8s pr\xE9cise (3\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "6" }, "Pr\xE9cise (6\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Large (10\xB0)"))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "fausse-piste" }, "Fausse piste : au troisi\xE8me essai, le jeu dit au joueur qu'il n'y a rien \xE0 trouver ici"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Son qui guide vers ce point"), /* @__PURE__ */ import_react.default.createElement(SonIndice, { valeur: sonIndice, onChange: setSonIndice, audio, setAudio }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 12, display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement(CopierBouton, { sorte: "point", data: hotspot, nom: hotspot.label || hotspot.type })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Gros plan"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginBottom: 4, lineHeight: 1.4 } }, "Toucher ce point ouvre une vue rapproch\xE9e (un tiroir, un bureau, un tableau) avec ses propres zones, objets et \xE9nigmes."), /* @__PURE__ */ import_react.default.createElement(GrosPlanEditor, { valeur: grosPlan, onChange: setGrosPlan, items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Regard pr\xE9cis et fausse piste"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: !!anamorphose, onChange: (v) => setAnamorphose(v ? { tolerance: 6 } : void 0), data: "anamorphose" }, "Se d\xE9clenche tout seul quand le joueur regarde exactement ce point (anamorphose : un dessin qui ne se lit que d'ici)"), anamorphose && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4, marginLeft: 22, fontFamily: sans, fontSize: 11.5, color: C.textDim } }, "Pr\xE9cision", /* @__PURE__ */ import_react.default.createElement("select", { value: String(anamorphose.tolerance || 6), onChange: (e) => setAnamorphose({ tolerance: parseFloat(e.target.value) }), style: { ...select, marginTop: 0, width: "auto" } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "3" }, "Tr\xE8s pr\xE9cise (3\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "6" }, "Pr\xE9cise (6\xB0)"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Large (10\xB0)"))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "fausse-piste" }, "Fausse piste : au troisi\xE8me essai, le jeu dit au joueur qu'il n'y a rien \xE0 trouver ici"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function LevelBadge({ level, small }) {
     const L = PUZZLE_LEVELS[level] || PUZZLE_LEVELS.link;
@@ -38066,7 +38577,7 @@
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Calque \u2014 personnage"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => {
       save();
       onClose();
-    }, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ import_react.default.createElement("img", { src: layer.image, alt: "", style: { width: 54, height: 54, objectFit: "contain", background: C.ink2, borderRadius: 6 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Remplacer le GIF"), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && replaceImage(e.target.files[0]) })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom (rep\xE8re interne)"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Le vieux sage" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille \u2014 ", Math.round(scale * 100), "%"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "0.3", max: "3", step: "0.05", value: scale, onChange: (e) => setScale(parseFloat(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => {
+    }, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center", marginBottom: 10 } }, /* @__PURE__ */ import_react.default.createElement("img", { src: layer.image, alt: "", style: { width: 54, height: 54, objectFit: "contain", background: C.ink2, borderRadius: 6 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Remplacer le GIF"), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && replaceImage(e.target.files[0]) })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom (rep\xE8re interne)"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Le vieux sage" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille \u2014 ", Math.round(scale * 100), "%"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "0.3", max: "3", step: "0.05", value: scale, onChange: (e) => setScale(parseFloat(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement(AnimationCalque, { layer, onSave: (patch) => save(patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => {
       save();
       onReposition();
     }, style: { ...smallBtn, flex: 1, justifyContent: "center" } }, /* @__PURE__ */ import_react.default.createElement(Move, { size: 13 }), " D\xE9placer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => save(), style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
@@ -38104,7 +38615,7 @@
         faussePiste: faussePiste || void 0
       });
     };
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Document \xE0 lire"), /* @__PURE__ */ import_react.default.createElement(DocumentPages, { pages, onChange: setPages }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Usure"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "S'use apr\xE8s", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: usages, onChange: (e) => setUsages(Math.max(0, parseInt(e.target.value, 10) || 0)), style: { ...input, width: 64, marginTop: 0 }, "data-item-usages": true }), "utilisation(s) ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "(0 : jamais)")), usages > 0 && /* @__PURE__ */ import_react.default.createElement("input", { value: usureTexte, onChange: (e) => setUsureTexte(e.target.value), style: { ...input, marginTop: 6 }, placeholder: "La lampe s'\xE9teint : plus de pile." }), /* @__PURE__ */ import_react.default.createElement(Label, null, "D\xE9monter en"), /* @__PURE__ */ import_react.default.createElement(DemontageObjet, { liste: demonter, onChange: setDemonter, itemId: item.id }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Examiner sous toutes ses faces"), /* @__PURE__ */ import_react.default.createElement(FacesObjet, { faces, onChange: setFaces }), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "objet-fausse-piste" }, "Fausse piste : si le joueur insiste, le jeu lui dit que cet objet ne sert \xE0 rien"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Document \xE0 lire"), /* @__PURE__ */ import_react.default.createElement(DocumentPages, { pages, onChange: setPages }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Usure"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "S'use apr\xE8s", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: usages, onChange: (e) => setUsages(Math.max(0, parseInt(e.target.value, 10) || 0)), style: { ...input, width: 64, marginTop: 0 }, "data-item-usages": true }), "utilisation(s) ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "(0 : jamais)")), usages > 0 && /* @__PURE__ */ import_react.default.createElement("input", { value: usureTexte, onChange: (e) => setUsureTexte(e.target.value), style: { ...input, marginTop: 6 }, placeholder: "La lampe s'\xE9teint : plus de pile." }), /* @__PURE__ */ import_react.default.createElement(Label, null, "D\xE9monter en"), /* @__PURE__ */ import_react.default.createElement(DemontageObjet, { liste: demonter, onChange: setDemonter, itemId: item.id }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 12, display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement(CopierBouton, { sorte: "objet", data: item, nom: item.name })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Examiner sous toutes ses faces"), /* @__PURE__ */ import_react.default.createElement(FacesObjet, { faces, onChange: setFaces }), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: faussePiste, onChange: setFaussePiste, data: "objet-fausse-piste" }, "Fausse piste : si le joueur insiste, le jeu lui dit que cet objet ne sert \xE0 rien"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function ItemManager({ items, onEdit, onCreate, onClose, combos, onCombos, variables, puzzles, scenes, dialogues, projet }) {
     const [onglet, setOnglet] = (0, import_react.useState)("objets");
@@ -48709,7 +49220,7 @@
       ["onFailure", "\xC0 l'\xE9chec"],
       ["onAbandon", "Si elle est abandonn\xE9e"]
     ];
-    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Conditions d'acc\xE8s"), /* @__PURE__ */ import_react.default.createElement(
+    return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement(CopierBouton, { sorte: "enigme", data: puzzle, nom: puzzle.title })), /* @__PURE__ */ import_react.default.createElement(Label, null, "Conditions d'acc\xE8s"), /* @__PURE__ */ import_react.default.createElement(
       RequirementsEditor,
       {
         requirements: puzzle.requirements,
@@ -70121,6 +70632,47 @@ ${partageMeta(game)}
   .meteo{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;display:none}
   .lampe{position:absolute;inset:0;pointer-events:none;display:none}
   .reticule-ctx{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:28px;height:28px;border-radius:50%;display:none;align-items:center;justify-content:center;pointer-events:none;border:2px solid rgba(255,255,255,.5);font-size:15px;transition:width .15s,height .15s,background .15s;box-sizing:border-box}
+  .reticule-ctx.dessine{border:none;background:none;width:48px;height:48px}
+  .reticule-ctx img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+  .annonce-txt b,#fin-jeu h1,#fin-jeu h2,.ex-titre,.generique h2,.profil-box h2,.empl-box h2{font-family:var(--police-titres,inherit)}
+  .teinte{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:0;transition:opacity 2.5s ease,background 2.5s ease;mix-blend-mode:multiply}
+  .teinte[data-teinte="aube"]{opacity:1;background:linear-gradient(to top,rgba(255,170,120,.55),rgba(255,214,190,.35))}
+  .teinte[data-teinte="crepuscule"]{opacity:1;background:linear-gradient(to top,rgba(210,90,70,.6),rgba(120,70,140,.55))}
+  .teinte[data-teinte="nuit"]{opacity:1;background:rgba(40,55,120,.78)}
+  .teinte[data-teinte="orage"]{opacity:1;background:rgba(80,86,100,.7)}
+  .generique{position:absolute;inset:0;z-index:75;background:#000;overflow:hidden;color:#F2EEE4;text-align:center;transition:opacity .6s}
+  .generique.part{opacity:0}
+  .gen-rouleau{position:absolute;left:0;right:0;top:100%;padding:0 24px;animation:gen-monte linear forwards}
+  .gen-rouleau h2{font:600 13px/1.4 system-ui,sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--accent,#E8A33D);margin:26px 0 6px}
+  .gen-rouleau p{font:17px/1.5 Georgia,serif;margin:2px 0}
+  .gen-vide{height:22px}
+  @keyframes gen-monte{to{transform:translateY(calc(-100% - 100vh))}}
+  .generique .pnl-close{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:10px;z-index:2}
+  .profil{position:absolute;inset:0;z-index:85;background:rgba(5,7,11,.92);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+  .profil-box{width:100%;max-width:360px;background:#161A25;border:1px solid #242938;border-radius:14px;padding:18px;color:#E9E6DD;display:flex;flex-direction:column;gap:8px;max-height:100%;overflow:auto;box-sizing:border-box}
+  .profil-box h2{margin:0 0 4px;font-size:19px}
+  .profil-box label{font:600 11px system-ui,sans-serif;letter-spacing:1px;text-transform:uppercase;color:#8B8FA3;margin-top:6px}
+  .profil-champ{min-height:44px;border-radius:9px;border:1px solid #2e3446;background:#0f1219;color:#fff;font:16px system-ui,sans-serif;padding:0 12px}
+  .profil-champ.vide{border-color:#D9636B}
+  .profil-avatars{display:flex;gap:8px;flex-wrap:wrap}
+  .profil-avatar{width:58px;height:58px;padding:0;border-radius:12px;border:2px solid transparent;background:#0f1219;overflow:hidden;cursor:pointer}
+  .profil-avatar img{width:100%;height:100%;object-fit:cover}
+  .profil-avatar.on{border-color:var(--accent,#E8A33D)}
+  .profil-niveaux{display:flex;flex-direction:column;gap:6px}
+  .profil-niveau{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border-radius:10px;border:1px solid #2e3446;background:#0f1219;color:#E9E6DD;cursor:pointer;text-align:left}
+  .profil-niveau.on{border-color:var(--accent,#E8A33D);background:rgba(232,163,61,.12)}
+  .profil-niveau small{font-size:11px;opacity:.7}
+  .profil-go{margin-top:10px;min-height:44px}
+  .empl-box{width:100%;max-width:380px;background:#161A25;border:1px solid #242938;border-radius:14px;padding:16px;color:#E9E6DD;box-sizing:border-box;max-height:100%;overflow:auto}
+  .empl-box h2{margin:0 0 10px;font-size:17px}
+  .empl-ligne{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #242938}
+  .empl-ligne img,.empl-vide{width:72px;height:44px;border-radius:6px;object-fit:cover;flex:none;background:#0f1219;display:flex;align-items:center;justify-content:center;color:#555B6E;font:600 16px system-ui}
+  .empl-txt{flex:1;min-width:0;display:flex;flex-direction:column;font:13px/1.3 system-ui,sans-serif}
+  .empl-txt small{opacity:.6;font-size:11px}
+  .empl-btns{display:flex;flex-direction:column;gap:4px}
+  .empl-btn{min-height:32px;padding:0 10px;border-radius:7px;border:1px solid #2e3446;background:#1d2230;color:#E9E6DD;font:600 12px system-ui,sans-serif;cursor:pointer}
+  .empl-charge{background:var(--accent,#E8A33D);color:#0B0E14;border-color:transparent}
+  .empl-fermer{margin-top:10px;width:100%;min-height:40px;border-radius:9px;border:none;background:#242938;color:#E9E6DD;font:600 13px system-ui,sans-serif;cursor:pointer}
   .reticule-ctx.vise{width:44px;height:44px;background:rgba(16,19,27,.6);border-color:var(--accent,#E8A33D)}
   .montrer-points{position:absolute;left:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:31;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(16,19,27,.8);color:#fff;font-size:18px;display:none;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .montrer-points[data-reste]:not([data-reste=""])::after{content:attr(data-reste);position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--accent,#E8A33D);color:#0B0E14;font:700 11px/18px system-ui,sans-serif;text-align:center}
@@ -71283,6 +71835,12 @@ function montrerFin(a){
     goHome();
   };
   btns.appendChild(rejouer); btns.appendChild(accueil);
+  if(OPTS.generique && String(OPTS.generique.lignes || '').trim()){
+    const gen = mk('button', 'fin-btn', 'G\xE9n\xE9rique'); gen.type = 'button';
+    gen.onclick = function(){ montrerGenerique(); };
+    btns.appendChild(gen);
+    if(OPTS.generique.auto) setTimeout(montrerGenerique, 3000);
+  }
   box.appendChild(btns);
   fond.appendChild(box);
   frameEl.appendChild(fond);
@@ -71323,6 +71881,225 @@ function montrerImage(image, texte){
         bande-annonce ------------------------------------------------- */
 const OPTS = (GAME.game && GAME.game.options) || {};
 function optJeu(k){ return OPTS[k] || {}; }
+/* ---- Lot 9 : polices, g\xE9n\xE9rique, profil et difficult\xE9, jour et nuit,
+        emplacements de sauvegarde ------------------------------------- */
+function difficulte(){ try{ return vars.__difficulte || 'normal'; }catch(e){ return 'normal'; } }
+
+/*  Les polices import\xE9es par l'auteur.                               */
+let polices9Fait = false;
+function polices9(){
+  if(polices9Fait) return;
+  polices9Fait = true;
+  let css = '';
+  (OPTS.polices || []).forEach(function(p){ if(p && p.nom && p.src) css += '@font-face{font-family:"' + p.nom + '";src:url("' + p.src + '");font-display:swap}'; });
+  if(OPTS.policeTitres) css += ':root{--police-titres:"' + OPTS.policeTitres + '",Georgia,serif}';
+  if(!css) return;
+  const st = document.createElement('style');
+  st.textContent = css;
+  document.head.appendChild(st);
+}
+
+/*  Le g\xE9n\xE9rique de fin.                                              */
+function montrerGenerique(){
+  const g = OPTS.generique || {};
+  const lignes = String(g.lignes || '').split(String.fromCharCode(10));
+  if(!lignes.join('').trim() || document.querySelector('.generique')) return;
+  const fond = mk('div', 'generique');
+  const rouleau = mk('div', 'gen-rouleau');
+  lignes.forEach(function(l){
+    const t = l.trim();
+    if(!t){ rouleau.appendChild(mk('div', 'gen-vide')); return; }
+    if(t.charAt(0) === '#') rouleau.appendChild(mk('h2', '', trJeu(t.slice(1).trim())));
+    else rouleau.appendChild(mk('p', '', trJeu(t)));
+  });
+  fond.appendChild(rouleau);
+  const pas = g.vitesse === 'lent' ? 2.6 : g.vitesse === 'rapide' ? 1.1 : 1.7;
+  rouleau.style.animationDuration = Math.max(12, lignes.length * pas + 8) + 's';
+  let fini = false;
+  const fin = function(){
+    if(fini) return; fini = true;
+    fond.classList.add('part');
+    setTimeout(function(){ fond.remove(); }, 600);
+    try{ aStopStream('generique', 1.5); }catch(e){}
+    try{ syncMusic(); }catch(e){}
+  };
+  const x = mk('button', 'pnl-close', '\u2715');
+  x.type = 'button'; x.setAttribute('aria-label', 'Fermer le g\xE9n\xE9rique');
+  x.onclick = function(e){ e.stopPropagation(); fin(); };
+  fond.appendChild(x);
+  rouleau.addEventListener('animationend', function(){ setTimeout(fin, 1500); });
+  frameEl.appendChild(fond);
+  if(g.musique){
+    const s = aSrc(g.musique);
+    if(s){ try{ aStopStream('scene', 1); aStream('generique', s, { bus: 'music', loop: true, volume: 0.8, fade: 1.5 }); }catch(e){} }
+  }
+}
+
+/*  Avant de commencer : pr\xE9nom, personnage, difficult\xE9.              */
+function profil9(suite){
+  const pr = OPTS.profil || {};
+  const avatars = pr.avatars || [];
+  if(!(pr.prenom || avatars.length || pr.difficulte) || vars.__profil){ suite(); return; }
+  const fond = mk('div', 'profil');
+  const box = mk('div', 'profil-box');
+  box.appendChild(mk('h2', '', 'Avant de commencer'));
+  let champ = null, avatar = avatars[0] || '', niveau = 'normal';
+  if(pr.prenom){
+    box.appendChild(mk('label', '', 'Ton pr\xE9nom'));
+    champ = document.createElement('input');
+    champ.type = 'text'; champ.maxLength = 24; champ.className = 'profil-champ'; champ.placeholder = 'Alex';
+    champ.setAttribute('data-profil-prenom', '1');
+    box.appendChild(champ);
+  }
+  if(avatars.length){
+    box.appendChild(mk('label', '', 'Ton personnage'));
+    const rang = mk('div', 'profil-avatars');
+    avatars.forEach(function(src, i){
+      const b = mk('button', 'profil-avatar' + (i === 0 ? ' on' : ''));
+      b.type = 'button';
+      const im = document.createElement('img'); im.src = src; im.alt = ''; b.appendChild(im);
+      b.onclick = function(){ avatar = src; rang.querySelectorAll('.profil-avatar').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); };
+      rang.appendChild(b);
+    });
+    box.appendChild(rang);
+  }
+  if(pr.difficulte){
+    box.appendChild(mk('label', '', 'Difficult\xE9'));
+    const rang = mk('div', 'profil-niveaux');
+    [['facile', 'Facile', 'Plus d\u2019aide, pas de chronom\xE8tre'], ['normal', 'Normal', ''], ['expert', 'Expert', 'Sans indices ni aides']].forEach(function(n){
+      const b = mk('button', 'profil-niveau' + (n[0] === 'normal' ? ' on' : ''));
+      b.type = 'button';
+      b.setAttribute('data-niveau', n[0]);
+      b.appendChild(mk('b', '', n[1]));
+      if(n[2]) b.appendChild(mk('small', '', n[2]));
+      b.onclick = function(){ niveau = n[0]; rang.querySelectorAll('.profil-niveau').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); };
+      rang.appendChild(b);
+    });
+    box.appendChild(rang);
+  }
+  const go = mk('button', 'pz-validate profil-go', 'Commencer');
+  go.type = 'button';
+  go.setAttribute('data-profil-go', '1');
+  go.onclick = function(){
+    const nom = champ ? champ.value.trim().slice(0, 24) : '';
+    if(champ && !nom){ champ.focus(); champ.classList.add('vide'); return; }
+    if(nom){ vars.prenom = nom; vars['pr\xE9nom'] = nom; }
+    if(avatar) vars.__avatar = avatar;
+    vars.__difficulte = niveau;
+    vars.__profil = true;
+    fond.remove();
+    saveGame();
+    suite();
+  };
+  box.appendChild(go);
+  fond.appendChild(box);
+  frameEl.appendChild(fond);
+  if(champ) setTimeout(function(){ try{ champ.focus(); }catch(e){} }, 300);
+}
+
+/*  Jour, nuit et m\xE9t\xE9o qui changent.                                 */
+let teinteEl = null, meteoCycleActif = null, cycleSig = '';
+function cycleEtat(){
+  const c = current && current.cycle;
+  if(!c || !Array.isArray(c.etats) || !c.etats.length) return null;
+  if(c.minutes > 0){
+    const t = (parseFloat(vars.__temps) || 0) / 60;
+    return c.etats[Math.floor(t / c.minutes) % c.etats.length];
+  }
+  for(let i = 0; i < c.etats.length; i++){
+    const e = c.etats[i];
+    if(!(e.conditions && e.conditions.length && reqMissing(e.conditions, inventory, vars).length)) return e;
+  }
+  return null;
+}
+function cycleTick(){
+  if(!current) return;
+  const e = cycleEtat();
+  const teinte = e ? (e.teinte || 'jour') : 'jour';
+  const met = e && e.meteo ? e.meteo : null;
+  const sig = current.id + '|' + teinte + '|' + (met ? (met.type || 'aucune') + (met.force || 2) : '-');
+  if(sig === cycleSig) return;
+  cycleSig = sig;
+  if(!teinteEl){ teinteEl = mk('div', 'teinte'); mount.insertBefore(teinteEl, renderer.domElement.nextSibling); }
+  teinteEl.setAttribute('data-teinte', teinte);
+  meteoCycleActif = met ? { type: met.type || 'aucune', force: met.force || 2 } : null;
+  try{ meteoScene(); }catch(x){}
+}
+setInterval(function(){ try{ if(playerScreen !== 'home') cycleTick(); }catch(e){} }, 2000);
+
+/*  Trois emplacements de sauvegarde, avec une image de l'endroit.    */
+function slotCle(i){ return SAVE_KEY + ':slot' + i; }
+function lireSlot(i){ try{ return JSON.parse(localStorage.getItem(slotCle(i)) || 'null'); }catch(e){ return null; } }
+function captureVue(){
+  try{
+    renderer.render(scene, camera);
+    const s = renderer.domElement, c = document.createElement('canvas');
+    c.width = 240; c.height = Math.max(1, Math.round(240 * s.height / Math.max(1, s.width)));
+    c.getContext('2d').drawImage(s, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.7);
+  }catch(e){ return ''; }
+}
+function ouvrirEmplacements(){
+  const ov = PlayerUI.overlay(frameEl, 'data-emplacements');
+  const box = mk('div', 'empl-box');
+  ov.appendChild(box);
+  const ferme = function(){ ov.remove(); };
+  ov.addEventListener('click', function(e){ if(e.target === ov) ferme(); });
+  const dessine = function(){
+    box.textContent = '';
+    box.appendChild(mk('h2', '', 'Emplacements de sauvegarde'));
+    for(let i = 1; i <= 3; i++){
+      const s = lireSlot(i);
+      const ligne = mk('div', 'empl-ligne');
+      ligne.setAttribute('data-emplacement', String(i));
+      if(s && s.image){ const im = document.createElement('img'); im.src = s.image; im.alt = ''; ligne.appendChild(im); }
+      else ligne.appendChild(mk('div', 'empl-vide', String(i)));
+      const t = mk('div', 'empl-txt');
+      t.appendChild(mk('b', '', s ? trJeu(s.scene || 'Partie') : 'Emplacement libre'));
+      if(s) t.appendChild(mk('small', '', new Date(s.quand).toLocaleString()));
+      ligne.appendChild(t);
+      const bs = mk('div', 'empl-btns');
+      const ecrit = mk('button', 'empl-btn', s ? '\xC9craser' : 'Enregistrer ici');
+      ecrit.type = 'button';
+      ecrit.onclick = function(){
+        const faire = function(){
+          try{
+            localStorage.setItem(slotCle(i), JSON.stringify({ save: buildSave(), image: captureVue(), scene: current ? (current.name || current.id) : '', quand: Date.now() }));
+            writeSave();
+            PlayerUI.toast(frameEl, '\u2713 Enregistr\xE9 dans l\u2019emplacement ' + i);
+          }catch(e){ PlayerUI.toast(frameEl, "L'enregistrement a \xE9chou\xE9"); }
+          dessine();
+        };
+        if(s) PlayerUI.dialog(frameEl, { title: '\xC9craser l\u2019emplacement ' + i, message: 'La partie d\xE9j\xE0 enregistr\xE9e ici sera remplac\xE9e.', buttons: [{ label: 'ANNULER' }, { label: '\xC9CRASER', primary: true, fn: faire }] });
+        else faire();
+      };
+      bs.appendChild(ecrit);
+      if(s){
+        const charge = mk('button', 'empl-btn empl-charge', 'Charger');
+        charge.type = 'button';
+        charge.onclick = function(){
+          try{ localStorage.setItem(SAVE_KEY, JSON.stringify(s.save)); }catch(e){}
+          const sv = readSave();
+          if(!sv){ PlayerUI.toast(frameEl, 'Cet emplacement est illisible'); return; }
+          ferme();
+          try{ hidePauseMenu(); }catch(e){}
+          applySave(sv);
+          markSaved();
+          setScreen('playing');
+        };
+        bs.appendChild(charge);
+      }
+      ligne.appendChild(bs);
+      box.appendChild(ligne);
+    }
+    const x = mk('button', 'empl-fermer', 'Fermer');
+    x.type = 'button';
+    x.onclick = ferme;
+    box.appendChild(x);
+  };
+  dessine();
+}
+
 function vibre(motif){ try{ if(optJeu('confort').vibrations !== false && navigator.vibrate) navigator.vibrate(motif); }catch(e){} }
 
 /*  Langues : un texte traduit s'il existe, sinon l'original.         */
@@ -71331,16 +72108,20 @@ function trJeu(s){
   if(!s || typeof s !== 'string') return s;
   let L = '';
   try{ L = HomeSettings.get().langue || ''; }catch(e){}
-  if(!L) return s;
+  if(!L) return prenom9(s);
   const t = (optJeu('langues').textes || {})[L];
-  return (t && t[s]) || s;
+  return prenom9((t && t[s]) || s);
+}
+function prenom9(s){
+  try{ if(s && s.indexOf('{pr') >= 0 && vars.prenom) return s.split('{pr\xE9nom}').join(vars.prenom).split('{prenom}').join(vars.prenom); }catch(e){}
+  return s;
 }
 
 /*  R\xE9ticule qui change selon ce que l'on vise.                       */
 let reticuleEl = null;
 const RETICULE_ICONES = { navigate: '\u279C', pickup_item: '\u270B', puzzle: '\u{1F9E9}', external_puzzle: '\u{1F9E9}', dialogue: '\u{1F4AC}', show_text: '\u{1F441}' };
 function reticuleTick(){
-  if(!optJeu('confort').reticule || playerScreen !== 'playing'){ if(reticuleEl && reticuleEl.style.display !== 'none') reticuleEl.style.display = 'none'; return; }
+  if((!optJeu('confort').reticule && difficulte() !== 'facile') || difficulte() === 'expert' || playerScreen !== 'playing'){ if(reticuleEl && reticuleEl.style.display !== 'none') reticuleEl.style.display = 'none'; return; }
   if(!reticuleEl){ reticuleEl = mk('div', 'reticule-ctx'); reticuleEl.setAttribute('aria-hidden', 'true'); frameEl.appendChild(reticuleEl); }
   if(reticuleEl.style.display !== 'flex') reticuleEl.style.display = 'flex';
   const w = mount.clientWidth, h = mount.clientHeight;
@@ -71352,14 +72133,23 @@ function reticuleTick(){
     if(d < Math.max(30, (hs.size || 36) / 2 + 12) && d < best){ best = d; vise = hs; }
   });
   const ic = !vise ? '' : objetEnMain ? '\u270B' : (vise.grosPlan && vise.grosPlan.image) ? '\u{1F50D}' : (RETICULE_ICONES[vise.type] || '\u2022');
-  if(reticuleEl._ic !== ic){ reticuleEl._ic = ic; reticuleEl.textContent = ic; reticuleEl.classList.toggle('vise', !!ic); }
+  const icones = optJeu('confort').icones || {};
+  const cleIc = !vise ? '' : objetEnMain ? 'pickup_item' : (vise.grosPlan && vise.grosPlan.image) ? 'loupe' : (vise.type === 'external_puzzle' ? 'puzzle' : vise.type);
+  const dessin = cleIc && icones[cleIc] ? icones[cleIc] : '';
+  const sigIc = ic + '|' + dessin;
+  if(reticuleEl._ic !== sigIc){
+    reticuleEl._ic = sigIc; reticuleEl.textContent = '';
+    if(dessin){ const im = document.createElement('img'); im.src = dessin; im.alt = ''; reticuleEl.appendChild(im); }
+    else reticuleEl.textContent = ic;
+    reticuleEl.classList.toggle('vise', !!ic); reticuleEl.classList.toggle('dessine', !!dessin);
+  }
 }
 
 /*  Montrer les points de la sc\xE8ne, un instant.                       */
 let montrerBtn = null;
 function montrerPointsMaj(){
   const o = optJeu('confort');
-  const voulu = !!o.montrerPoints && playerScreen === 'playing';
+  const voulu = (!!o.montrerPoints || difficulte() === 'facile') && difficulte() !== 'expert' && playerScreen === 'playing';
   if(!voulu){ if(montrerBtn && montrerBtn.style.display !== 'none') montrerBtn.style.display = 'none'; return; }
   if(!montrerBtn){
     montrerBtn = mk('button', 'montrer-points', '\u{1F441}');
@@ -71370,13 +72160,13 @@ function montrerPointsMaj(){
     frameEl.appendChild(montrerBtn);
   }
   if(montrerBtn.style.display !== 'flex') montrerBtn.style.display = 'flex';
-  const max = o.montrerFois || 0;
+  const max = difficulte() === 'facile' ? 0 : (o.montrerFois || 0);
   const reste = max ? Math.max(0, max - (vars.__montrer || 0)) : -1;
   const lib = reste < 0 ? '' : String(reste);
   if(montrerBtn.getAttribute('data-reste') !== lib){ montrerBtn.setAttribute('data-reste', lib); montrerBtn.disabled = reste === 0; }
 }
 function montrerPoints(){
-  const max = optJeu('confort').montrerFois || 0;
+  const max = difficulte() === 'facile' ? 0 : (optJeu('confort').montrerFois || 0);
   if(max && (vars.__montrer || 0) >= max) return;
   vars.__montrer = (vars.__montrer || 0) + 1;
   markerEls.forEach(function(el){
@@ -71593,7 +72383,7 @@ function faussePistePoint(hs){
   if(!hs.faussePiste) return false;
   const k = '__fp:' + hs.id;
   vars[k] = (vars[k] || 0) + 1;
-  if(vars[k] < 3) return false;
+  if(vars[k] < (difficulte() === 'facile' ? 2 : 3)) return false;
   showModal(trJeu(hs.faussePisteTexte || "Rien d'utile ici : c'est une fausse piste."));
   return true;
 }
@@ -71699,7 +72489,7 @@ function dlgChrono(box){
   if(dlgChronoT){ clearTimeout(dlgChronoT); dlgChronoT = 0; }
   const v = dlgV;
   if(!v || !(v.delai > 0)) return;
-  try{ if(HomeSettings.get().sansPression) return; }catch(e){}
+  try{ if(HomeSettings.get().sansPression || difficulte() === 'facile') return; }catch(e){}
   const barre = mk('div', 'dlg-chrono');
   const jauge = mk('i');
   jauge.style.animationDuration = v.delai + 's';
@@ -71843,6 +72633,8 @@ function ambiance678(){
   }
   bulles.forEach(function(b){ b.el.remove(); }); bulles = [];
   anaDebut = {};
+  try{ polices9(); }catch(e){}
+  cycleSig = ''; try{ cycleTick(); }catch(e){}
   if(EN_TEST && current && !BANDE_ANNONCE){ statsDe(current.id).visites++; statsSauve(); }
   chargementScene();
 }
@@ -72064,7 +72856,8 @@ function baisseDialogue(){
 const METEO_N = { pluie: 150, neige: 90, brouillard: 7, poussiere: 55, lucioles: 26, feuilles: 22, braises: 45 };
 let meteoCv = null, meteoCtx = null, meteoParts = [], meteoType = '', meteoRaf = 0, meteoYaw = 0, meteoPitch = 0, meteoT = 0;
 function meteoScene(){
-  const m = current && current.meteo && METEO_N[current.meteo.type] ? current.meteo : null;
+  const mm = meteoCycleActif || (current && current.meteo);
+  const m = mm && METEO_N[mm.type] ? mm : null;
   const type = m ? m.type + ':' + (m.force || 2) : '';
   if(type === meteoType) return;
   meteoType = type;
@@ -72397,11 +73190,12 @@ function sceneAutoOuvre(){
 }
 let layerEls=[];
 function renderLayers(){
-  layerEls.forEach(e=>e.remove()); layerEls=[];
+  layerEls.forEach(e=>{ if(e._anim) clearInterval(e._anim); e.remove(); }); layerEls=[];
   (current.layers||[]).forEach(ly=>{
     const el=document.createElement('img');
     el.className='ly'; el.src=ly.image; el.draggable=false;
     el.style.width=(140*(ly.scale||1))+'px';
+    if(Array.isArray(ly.frames) && ly.frames.length > 1){ let k = 0; el._anim = setInterval(function(){ k = (k + 1) % ly.frames.length; el.src = ly.frames[k]; }, 1000 / Math.max(1, Math.min(30, ly.fps || 8))); }
     mount.appendChild(el); layerEls.push(el);
   });
 }
@@ -86862,6 +87656,13 @@ function showPauseMenu(){
     b.onclick = function(){ hudPlaySound('click'); const fn = fns[a.action]; if(fn) fn(); };
     col.appendChild(b);
   });
+  if(saveEnabled){
+    const be = mk('button', 'pm-btn', 'EMPLACEMENTS'); be.type = 'button';
+    be.setAttribute('data-pm-action', 'emplacements');
+    if(cfg.buttonImage){ be.style.backgroundImage = 'url("' + cfg.buttonImage + '")'; be.style.backgroundSize = '100% 100%'; be.style.backgroundColor = 'transparent'; be.style.border = 'none'; }
+    be.onclick = function(){ hudPlaySound('click'); ouvrirEmplacements(); };
+    col.appendChild(be);
+  }
   frameEl.appendChild(el); pauseEl = el;
   const first = el.querySelector('.pm-btn:not([data-pm-off])'); if(first && first.focus) try{ first.focus(); }catch(e){}
 }
@@ -87092,7 +87893,7 @@ const homeHost = {
   },
   afterStart: function(){
     setScreen('playing'); syncMusic(); flushDialogue();
-    if(entreeAuDepart){ entreeAuDepart = false; runSceneEnter(current); }
+    if(entreeAuDepart){ entreeAuDepart = false; profil9(function(){ runSceneEnter(current); }); }
     if(repriseEnAttente){ repriseEnAttente = false; if(aideDuJeu().precedemment !== false) setTimeout(montrerPrecedemment, 500); }
   },
 };
@@ -87613,7 +88414,7 @@ function startPuzzleClock(ap){
     ap.live.elapsed = (ap.live.elapsed || 0) + (t - dernier) / 1000;
     dernier = t;
     const reste = puzSecondesRestantes(ap.p, ap.live);
-    if(reste === 0 && !ap.timedOut && !HomeSettings.get().sansPression){ ap.timedOut = true; puzzleTimeout(ap); return; }
+    if(reste === 0 && !ap.timedOut && !HomeSettings.get().sansPression && difficulte() !== 'facile'){ ap.timedOut = true; puzzleTimeout(ap); return; }
     indicesAuto(ap);
     refreshPuzzleStatus();
   }, 250);
@@ -87635,6 +88436,7 @@ function puzzleTimeout(ap){
 /*  Donner l'indice suivant. On n'en donne jamais deux d'un coup :
     le joueur redemande s'il en veut un autre.                      */
 function askPuzzleHint(){
+  if(difficulte() === 'expert'){ try{ PlayerUI.toast(frameEl, 'Pas d\u2019indice en mode expert'); }catch(e){} return; }
   if(!activeP || !pzUI) return;
   const ap = activeP, h = puzProchainIndice(ap.p, ap.live);
   if(!h) return;
@@ -91598,6 +92400,88 @@ loop();
       };
       downloadBlob(JSON.stringify(game, null, 2), "jeu-360.json", "application/json");
     };
+    const histoire = (0, import_react.useRef)({ passe: [], futur: [], dernier: null, restaure: false, jeu: null });
+    const [, setHistoireV] = (0, import_react.useState)(0);
+    (0, import_react.useEffect)(() => {
+      if (!loadedFromStorage) return;
+      const h = histoire.current;
+      const NOMS = {
+        scenes: "Sc\xE8nes",
+        items: "Objets",
+        puzzles: "\xC9nigmes",
+        variables: "Variables",
+        dialogues: "Dialogues",
+        characters: "Intervenants",
+        meta: "Fiche et options du jeu",
+        ui: "Interface",
+        audio: "Sons",
+        homeScreen: "Accueil",
+        dialogTheme: "Style des dialogues",
+        puzzleTheme: "Style des \xE9nigmes",
+        combinations: "Combinaisons",
+        hudSettings: "Interface",
+        startSceneId: "Sc\xE8ne de d\xE9part"
+      };
+      if (h.jeu !== gameMeta.id) {
+        h.jeu = gameMeta.id;
+        h.passe = [];
+        h.futur = [];
+        h.dernier = { etat: serializeProject(), quand: Date.now(), quoi: "Ouverture du jeu" };
+        setHistoireV((n) => n + 1);
+        return;
+      }
+      if (h.restaure) {
+        h.restaure = false;
+        if (h.dernier) h.dernier = { ...h.dernier, etat: serializeProject() };
+        return;
+      }
+      const t = setTimeout(() => {
+        const etat = serializeProject();
+        const avant = h.dernier && h.dernier.etat;
+        if (!avant) {
+          h.dernier = { etat, quand: Date.now(), quoi: "D\xE9part" };
+          return;
+        }
+        const quoi = Object.keys(NOMS).filter((k) => avant[k] !== etat[k]).map((k) => NOMS[k]);
+        if (!quoi.length) return;
+        h.passe.push(h.dernier);
+        if (h.passe.length > 80) h.passe.shift();
+        h.futur = [];
+        h.dernier = { etat, quand: Date.now(), quoi: Array.from(new Set(quoi)).join(", ") };
+        setHistoireV((n) => n + 1);
+      }, 700);
+      return () => clearTimeout(t);
+    }, [scenes, items, puzzles, variables, dialogues, characters, gameMeta, ui, audio, homeScreen, dialogTheme, puzzleTheme, combinations, hudSettings, startSceneId, loadedFromStorage]);
+    const allerHistoire = (i) => {
+      const h = histoire.current;
+      const tout = h.passe.concat([h.dernier]).concat(h.futur).filter(Boolean);
+      if (i < 0 || i >= tout.length || tout[i] === h.dernier) return;
+      h.passe = tout.slice(0, i);
+      h.dernier = tout[i];
+      h.futur = tout.slice(i + 1);
+      h.restaure = true;
+      applyProject(h.dernier.etat, { keepScene: true, keepId: true });
+      setHistoireV((n) => n + 1);
+    };
+    const annulerTout = () => allerHistoire(histoire.current.passe.length - 1);
+    const retablirTout = () => allerHistoire(histoire.current.passe.length + 1);
+    const secoursRef = (0, import_react.useRef)({});
+    secoursRef.current = { meta: gameMeta, projet: serializeProject, sig: secoursRef.current.sig };
+    const copieSecours = async (force) => {
+      const r = secoursRef.current, h = histoire.current;
+      const sig = h.dernier ? String(h.dernier.quand) : "";
+      if (!force && (!sig || sig === r.sig)) return false;
+      r.sig = sig;
+      return ecrireSecours(r.meta, r.projet());
+    };
+    (0, import_react.useEffect)(() => {
+      const t = setInterval(() => {
+        copieSecours(false);
+      }, 5 * 60 * 1e3);
+      return () => clearInterval(t);
+    }, []);
+    const [testPlein, setTestPlein] = (0, import_react.useState)(false);
+    const testFrameRef = (0, import_react.useRef)(null);
     const lockedIds = new Set(
       (mode === "player" ? scene.hotspots : []).filter(
         (h) => missingRequirements(h, playerInventory, effectiveVars).length > 0
@@ -91613,7 +92497,7 @@ loop();
       },
       /* @__PURE__ */ import_react.default.createElement(Play, { size: 13 }),
       " Tester la sc\xE8ne"
-    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: testGame, style: { ...smallBtn, background: C.amber, color: C.ink }, title: "Lance le jeu complet depuis l'\xE9cran d'accueil, comme dans le jeu export\xE9" }, "\u25B6 Tester le jeu"), mode === "editor" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", background: C.panel, borderRadius: 8, padding: 3, gap: 3 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("list"), style: { ...smallBtn, background: editorView === "list" ? C.amber : "transparent", color: editorView === "list" ? C.ink : C.textDim } }, "\u2630 Liste"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("map"), style: { ...smallBtn, background: editorView === "map" ? C.amber : "transparent", color: editorView === "map" ? C.ink : C.textDim } }, "\u{1F5FA} Carte"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("hud"), "data-view-hud": true, style: { ...smallBtn, background: editorView === "hud" ? C.amber : "transparent", color: editorView === "hud" ? C.ink : C.textDim } }, "\u2699 Interface"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("dialogues"), "data-view-dialogues": true, style: { ...smallBtn, background: editorView === "dialogues" ? C.amber : "transparent", color: editorView === "dialogues" ? C.ink : C.textDim } }, "\u{1F4AC} Dialogues"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("puzzles"), "data-view-puzzles": true, style: { ...smallBtn, background: editorView === "puzzles" ? C.amber : "transparent", color: editorView === "puzzles" ? C.ink : C.textDim } }, "\u{1F9E9} \xC9nigmes"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("sons"), "data-view-sons": true, style: { ...smallBtn, background: editorView === "sons" ? C.amber : "transparent", color: editorView === "sons" ? C.ink : C.textDim } }, "\u{1F50A} Sons")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowLibrary(true), style: smallBtn }, "\u{1F4DA} Mes jeux"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHomeEditor(true), style: smallBtn }, "\u{1F3E0} Page d'accueil"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => saveProject(), style: { ...smallBtn, background: saveState === "saved" ? "#2E7D32" : saveState === "error" ? C.danger : C.line } }, saveState === "saving" ? "Enregistrement..." : saveState === "saved" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Check, { size: 13 }), " Enregistr\xE9") : saveState === "error" ? "\xC9chec" : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Save, { size: 13 }), " Enregistrer")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => importRef.current.click(), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Charger"), /* @__PURE__ */ import_react.default.createElement("input", { ref: importRef, type: "file", accept: "application/json", hidden: true, onChange: (e) => e.target.files[0] && importProject(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHudEditor(true), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 13 }), " HUD"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowDa(true), style: smallBtn, title: "Direction artistique : exporter les cadres, importer vos PNG", "data-open-da": true }, "\u{1F3A8} DA"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportJSON, style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Download, { size: 13 }), " JSON"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportGame, style: { ...smallBtn, background: C.amber, color: C.ink } }, /* @__PURE__ */ import_react.default.createElement(Film, { size: 13 }), " Exporter le jeu"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowAppExport(true), style: { ...smallBtn, background: C.amber, color: C.ink } }, "\u{1F4F1} Application"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, mode === "editor" && /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 220, borderRight: `1px solid ${C.line}`, background: C.ink2, padding: 12, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8nes"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: annulerTout, disabled: !histoire.current.passe.length, style: { ...smallBtn, opacity: histoire.current.passe.length ? 1 : 0.4 }, title: "Annuler la derni\xE8re modification", "aria-label": "Annuler", "data-e360-annuler": true }, "\u21B6"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: retablirTout, disabled: !histoire.current.futur.length, style: { ...smallBtn, opacity: histoire.current.futur.length ? 1 : 0.4 }, title: "R\xE9tablir", "aria-label": "R\xE9tablir", "data-e360-retablir": true }, "\u21B7"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setFenetre678("historique"), style: smallBtn, title: "Historique des modifications", "aria-label": "Historique", "data-e360-historique": true }, "\u{1F558}"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: testGame, style: { ...smallBtn, background: C.amber, color: C.ink }, title: "Lance le jeu complet depuis l'\xE9cran d'accueil, comme dans le jeu export\xE9" }, "\u25B6 Tester le jeu"), mode === "editor" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", background: C.panel, borderRadius: 8, padding: 3, gap: 3 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("list"), style: { ...smallBtn, background: editorView === "list" ? C.amber : "transparent", color: editorView === "list" ? C.ink : C.textDim } }, "\u2630 Liste"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("map"), style: { ...smallBtn, background: editorView === "map" ? C.amber : "transparent", color: editorView === "map" ? C.ink : C.textDim } }, "\u{1F5FA} Carte"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("hud"), "data-view-hud": true, style: { ...smallBtn, background: editorView === "hud" ? C.amber : "transparent", color: editorView === "hud" ? C.ink : C.textDim } }, "\u2699 Interface"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("dialogues"), "data-view-dialogues": true, style: { ...smallBtn, background: editorView === "dialogues" ? C.amber : "transparent", color: editorView === "dialogues" ? C.ink : C.textDim } }, "\u{1F4AC} Dialogues"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("puzzles"), "data-view-puzzles": true, style: { ...smallBtn, background: editorView === "puzzles" ? C.amber : "transparent", color: editorView === "puzzles" ? C.ink : C.textDim } }, "\u{1F9E9} \xC9nigmes"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setEditorView("sons"), "data-view-sons": true, style: { ...smallBtn, background: editorView === "sons" ? C.amber : "transparent", color: editorView === "sons" ? C.ink : C.textDim } }, "\u{1F50A} Sons")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowLibrary(true), style: smallBtn }, "\u{1F4DA} Mes jeux"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHomeEditor(true), style: smallBtn }, "\u{1F3E0} Page d'accueil"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => saveProject(), style: { ...smallBtn, background: saveState === "saved" ? "#2E7D32" : saveState === "error" ? C.danger : C.line } }, saveState === "saving" ? "Enregistrement..." : saveState === "saved" ? /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Check, { size: 13 }), " Enregistr\xE9") : saveState === "error" ? "\xC9chec" : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Save, { size: 13 }), " Enregistrer")), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => importRef.current.click(), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 13 }), " Charger"), /* @__PURE__ */ import_react.default.createElement("input", { ref: importRef, type: "file", accept: "application/json", hidden: true, onChange: (e) => e.target.files[0] && importProject(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowHudEditor(true), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 13 }), " HUD"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowDa(true), style: smallBtn, title: "Direction artistique : exporter les cadres, importer vos PNG", "data-open-da": true }, "\u{1F3A8} DA"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportJSON, style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Download, { size: 13 }), " JSON"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: exportGame, style: { ...smallBtn, background: C.amber, color: C.ink } }, /* @__PURE__ */ import_react.default.createElement(Film, { size: 13 }), " Exporter le jeu"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowAppExport(true), style: { ...smallBtn, background: C.amber, color: C.ink } }, "\u{1F4F1} Application"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, mode === "editor" && /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 220, borderRight: `1px solid ${C.line}`, background: C.ink2, padding: 12, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement(Label, null, "Sc\xE8nes"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement(
       "div",
       {
         key: s.id,
@@ -91687,7 +92571,17 @@ loop();
         /* @__PURE__ */ import_react.default.createElement("span", { style: { flexShrink: 0 } }, natif ? t ? t.icon : "\u{1F9E9}" : providerOrGeneric(p.provider).icon),
         /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, p.title || "\xC9nigme sans nom")
       );
-    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), [["options", "\u2728 Options du jeu"], ["carte", "\u{1F5FA} Carte illustr\xE9e"], ["outils", "\u{1F6E0} V\xE9rifier, rechercher, mod\xE8les"], ["langues", "\u{1F30D} Langues"], ["bande", "\u{1F3AC} Bande-annonce"]].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: k, onClick: () => setFenetre678(k), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-678": k }, l)), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
+    }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), [
+      ["options", "\u2728 Options du jeu"],
+      ["carte", "\u{1F5FA} Carte illustr\xE9e"],
+      ["outils", "\u{1F6E0} V\xE9rifier, rechercher, mod\xE8les"],
+      ["langues", "\u{1F30D} Langues"],
+      ["bande", "\u{1F3AC} Bande-annonce"],
+      ["theme", "\u{1F3AD} Th\xE8me, polices, fin et joueur"],
+      ["presse", "\u{1F4CB} Copier, coller, biblioth\xE8que"],
+      ["import", "\u{1F5BC} Importer des sc\xE8nes en lot"],
+      ["secours", "\u{1F6DF} Versions de secours"]
+    ].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: k, onClick: () => setFenetre678(k), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-678": k }, l)), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
       const pose = c.poses.find((p) => p.id === c.defaultPose) || c.poses[0] || {};
       return /* @__PURE__ */ import_react.default.createElement(
         "div",
@@ -91956,7 +92850,7 @@ loop();
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement(VideoScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement(VideoScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement(CycleScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement(RetoucheScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         type: "range",
@@ -92142,7 +93036,32 @@ loop();
           style: { ...input, width: 64, marginTop: 0, textAlign: "center" }
         }
       ))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Variables"), varOpts.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim } }, "Ce jeu n'a aucune variable."), varOpts.map((v) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.key, style: { display: "flex", alignItems: "center", gap: 8, padding: "3px 0" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, fontFamily: sans, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, title: v.key }, v.label), /* @__PURE__ */ import_react.default.createElement("span", { "data-test-var": v.key }, /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: v.type, value: hasOwn(testFrom.vars, v.key) ? testFrom.vars[v.key] : defaultForType(v.type), onChange: (x) => setVar(v.key, x) })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { "data-test-run": "1", onClick: runTestFrom, style: { ...primaryBtn, flex: 1 } }, "\u25B6 Lancer le test"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setTestFrom(null), style: smallBtn }, "Annuler"))));
-    })(), testHtml && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...panelOverlay, zIndex: 90, flexDirection: "column", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text } }, "Test du jeu \u2014 c'est le m\xEAme Player que le jeu export\xE9, il d\xE9marre sur l'accueil."), /* @__PURE__ */ import_react.default.createElement("iframe", { title: "Test du jeu", srcDoc: testHtml, allow: "fullscreen", sandbox: "allow-scripts allow-same-origin allow-popups allow-forms", style: { width: "min(94vw, 900px)", height: "80vh", border: `1px solid ${C.line}`, background: "#000" } }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: clearTestSave, style: smallBtn, title: "Supprime la sauvegarde de test de ce jeu et relance le test" }, "\u21BA Effacer la sauvegarde de test"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setTestHtml(null), style: primaryBtn }, "Fermer le test"))), showAppExport && /* @__PURE__ */ import_react.default.createElement(
+    })(), testHtml && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...panelOverlay, zIndex: 90, flexDirection: "column", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text } }, "Test du jeu \u2014 c'est le m\xEAme Player que le jeu export\xE9, il d\xE9marre sur l'accueil."), /* @__PURE__ */ import_react.default.createElement(
+      "iframe",
+      {
+        title: "Test du jeu",
+        srcDoc: testHtml,
+        allow: "fullscreen",
+        sandbox: "allow-scripts allow-same-origin allow-popups allow-forms",
+        ref: testFrameRef,
+        onLoad: () => pleinEcranTest(testFrameRef.current, testPlein),
+        style: testPlein ? { position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh", border: "none", background: "#000", zIndex: 96 } : { width: "min(94vw, 900px)", height: "80vh", border: `1px solid ${C.line}`, background: "#000" }
+      }
+    ), testPlein && /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => {
+          setTestPlein(false);
+          pleinEcranTest(testFrameRef.current, false);
+        },
+        "data-test-plein-sortie": true,
+        style: { ...smallBtn, position: "fixed", top: "calc(10px + env(safe-area-inset-top, 0px))", left: 10, zIndex: 97, background: "rgba(16,19,27,.85)" }
+      },
+      "\u2715 Quitter le plein \xE9cran"
+    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => {
+      setTestPlein(true);
+      pleinEcranTest(testFrameRef.current, true);
+    }, style: smallBtn, "data-test-plein": true }, "\u26F6 Plein \xE9cran, comme le jeu export\xE9"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: clearTestSave, style: smallBtn, title: "Supprime la sauvegarde de test de ce jeu et relance le test" }, "\u21BA Effacer la sauvegarde de test"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setTestHtml(null), style: primaryBtn }, "Fermer le test"))), showAppExport && /* @__PURE__ */ import_react.default.createElement(
       AppExportPanel,
       {
         dialogues,
@@ -92198,7 +93117,20 @@ loop();
         },
         onClose: () => setFenetre678("")
       }
-    ), fenetre678 === "langues" && /* @__PURE__ */ import_react.default.createElement(LanguesJeu, { meta: gameMeta, setMeta: setGameMeta, scenes, items, dialogues, onClose: () => setFenetre678("") }), fenetre678 === "bande" && /* @__PURE__ */ import_react.default.createElement(
+    ), fenetre678 === "langues" && /* @__PURE__ */ import_react.default.createElement(LanguesJeu, { meta: gameMeta, setMeta: setGameMeta, scenes, items, dialogues, onClose: () => setFenetre678("") }), fenetre678 === "historique" && /* @__PURE__ */ import_react.default.createElement(HistoriqueFenetre, { histoire: histoire.current, onAller: allerHistoire, onClose: () => setFenetre678("") }), fenetre678 === "secours" && /* @__PURE__ */ import_react.default.createElement(SecoursFenetre, { gameMeta, onCopie: () => copieSecours(true), onRestaurer: (p) => applyProject(p, { keepScene: true, keepId: true }), onClose: () => setFenetre678("") }), fenetre678 === "presse" && /* @__PURE__ */ import_react.default.createElement(PressePapiers, { scene, setScenes, setItems, setPuzzles, onClose: () => setFenetre678("") }), fenetre678 === "import" && /* @__PURE__ */ import_react.default.createElement(ImportLot, { scenes, setScenes, setCurrentSceneId, onClose: () => setFenetre678("") }), fenetre678 === "theme" && /* @__PURE__ */ import_react.default.createElement(
+      ThemeJeu,
+      {
+        meta: gameMeta,
+        setMeta: setGameMeta,
+        setUi,
+        dialogTheme,
+        setDialogTheme,
+        setPuzzleTheme,
+        audio,
+        setAudio,
+        onClose: () => setFenetre678("")
+      }
+    ), fenetre678 === "bande" && /* @__PURE__ */ import_react.default.createElement(
       BandeAnnonce,
       {
         scenes,

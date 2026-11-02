@@ -76,14 +76,29 @@
     if (spans[0]) spans[0].setAttribute("data-e360", "logo");
     if (spans[1]) spans[1].setAttribute("data-e360", "marque");
     if (spans[2]) spans[2].setAttribute("data-e360", "nom-jeu");
+    var prefs = lireReglage("e360-barre", {});
     Array.prototype.forEach.call(h.children, function (c) {
-      if (c.tagName === "DIV" && c.querySelector("button")) c.setAttribute("data-e360", "vues");
+      if (c.tagName === "DIV" && c.querySelector("button")) {
+        c.setAttribute("data-e360", "vues");
+        if (!c.hasAttribute("data-e360-vues-ok")) {
+          c.setAttribute("data-e360-vues-ok", "");
+          // La vue choisie (Liste, Carte, Dialogues…) est retenue pour la prochaine ouverture.
+          c.addEventListener("click", function (e) {
+            var b = e.target.closest && e.target.closest("button");
+            if (b) ecrireReglage("e360-vue", libelle(b));
+          }, true);
+        }
+      }
       if (c.tagName !== "BUTTON") return;
       var t = libelle(c);
       for (var i = 0; i < BARRE.length; i++) {
         if (t.indexOf(BARRE[i][1]) === 0) {
-          c.setAttribute("data-e360", BARRE[i][0]);
-          if (BARRE[i][2]) c.setAttribute("data-e360-menu", BARRE[i][2]);
+          var cle = BARRE[i][0], p = prefs[cle] || {};
+          c.setAttribute("data-e360", cle);
+          var place = p.place || (BARRE[i][2] ? "menu" : "barre");
+          if (place === "menu") c.setAttribute("data-e360-menu", BARRE[i][2] || "Projet");
+          else c.removeAttribute("data-e360-menu");
+          c.style.order = p.ordre != null ? String(p.ordre) : "";
           return;
         }
       }
@@ -129,6 +144,18 @@
         item.addEventListener("click", function () { fermerMenu(); b.click(); });
         menu.appendChild(item);
       });
+    });
+    var tEd = document.createElement("div");
+    tEd.className = "e360-menu-titre";
+    tEd.textContent = "Éditeur";
+    menu.appendChild(tEd);
+    [["Apparence de l'éditeur…", panneauApparence], ["Personnaliser la barre…", panneauBarre], ["Double toucher du crayon…", panneauCrayon]].forEach(function (x) {
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "e360-menu-item";
+      item.textContent = x[0];
+      item.addEventListener("click", function () { fermerMenu(); x[1](); });
+      menu.appendChild(item);
     });
     document.body.appendChild(menu);
     var r = ancre.getBoundingClientRect();
@@ -336,6 +363,14 @@
   function finAccueil() {
     accueil.fait = true;
     document.documentElement.classList.remove("e360-demarrage");
+    // On rouvre la vue où l'on travaillait la dernière fois.
+    var vue = lireReglage("e360-vue", "");
+    if (vue) setTimeout(function () {
+      var h = barreDuHaut();
+      var v = h && h.querySelector("[data-e360='vues']");
+      var b = v && Array.prototype.filter.call(v.querySelectorAll("button"), function (x) { return libelle(x) === vue; })[0];
+      if (b) b.click();
+    }, 200);
   }
   document.documentElement.classList.add("e360-demarrage");
   // Filet : si la fenêtre n'est jamais venue, on montre l'éditeur quand même.
@@ -420,10 +455,69 @@
         }
         return;
       }
+      // Une scène de la liste : une étoile pour l'épingler en tête de colonne.
+      if (cle === "Scènes" && el.tagName === "DIV" && /padding:\s*8px 10px/.test(st)) etoile(el);
       // Le réglage général en bas (« Activer la carte en jeu ») reste toujours visible.
       var general = el.querySelector && el.querySelector("input[type='checkbox']") && !el.querySelector("button");
       if (cle && replis[cle] && !general && el.tagName !== "INPUT") el.setAttribute("data-e360-cache", "");
       else el.removeAttribute("data-e360-cache");
+    });
+    favorisColonne(col);
+  }
+
+  // ---------- Scènes favorites ----------
+  var favoris = lireReglage("e360-favoris", []);
+  function nomLigne(l) {
+    var s = l.querySelector("span");
+    return s ? (s.textContent || "").trim() : "";
+  }
+  function etoile(ligne) {
+    var nom = nomLigne(ligne);
+    if (!nom) return;
+    var e = ligne.querySelector(":scope > .e360-etoile");
+    if (!e) {
+      e = document.createElement("span");
+      e.className = "e360-etoile";
+      e.setAttribute("role", "button");
+      e.setAttribute("aria-label", "Épingler la scène");
+      e.addEventListener("click", function (ev) {
+        ev.stopPropagation(); ev.preventDefault();
+        var n = nomLigne(ligne), i = favoris.indexOf(n);
+        if (i >= 0) favoris.splice(i, 1); else favoris.unshift(n);
+        ecrireReglage("e360-favoris", favoris);
+        planifier();
+      }, true);
+      ligne.appendChild(e);
+    }
+    var on = favoris.indexOf(nom) >= 0;
+    if (e.classList.contains("on") !== on) e.classList.toggle("on", on);
+    e.textContent = on ? "★" : "☆";
+  }
+  function favorisColonne(col) {
+    var lignes = {};
+    Array.prototype.forEach.call(col.children, function (el) { if (el.querySelector(":scope > .e360-etoile")) lignes[nomLigne(el)] = el; });
+    var presents = favoris.filter(function (n) { return lignes[n]; });
+    var bloc = col.querySelector(":scope > .e360-favoris");
+    var sig = presents.join("|");
+    if (!presents.length) { if (bloc) bloc.remove(); return; }
+    if (bloc && bloc.getAttribute("data-sig") === sig) return;
+    if (!bloc) {
+      bloc = document.createElement("div");
+      bloc.className = "e360-favoris";
+      var rep = col.querySelector(":scope > .e360-replier");
+      col.insertBefore(bloc, rep ? rep.nextSibling : col.firstChild);
+    }
+    bloc.setAttribute("data-sig", sig);
+    bloc.textContent = "";
+    var t = document.createElement("div"); t.className = "e360-favoris-titre"; t.textContent = "★ Favoris"; bloc.appendChild(t);
+    presents.forEach(function (n) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "e360-favori"; b.textContent = n;
+      b.addEventListener("click", function () {
+        var l = Array.prototype.filter.call(col.children, function (el) { return el.querySelector(":scope > .e360-etoile") && nomLigne(el) === n; })[0];
+        if (l) l.click();
+      });
+      bloc.appendChild(b);
     });
   }
 
@@ -442,7 +536,7 @@
     ["Apparence", /couleur|fond|image|police|style|logo|opacit|arrondi|th[eè]me|ic[oô]ne|transition|habillage|apparence|visuel|taille|dessin|fen[eê]tre|bouton/i],
     ["Publier", /v[ée]rification|export|publi|application/i]
   ];
-  var choixOnglet = {};   // onglet choisi, par panneau (clé : la liste de ses rubriques)
+  var choixOnglet = lireReglage("e360-onglets", {});   // onglet choisi, par panneau (clé : la liste de ses rubriques), retenu
 
   function estRubrique(el) {
     return el.tagName === "DIV" && el.style.textTransform === "uppercase" && el.style.marginTop !== "0px" &&
@@ -534,7 +628,7 @@
   }
 
   function montrerOnglet(p, d, nom, anime) {
-    choixOnglet[d.cle] = nom;
+    if (choixOnglet[d.cle] !== nom) { choixOnglet[d.cle] = nom; ecrireReglage("e360-onglets", choixOnglet); }
     var vise = d.pages.filter(function (pg) { return pg.nom === nom; })[0] || d.pages[0];
     if (p.getAttribute("data-e360-page") !== vise.nom) p.setAttribute("data-e360-page", vise.nom);
     d.pages.forEach(function (pg) {
@@ -644,6 +738,144 @@
     });
     vus.forEach(function (v) { appliquerOnglets(v[0], v[1]); });
   }
+
+  // ---------- Petits panneaux de réglage de l'éditeur ----------
+  function ouvrirPanneau(titre, construire) {
+    var fond = document.createElement("div");
+    fond.className = "e360-panneau-fond";
+    var p = document.createElement("div");
+    p.className = "e360-panneau";
+    var t = document.createElement("div");
+    t.className = "e360-panneau-titre";
+    t.textContent = titre;
+    var x = document.createElement("button");
+    x.type = "button"; x.className = "e360-panneau-x"; x.textContent = "✕"; x.setAttribute("aria-label", "Fermer");
+    x.addEventListener("click", function () { fond.remove(); });
+    t.appendChild(x);
+    p.appendChild(t);
+    var corps = document.createElement("div");
+    corps.className = "e360-panneau-corps";
+    p.appendChild(corps);
+    fond.appendChild(p);
+    fond.addEventListener("click", function (e) { if (e.target === fond) fond.remove(); });
+    document.body.appendChild(fond);
+    var redessiner = function () { corps.textContent = ""; construire(corps, redessiner); };
+    redessiner();
+  }
+  function choixEnLigne(parent, titre, options, actuel, choisir) {
+    var l = document.createElement("div"); l.className = "e360-p-libelle"; l.textContent = titre; parent.appendChild(l);
+    var r = document.createElement("div"); r.className = "e360-p-choix"; parent.appendChild(r);
+    options.forEach(function (o) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "e360-p-bouton" + (o[0] === actuel ? " on" : "");
+      if (o[2]) { b.style.background = o[2]; b.setAttribute("aria-label", o[1]); b.classList.add("e360-p-pastille"); }
+      else b.textContent = o[1];
+      b.addEventListener("click", function () { choisir(o[0]); });
+      r.appendChild(b);
+    });
+  }
+
+  // ---------- Apparence de l'éditeur : thème, couleur d'accent, taille du texte ----------
+  var ACCENTS = [["#E8A33D", "Ambre"], ["#4FA3E0", "Bleu"], ["#5CC48A", "Vert"], ["#D9636B", "Rouge"], ["#A77BE0", "Violet"], ["#E07BB4", "Rose"]];
+  function appliquerApparence() {
+    var a = lireReglage("e360-apparence", {});
+    var html = document.documentElement;
+    ["clair", "sepia"].forEach(function (t) { html.classList.toggle("e360-theme-" + t, a.theme === t); });
+    ["grand", "tres-grand"].forEach(function (t) { html.classList.toggle("e360-texte-" + t, a.texte === t); });
+    if (a.accent && a.accent !== "#E8A33D") {
+      html.style.setProperty("--accent", a.accent);
+      html.setAttribute("data-e360-accent", "");
+    } else { html.style.removeProperty("--accent"); html.removeAttribute("data-e360-accent"); }
+  }
+  function panneauApparence() {
+    ouvrirPanneau("Apparence de l'éditeur", function (c, redessiner) {
+      var a = lireReglage("e360-apparence", {});
+      var change = function (patch) { for (var k in patch) a[k] = patch[k]; ecrireReglage("e360-apparence", a); appliquerApparence(); redessiner(); };
+      choixEnLigne(c, "Thème", [["sombre", "Sombre"], ["clair", "Clair"], ["sepia", "Sépia"]], a.theme || "sombre", function (v) { change({ theme: v }); });
+      choixEnLigne(c, "Couleur d'accent", ACCENTS.map(function (x) { return [x[0], x[1], x[0]]; }), a.accent || "#E8A33D", function (v) { change({ accent: v }); });
+      choixEnLigne(c, "Taille du texte", [["normal", "Normale"], ["grand", "Grande"], ["tres-grand", "Très grande"]], a.texte || "normal", function (v) { change({ texte: v }); });
+      var n = document.createElement("p"); n.className = "e360-p-note";
+      n.textContent = "Le thème ne change que l'éditeur : le jeu garde ses propres couleurs.";
+      c.appendChild(n);
+    });
+  }
+  appliquerApparence();
+
+  // ---------- Personnaliser la barre du haut ----------
+  function panneauBarre() {
+    ouvrirPanneau("Personnaliser la barre", function (c, redessiner) {
+      var prefs = lireReglage("e360-barre", {});
+      var liste = BARRE.map(function (b, i) {
+        var p = prefs[b[0]] || {};
+        return { cle: b[0], nom: LIBELLES_MENU[b[0]] || b[1], place: p.place || (b[2] ? "menu" : "barre"), ordre: p.ordre != null ? p.ordre : i };
+      }).sort(function (x, y) { return x.ordre - y.ordre; });
+      var ecrire = function () {
+        var out = {};
+        liste.forEach(function (x, i) { out[x.cle] = { place: x.place, ordre: i }; });
+        ecrireReglage("e360-barre", out);
+        planifier();
+        redessiner();
+      };
+      var n = document.createElement("p"); n.className = "e360-p-note";
+      n.textContent = "Ce qui est « dans la barre » reste visible en haut ; le reste passe dans le menu •••. Les flèches changent l'ordre.";
+      c.appendChild(n);
+      liste.forEach(function (x, i) {
+        var l = document.createElement("div"); l.className = "e360-p-ligne";
+        var nom = document.createElement("span"); nom.textContent = x.nom; l.appendChild(nom);
+        var place = document.createElement("button"); place.type = "button";
+        place.className = "e360-p-bouton" + (x.place === "barre" ? " on" : "");
+        place.textContent = x.place === "barre" ? "Dans la barre" : "Dans •••";
+        place.addEventListener("click", function () { x.place = x.place === "barre" ? "menu" : "barre"; ecrire(); });
+        l.appendChild(place);
+        [["↑", -1], ["↓", 1]].forEach(function (f) {
+          var b = document.createElement("button"); b.type = "button"; b.className = "e360-p-bouton"; b.textContent = f[0];
+          b.disabled = (i === 0 && f[1] < 0) || (i === liste.length - 1 && f[1] > 0);
+          b.addEventListener("click", function () { var j = i + f[1]; var t = liste[i]; liste[i] = liste[j]; liste[j] = t; ecrire(); });
+          l.appendChild(b);
+        });
+        c.appendChild(l);
+      });
+      var raz = document.createElement("button"); raz.type = "button"; raz.className = "e360-p-bouton"; raz.textContent = "Revenir à la barre d'origine";
+      raz.addEventListener("click", function () { ecrireReglage("e360-barre", {}); planifier(); redessiner(); });
+      c.appendChild(raz);
+    });
+  }
+
+  // ---------- Double toucher de l'Apple Pencil ----------
+  var ACTIONS_CRAYON = [["annuler", "Annuler"], ["vue", "Passer de la Liste à la Carte"], ["point", "Ajouter un point"], ["tester", "Tester la scène"], ["rien", "Rien"]];
+  function panneauCrayon() {
+    ouvrirPanneau("Double toucher du crayon", function (c, redessiner) {
+      var a = lireReglage("e360-crayon", "annuler");
+      var n = document.createElement("p"); n.className = "e360-p-note";
+      n.textContent = "Ce que fait un double toucher sur le côté de l'Apple Pencil 2 pendant que tu travailles.";
+      c.appendChild(n);
+      ACTIONS_CRAYON.forEach(function (x) {
+        var b = document.createElement("button"); b.type = "button";
+        b.className = "e360-p-bouton e360-p-large" + (x[0] === a ? " on" : "");
+        b.textContent = x[1];
+        b.addEventListener("click", function () { ecrireReglage("e360-crayon", x[0]); redessiner(); });
+        c.appendChild(b);
+      });
+    });
+  }
+  function boutonLibelle(debut) {
+    var root = document.getElementById("root");
+    return root && Array.prototype.filter.call(root.querySelectorAll("button"), function (b) { return b.offsetParent && libelle(b).indexOf(debut) === 0; })[0];
+  }
+  window.addEventListener("e360-crayon", function () {
+    var a = lireReglage("e360-crayon", "annuler");
+    var b = null;
+    if (a === "annuler") b = document.querySelector("[data-e360-annuler]");
+    else if (a === "point") b = boutonLibelle("Ajouter un point");
+    else if (a === "tester") b = boutonLibelle("Tester la scène");
+    else if (a === "vue") {
+      var h = barreDuHaut(), v = h && h.querySelector("[data-e360='vues']");
+      var dansListe = !!document.querySelector("[data-e360-scene]");
+      b = v && Array.prototype.filter.call(v.querySelectorAll("button"), function (x) { return libelle(x) === (dansListe ? "Carte" : "Liste"); })[0];
+    }
+    if (b && !b.disabled) b.click();
+  });
 
   // ---------- Barre réglable entre la vue 360 et les réglages de la scène ----------
   // Glisser vers le bas agrandit la vue, vers le haut les réglages ; deux touchers
