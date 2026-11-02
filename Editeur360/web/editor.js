@@ -36917,6 +36917,56 @@
       " Ajouter un objectif"
     ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Aide au joueur"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "Coup de pouce automatique", /* @__PURE__ */ import_react.default.createElement("select", { value: String(aide.coupDePouce), onChange: (e) => majAide({ coupDePouce: parseFloat(e.target.value) }), style: { ...select, width: "auto", marginTop: 0 }, "data-coup-de-pouce": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "0" }, "Jamais"), /* @__PURE__ */ import_react.default.createElement("option", { value: "2" }, "Apr\xE8s 2 min sans progr\xE8s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "5" }, "Apr\xE8s 5 min sans progr\xE8s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "10" }, "Apr\xE8s 10 min sans progr\xE8s"))), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 8, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: aide.precedemment, onChange: (e) => majAide({ precedemment: e.target.checked }), "data-precedemment": true }), "\xAB Pr\xE9c\xE9demment\u2026 \xBB : un rappel quand le joueur reprend sa partie"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, lineHeight: 1.55, marginTop: 10 } }, "L'objectif affich\xE9 est le premier de la liste qui est apparu et pas encore accompli : le joueur le voit annonc\xE9, dans son journal et en touchant un bouton \xAB Aide \xBB de l'interface. Chaque indice demand\xE9 compte dans le bilan de fin. Dans l'Interface, un bouton peut aussi \xAB Prendre une photo \xBB : elle se range dans le journal, avec les notes du joueur.")));
   }
+  var CONSOMME_REACTION = [["garde", "Le joueur garde l'objet"], ["un", "L'objet est retir\xE9 (un exemplaire)"], ["usure", "L'objet s'use (une utilisation)"]];
+  function ReactionsPoint({ reactions, onChange, reponseDefaut, onReponse, items, scenes, variables, dialogues }) {
+    const maj = (i, patch) => onChange(reactions.map((r, k) => k === i ? { ...r, ...patch } : r));
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-reactions": true }, reactions.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginBottom: 6 } }, "Aucun objet ne sert ici."), reactions.map((r, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginBottom: 6 }, "data-reaction": i }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("select", { value: r.itemId || "", onChange: (e) => maj(i, { itemId: e.target.value }), style: { ...select, flex: 1, marginTop: 0 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 objet utilis\xE9 \u2014"), items.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(reactions.filter((_, k) => k !== i)), style: iconBtn, title: "Supprimer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 13, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement("select", { value: r.consomme || "garde", onChange: (e) => maj(i, { consomme: e.target.value }), style: { ...select, marginTop: 6 } }, CONSOMME_REACTION.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, l))), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "6px 0 4px" } }, "Alors :"), /* @__PURE__ */ import_react.default.createElement(ActionListEditor, { actions: r.actions || [], onChange: (actions) => maj(i, { actions }), items, scenes, variables, dialogues, emptyText: "Rien." }))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange([...reactions, { itemId: "", consomme: "garde", actions: [] }]), style: smallBtn, "data-reaction-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Un objet sert ici"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "8px 0 2px" } }, "R\xE9ponse quand l'objet ne sert \xE0 rien ici :"), /* @__PURE__ */ import_react.default.createElement("input", { value: reponseDefaut || "", onChange: (e) => onReponse(e.target.value), style: input, placeholder: "\xC7a ne donne rien." }));
+  }
+  function ZoneTrace({ scene, zone, onChange }) {
+    const [ouvert, setOuvert] = (0, import_react.useState)(false);
+    const [pts, setPts] = (0, import_react.useState)(zone || []);
+    const pret = !!(scene && scene.image);
+    const reperes = pts.map((p, i) => ({ id: "z" + i, type: "repere", position: { yaw: p.yaw, pitch: p.pitch }, size: 14 }));
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-zone-trace": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11.5, color: zone && zone.length >= 3 ? C.text : C.textDim, flex: 1, minWidth: 120 } }, zone && zone.length >= 3 ? "Zone trac\xE9e : " + zone.length + " points" : "Aucune zone : un cercle autour du point"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", disabled: !pret, onClick: () => {
+      setPts(zone || []);
+      setOuvert(true);
+    }, style: smallBtn, "data-zone-tracer": true }, "\u270E Tracer la zone"), zone && zone.length > 0 && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(void 0), style: iconBtn, title: "Retirer la zone" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), !pret && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 3 } }, "Place d'abord le point dans une sc\xE8ne qui a une image."), ouvert && pret && /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: () => setOuvert(false) }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: "min(92vw, 760px)" }, onClick: (e) => e.stopPropagation(), "data-zone-fenetre": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Tracer la zone dans \xAB ", scene.name || scene.id, " \xBB"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setOuvert(false), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("div", { style: { height: 380, borderRadius: 8, overflow: "hidden" } }, /* @__PURE__ */ import_react.default.createElement(
+      Viewer360,
+      {
+        image: scene.image,
+        imageFormat: scene.imageFormat,
+        hotspots: reperes,
+        mode: "editor",
+        placing: true,
+        onPlace: (yaw, pitch) => setPts((l) => [...l, { yaw, pitch }]),
+        onHotspotClick: () => {
+        },
+        hideMarkers: false,
+        layers: scene.layers || [],
+        fov: scene.fov
+      }
+    )), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", marginTop: 8, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11.5, color: C.textDim, flex: 1, minWidth: 160 } }, "Touche le d\xE9cor tout autour de l'objet, dans l'ordre. ", pts.length, " point(s)."), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setPts((l) => l.slice(0, -1)), disabled: !pts.length, style: smallBtn }, "\u21B6 Dernier point"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => setPts([]), disabled: !pts.length, style: smallBtn }, "Effacer"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => {
+      onChange(pts.length >= 3 ? pts : void 0);
+      setOuvert(false);
+    }, disabled: pts.length > 0 && pts.length < 3, style: primaryBtn, "data-zone-ok": true }, "Terminer")))));
+  }
+  function DocumentPages({ pages, onChange }) {
+    const maj = (i, patch) => onChange(pages.map((p, k) => k === i ? { ...p, ...patch } : p));
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-document": true }, pages.map((p, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 11.5, color: C.textDim } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1 } }, "Page ", i + 1), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(pages.filter((_, k) => k !== i)), style: iconBtn, title: "Supprimer la page" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: p.image, onChange: (image) => maj(i, { image }), libelle: "Image de la page" }), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: p.texte || "",
+        onChange: (e) => maj(i, { texte: e.target.value }),
+        placeholder: "Cher ami, la cl\xE9 est sous la troisi\xE8me marche\u2026",
+        style: { ...input, minHeight: 54, resize: "vertical", marginTop: 6 }
+      }
+    ))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange([...pages, { image: "", texte: "" }]), style: smallBtn, "data-document-page": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une page"));
+  }
+  function DemontageObjet({ liste, onChange, itemId }) {
+    const objets = (COMBO_EDITEUR && COMBO_EDITEUR.items || []).filter((it) => it.id !== itemId);
+    const maj = (i, patch) => onChange(liste.map((p, k) => k === i ? { ...p, ...patch } : p));
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-demontage": true }, liste.map((p, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: p.itemId || "", onChange: (e) => maj(i, { itemId: e.target.value }), style: { ...select, flex: 1, marginTop: 0 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 objet obtenu \u2014"), objets.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", value: p.qty || 1, onChange: (e) => maj(i, { qty: parseInt(e.target.value, 10) || 1 }), style: { ...input, width: 56, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(liste.filter((_, k) => k !== i)), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange([...liste, { itemId: "", qty: 1 }]), style: smallBtn, "data-demontage-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter ce qu'il donne"));
+  }
   function HotspotEditor({ hotspot, scenes, items, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -36931,6 +36981,11 @@
     const [transition, setTransition] = (0, import_react.useState)(hotspot.transition);
     const [repere, setRepere] = (0, import_react.useState)(hotspot.repere || "invisible");
     const [visibleSi, setVisibleSi] = (0, import_react.useState)(hotspot.visibleSi || []);
+    const [reactions, setReactions] = (0, import_react.useState)(hotspot.reactions || []);
+    const [reponseDefaut, setReponseDefaut] = (0, import_react.useState)(hotspot.reponseDefaut || "");
+    const [zone, setZone] = (0, import_react.useState)(hotspot.zone);
+    const [decouverte, setDecouverte] = (0, import_react.useState)(!!hotspot.decouverte);
+    const sceneDuPoint = scenes.find((s) => (s.hotspots || []).some((h) => h.id === hotspot.id)) || null;
     const [newItemName, setNewItemName] = (0, import_react.useState)("");
     const [newItemDesc, setNewItemDesc] = (0, import_react.useState)("");
     const selectedPuzzle = puzzles.find((p) => p.id === puzzleId);
@@ -36952,7 +37007,11 @@
         regard: type === "navigate" ? regard : void 0,
         transition: type === "navigate" ? transition : void 0,
         repere: repere === "invisible" ? void 0 : repere,
-        visibleSi: visibleSi.filter((r) => isVarReq(r) ? !!r.key : !!r.itemId)
+        visibleSi: visibleSi.filter((r) => isVarReq(r) ? !!r.key : !!r.itemId),
+        reactions: reactions.filter((r) => r.itemId).length ? reactions.filter((r) => r.itemId) : void 0,
+        reponseDefaut: reponseDefaut.trim() || void 0,
+        zone: zone && zone.length >= 3 ? zone : void 0,
+        decouverte: decouverte || void 0
       });
     };
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 360, maxHeight: "92vh", overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Configurer le point cliquable"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Type d'action"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, [
@@ -36979,7 +37038,19 @@
     ))), type === "dialogue" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Dialogue \xE0 lancer"), /* @__PURE__ */ import_react.default.createElement("select", { value: dialogId, onChange: (e) => setDialogId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), dialogues.map((d) => /* @__PURE__ */ import_react.default.createElement("option", { key: d.id, value: d.id }, d.name || d.id))), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, margin: "6px 2px 0" } }, "Les dialogues s'\xE9crivent dans \xAB Dialogues \xBB. Le mode de r\xE9p\xE9tition \u2014 une seule fois, \xE0 chaque fois \u2014 se r\xE8gle sur le dialogue lui-m\xEAme.")), type === "show_text" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "Texte affich\xE9"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: text, onChange: (e) => setText(e.target.value), style: { ...input, minHeight: 70, resize: "vertical" } })), type === "puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select, "data-hs-puzzle": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter(puzzleIsNative).map((p) => {
       const t = getPuzzleType(p.kind);
       return /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, (t ? t.icon + " " : "") + (p.title || "\xC9nigme sans nom"));
-    })), !puzzles.some(puzzleIsNative) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 6, lineHeight: 1.5 }, "data-hs-nopuzzle": true }, "Aucune \xE9nigme pour l'instant. Elles se fabriquent dans l'onglet \xAB \xC9nigmes \xBB."), puzzleId && !puzzles.some((p) => p.id === puzzleId) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6, fontFamily: sans } }, "Cette \xE9nigme n'existe plus : choisis-en une autre.")), type === "external_puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme externe"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter((p) => !puzzleIsNative(p)).map((p) => /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, p.title || "\xC9nigme sans nom"))), selectedPuzzle && selectedProvider && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6, fontFamily: sans, fontSize: 12 } }, /* @__PURE__ */ import_react.default.createElement("div", null, selectedProvider.icon, " ", selectedProvider.name), /* @__PURE__ */ import_react.default.createElement(LevelBadge, { level: selectedProvider.level, small: true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim, fontSize: 11, marginTop: 3 } }, PUZZLE_DISPLAY_MODES[selectedPuzzle.displayMode], selectedPuzzle.resultMode === "code" ? " \xB7 validation par code" : selectedPuzzle.resultMode === "provider" ? " \xB7 r\xE9sultat renvoy\xE9 par l'application" : " \xB7 sans validation"), !validateUrl(resolvePuzzleUrl(selectedPuzzle)).ok && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 3 } }, "\u26A0 Adresse \xE0 renseigner dans \xAB Configurer \xBB.")), puzzleId && !selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6 } }, "Cette \xE9nigme n'existe plus : choisis-en une autre."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleId(onCreatePuzzle()), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Nouvelle \xE9nigme"), selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onManagePuzzle(puzzleId), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 12 }), " Configurer"))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille de la zone cliquable \u2014 ", size, "px"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "16", max: "1000", step: "10", value: size, onChange: (e) => setSize(parseInt(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Rep\xE8re dans le jeu"), /* @__PURE__ */ import_react.default.createElement("select", { value: repere, onChange: (e) => setRepere(e.target.value), style: select, "data-hs-repere": true }, REPERES_POINT.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, l))), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "4px 2px 0", lineHeight: 1.4 } }, "L'anneau se calme une fois le lieu visit\xE9, montre un cadenas tant que c'est ferm\xE9 et une coche une fois l'\xE9nigme r\xE9solue."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Visible seulement si (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: visibleSi, onChange: setVisibleSi, items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    })), !puzzles.some(puzzleIsNative) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 6, lineHeight: 1.5 }, "data-hs-nopuzzle": true }, "Aucune \xE9nigme pour l'instant. Elles se fabriquent dans l'onglet \xAB \xC9nigmes \xBB."), puzzleId && !puzzles.some((p) => p.id === puzzleId) && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6, fontFamily: sans } }, "Cette \xE9nigme n'existe plus : choisis-en une autre.")), type === "external_puzzle" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC9nigme externe"), /* @__PURE__ */ import_react.default.createElement("select", { value: puzzleId, onChange: (e) => setPuzzleId(e.target.value), style: select }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 choisir \u2014"), puzzles.filter((p) => !puzzleIsNative(p)).map((p) => /* @__PURE__ */ import_react.default.createElement("option", { key: p.id, value: p.id }, p.title || "\xC9nigme sans nom"))), selectedPuzzle && selectedProvider && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, padding: 8, background: C.ink2, borderRadius: 6, fontFamily: sans, fontSize: 12 } }, /* @__PURE__ */ import_react.default.createElement("div", null, selectedProvider.icon, " ", selectedProvider.name), /* @__PURE__ */ import_react.default.createElement(LevelBadge, { level: selectedProvider.level, small: true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.textDim, fontSize: 11, marginTop: 3 } }, PUZZLE_DISPLAY_MODES[selectedPuzzle.displayMode], selectedPuzzle.resultMode === "code" ? " \xB7 validation par code" : selectedPuzzle.resultMode === "provider" ? " \xB7 r\xE9sultat renvoy\xE9 par l'application" : " \xB7 sans validation"), !validateUrl(resolvePuzzleUrl(selectedPuzzle)).ok && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 3 } }, "\u26A0 Adresse \xE0 renseigner dans \xAB Configurer \xBB.")), puzzleId && !selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: C.danger, fontSize: 11, marginTop: 6 } }, "Cette \xE9nigme n'existe plus : choisis-en une autre."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleId(onCreatePuzzle()), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Nouvelle \xE9nigme"), selectedPuzzle && /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onManagePuzzle(puzzleId), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Settings, { size: 12 }), " Configurer"))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Taille de la zone cliquable \u2014 ", size, "px"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "16", max: "1000", step: "10", value: size, onChange: (e) => setSize(parseInt(e.target.value)), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Rep\xE8re dans le jeu"), /* @__PURE__ */ import_react.default.createElement("select", { value: repere, onChange: (e) => setRepere(e.target.value), style: select, "data-hs-repere": true }, REPERES_POINT.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, l))), /* @__PURE__ */ import_react.default.createElement("p", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "4px 2px 0", lineHeight: 1.4 } }, "L'anneau se calme une fois le lieu visit\xE9, montre un cadenas tant que c'est ferm\xE9 et une coche une fois l'\xE9nigme r\xE9solue."), /* @__PURE__ */ import_react.default.createElement(Label, null, "Visible seulement si (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: visibleSi, onChange: setVisibleSi, items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 6, marginTop: 8, fontFamily: sans, fontSize: 12, color: C.text, lineHeight: 1.4 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: decouverte, onChange: (e) => setDecouverte(e.target.checked), style: { marginTop: 2 }, "data-hs-decouverte": true }), "Cach\xE9 : il n'appara\xEEt que quand le joueur regarde juste dessus"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Utiliser un objet ici"), /* @__PURE__ */ import_react.default.createElement(
+      ReactionsPoint,
+      {
+        reactions,
+        onChange: setReactions,
+        reponseDefaut,
+        onReponse: setReponseDefaut,
+        items,
+        scenes,
+        variables,
+        dialogues
+      }
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function LevelBadge({ level, small }) {
     const L = PUZZLE_LEVELS[level] || PUZZLE_LEVELS.link;
@@ -37248,6 +37319,10 @@
     const [description, setDescription] = (0, import_react.useState)(item.description || "");
     const [image, setImage] = (0, import_react.useState)(item.image || null);
     const [collection, setCollection] = (0, import_react.useState)(!!item.collection);
+    const [pages, setPages] = (0, import_react.useState)(item.document && item.document.pages || []);
+    const [usages, setUsages] = (0, import_react.useState)(item.usages || 0);
+    const [usureTexte, setUsureTexte] = (0, import_react.useState)(item.usureTexte || "");
+    const [demonter, setDemonter] = (0, import_react.useState)(item.demonter || []);
     const fileRef = (0, import_react.useRef)(null);
     const pickImage = (file) => {
       const reader = new FileReader();
@@ -37256,9 +37331,19 @@
     };
     const save = () => {
       if (!name.trim()) return;
-      onSave({ ...item, name: name.trim(), description: description.trim(), image, collection: collection || void 0 });
+      onSave({
+        ...item,
+        name: name.trim(),
+        description: description.trim(),
+        image,
+        collection: collection || void 0,
+        document: pages.some((p) => p.image || (p.texte || "").trim()) ? { pages: pages.filter((p) => p.image || (p.texte || "").trim()) } : void 0,
+        usages: usages > 0 ? usages : void 0,
+        usureTexte: usages > 0 && usureTexte.trim() ? usureTexte.trim() : void 0,
+        demonter: demonter.filter((d) => d.itemId).length ? demonter.filter((d) => d.itemId) : void 0
+      });
     };
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay, onClick: onClose }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 340 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, item.id ? "Modifier l'objet" : "Nouvel objet"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Image"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, image ? /* @__PURE__ */ import_react.default.createElement("img", { src: image, alt: "", style: { width: 48, height: 48, objectFit: "contain", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: C.ink2, borderRadius: 6, border: `1px solid ${C.line}` } }, /* @__PURE__ */ import_react.default.createElement(Package, { size: 20, color: C.textDim })), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => fileRef.current.click() }, /* @__PURE__ */ import_react.default.createElement(Upload, { size: 12 }), " Importer un PNG"), image && /* @__PURE__ */ import_react.default.createElement("button", { style: iconBtn, onClick: () => setImage(null), title: "Retirer l'image" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement("input", { ref: fileRef, type: "file", accept: "image/*", hidden: true, onChange: (e) => e.target.files[0] && pickImage(e.target.files[0]) }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: name, onChange: (e) => setName(e.target.value), style: input, placeholder: "Ex : Cl\xE9 rouill\xE9e" }), /* @__PURE__ */ import_react.default.createElement(Label, null, "\xC0 quoi il sert / description"), /* @__PURE__ */ import_react.default.createElement("textarea", { value: description, onChange: (e) => setDescription(e.target.value), style: { ...input, minHeight: 60, resize: "vertical" }, placeholder: "Ex : Ouvre la porte de la cave" }), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: sans, fontSize: 12, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: collection, onChange: (e) => setCollection(e.target.checked), "data-item-collection": true }), "\xC0 collectionner : compt\xE9 dans le journal et le bilan de fin"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Document \xE0 lire"), /* @__PURE__ */ import_react.default.createElement(DocumentPages, { pages, onChange: setPages }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Usure"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", fontFamily: sans, fontSize: 12, color: C.text } }, "S'use apr\xE8s", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "0", value: usages, onChange: (e) => setUsages(Math.max(0, parseInt(e.target.value, 10) || 0)), style: { ...input, width: 64, marginTop: 0 }, "data-item-usages": true }), "utilisation(s) ", /* @__PURE__ */ import_react.default.createElement("span", { style: { color: C.textDim } }, "(0 : jamais)")), usages > 0 && /* @__PURE__ */ import_react.default.createElement("input", { value: usureTexte, onChange: (e) => setUsureTexte(e.target.value), style: { ...input, marginTop: 6 }, placeholder: "La lampe s'\xE9teint : plus de pile." }), /* @__PURE__ */ import_react.default.createElement(Label, null, "D\xE9monter en"), /* @__PURE__ */ import_react.default.createElement(DemontageObjet, { liste: demonter, onChange: setDemonter, itemId: item.id }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), item.id && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: dangerBtn }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function ItemManager({ items, onEdit, onCreate, onClose, combos, onCombos, variables, puzzles, scenes, dialogues, projet }) {
     const [onglet, setOnglet] = (0, import_react.useState)("objets");
@@ -68374,6 +68459,29 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
   #viewer.tr-secoue-fort{animation:tr-secoue-fort .7s ease}
   @keyframes tr-secoue{0%,100%{transform:none}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
   @keyframes tr-secoue-fort{0%,100%{transform:none}15%{transform:translate(-16px,8px) rotate(-1deg)}30%{transform:translate(14px,-10px) rotate(1deg)}45%{transform:translate(-12px,6px)}60%{transform:translate(9px,-5px)}80%{transform:translate(-4px,2px)}}
+  .inv-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+  .inv-nom{flex:1 1 100%;font-weight:600}
+  .inv-btn{min-height:38px;padding:0 12px;border-radius:9px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:inherit;font:600 13px system-ui,sans-serif;cursor:pointer}
+  .en-main{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:45;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;border-radius:99px;background:rgba(16,19,27,.92);border:1px solid var(--accent,#E8A33D);color:#E9E6DD;font:13px system-ui,sans-serif;max-width:calc(100% - 24px);box-sizing:border-box;animation:tr-apparait .25s ease}
+  .en-main button{width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:inherit;cursor:pointer;flex:none}
+  .doc-lecteur{position:absolute;inset:0;z-index:66;background:rgba(5,7,11,.94);display:flex;flex-direction:column;align-items:center;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box;gap:10px;color:#E9E6DD;font-family:system-ui,sans-serif;animation:tr-apparait .25s ease}
+  .doc-titre{font:600 15px Georgia,serif;color:var(--accent,#E8A33D)}
+  .doc-page{flex:1;min-height:0;width:100%;max-width:560px;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:10px}
+  .doc-page img{max-width:100%;max-height:70%;object-fit:contain;border-radius:6px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .doc-page p{margin:0;white-space:pre-wrap;font:16px/1.6 Georgia,serif;background:#efe6d2;color:#2a241a;padding:16px 18px;border-radius:6px;width:100%;box-sizing:border-box}
+  .doc-bas{display:flex;align-items:center;gap:14px}
+  .doc-nav{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit;font-size:22px;cursor:pointer}
+  .doc-nav:disabled{opacity:.3}
+  .doc-num{font-variant-numeric:tabular-nums;font-size:13px;color:#9a968c}
+  .doc-ferme{min-height:40px;padding:0 18px;border-radius:10px;border:none;background:var(--accent,#E8A33D);color:#14110b;font:600 14px system-ui,sans-serif;cursor:pointer}
+  .zone-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+  .zone{fill:transparent;stroke:transparent;stroke-width:2}
+  .zone.zone-visible{stroke:rgba(255,255,255,.5);stroke-dasharray:6 5}
+  .zone.zone-touche{animation:zone-flash .7s ease}
+  @keyframes zone-flash{0%{fill:rgba(255,255,255,.35);stroke:#fff}100%{fill:transparent}}
+  .hs.hs-revele{opacity:1}
+  .hs.hs-revele::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid #fff;animation:hs-revele 1.2s ease-out forwards}
+  @keyframes hs-revele{0%{transform:scale(.4);opacity:1}100%{transform:scale(1.8);opacity:0}}
   .aide-objectif{font:600 16px/1.4 system-ui,sans-serif;margin:6px 0 12px}
   .aide-indice{display:block;line-height:1.5}
   .aide-btn,.jr-photo-btn{margin-top:10px;min-height:40px;padding:0 16px;border-radius:10px;border:none;background:var(--accent,#E8A33D);color:#14110b;font:600 14px system-ui,sans-serif;cursor:pointer}
@@ -69205,6 +69313,151 @@ function prendrePhoto(){
     try{ hudNotify(ok ? '\u{1F4F7} Photo rang\xE9e dans le journal' : "\u{1F4F7} Plus de place pour les photos", 'info'); }catch(e){}
   }catch(e){ showModal("La photo n'a pas pu \xEAtre prise."); }
 }
+/*  Lot 4. Un objet pris en main dans le sac s'utilise sur le prochain
+    point touche : le point dit ce qu'il en fait, ou sa reponse par
+    defaut.                                                           */
+let objetEnMain = null;
+function barreObjet(box){
+  const barre = mk('div', 'inv-actions');
+  barre.style.display = 'none';
+  box.appendChild(barre);
+  const defs = GAME.inventory_items || [];
+  const montre = function(id){
+    barre.textContent = '';
+    const it = id ? hudItemDef(id, defs) : null;
+    if(!it){ barre.style.display = 'none'; return; }
+    barre.style.display = 'flex';
+    barre.appendChild(mk('span', 'inv-nom', it.name || id));
+    const bouton = function(t, fn){ const b = mk('button', 'inv-btn', t); b.type = 'button'; b.onclick = function(e){ e.stopPropagation(); fn(); }; barre.appendChild(b); };
+    bouton('\u270B Utiliser sur le d\xE9cor', function(){ closeInv(); prendreEnMain(id); });
+    if(it.document && it.document.pages && it.document.pages.length) bouton('\u{1F4D6} Lire', function(){ lireDocument(it); });
+    if(Array.isArray(it.demonter) && it.demonter.length) bouton('\u{1F527} D\xE9monter', function(){ demonterObjet(it); });
+  };
+  box.addEventListener('click', function(e){
+    const n = e.target.closest ? e.target.closest('[data-inv-item]') : null;
+    if(!n) return;
+    setTimeout(function(){
+      const sel = box.querySelector('[data-inv-item].cmb-sel');
+      if(box.querySelector('.cmb-aide')) montre(sel ? sel.getAttribute('data-inv-item') : null);
+      else montre(n.getAttribute('data-inv-item'));
+    }, 0);
+  });
+}
+function prendreEnMain(id){
+  finUtiliser();
+  const it = hudItemDef(id, GAME.inventory_items || []);
+  objetEnMain = id;
+  const b = mk('div', 'en-main');
+  b.id = 'en-main';
+  b.appendChild(mk('span', '', '\u270B ' + ((it && it.name) || id) + ' \xB7 touche l\u2019endroit o\xF9 l\u2019utiliser'));
+  const x = mk('button', '', '\u2715'); x.type = 'button'; x.setAttribute('aria-label', 'Ranger l\u2019objet');
+  x.onclick = function(e){ e.stopPropagation(); finUtiliser(); };
+  b.appendChild(x);
+  frameEl.appendChild(b);
+}
+function finUtiliser(){
+  objetEnMain = null;
+  const b = document.getElementById('en-main'); if(b) b.remove();
+}
+function utiliserObjetSur(hs, id){
+  const r = (hs.reactions || []).filter(function(x){ return x && x.itemId === id; })[0];
+  if(!r){ showModal(hs.reponseDefaut || '\xC7a ne donne rien.'); return; }
+  const acts = r.consomme === 'un' ? [{ type: 'remove_item', itemId: id, amount: 1 }] : [];
+  hudRunList(acts.concat(r.actions || []));
+  if(r.consomme === 'usure') userObjet(id);
+}
+function userObjet(id){
+  const it = hudItemDef(id, GAME.inventory_items || []);
+  if(!it || !(it.usages > 0)) return;
+  const n = (vars['__usure:' + id] || 0) + 1;
+  if(n >= it.usages){
+    vars['__usure:' + id] = 0;
+    runActions([{ type: 'remove_item', itemId: id, amount: 1 }]);
+    try{ hudNotify(it.usureTexte || ((it.name || id) + ' est us\xE9.'), 'info'); }catch(e){}
+  } else {
+    vars['__usure:' + id] = n;
+    const reste = it.usages - n;
+    try{ hudNotify((it.name || id) + ' \xB7 encore ' + reste + ' utilisation' + (reste > 1 ? 's' : ''), 'info'); }catch(e){}
+  }
+  saveGame();
+}
+function lireDocument(it){
+  const pages = (it.document && it.document.pages) || [];
+  if(!pages.length) return;
+  let i = 0;
+  const fond = mk('div', 'doc-lecteur');
+  fond.setAttribute('role', 'dialog'); fond.setAttribute('aria-label', it.name || 'Document');
+  const page = mk('div', 'doc-page'), bas = mk('div', 'doc-bas');
+  const prec = mk('button', 'doc-nav', '\u2039'), suiv = mk('button', 'doc-nav', '\u203A'), num = mk('span', 'doc-num', ''), ferme = mk('button', 'doc-ferme', 'Fermer');
+  prec.type = 'button'; suiv.type = 'button'; ferme.type = 'button';
+  prec.setAttribute('aria-label', 'Page pr\xE9c\xE9dente'); suiv.setAttribute('aria-label', 'Page suivante');
+  const rend = function(){
+    page.textContent = '';
+    const p = pages[i];
+    if(p.image){ const im = document.createElement('img'); im.src = p.image; im.alt = ''; page.appendChild(im); }
+    if(p.texte) page.appendChild(mk('p', '', p.texte));
+    num.textContent = (i + 1) + ' / ' + pages.length;
+    prec.disabled = i === 0; suiv.disabled = i === pages.length - 1;
+  };
+  prec.onclick = function(){ if(i > 0){ i--; rend(); } };
+  suiv.onclick = function(){ if(i < pages.length - 1){ i++; rend(); } };
+  ferme.onclick = function(){ fond.remove(); };
+  let x0 = null;
+  fond.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, { passive: true });
+  fond.addEventListener('touchend', function(e){
+    if(x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if(dx < -50) suiv.onclick(); else if(dx > 50) prec.onclick();
+  }, { passive: true });
+  bas.appendChild(prec); bas.appendChild(num); bas.appendChild(suiv);
+  fond.appendChild(mk('div', 'doc-titre', it.name || ''));
+  fond.appendChild(page); fond.appendChild(bas); fond.appendChild(ferme);
+  frameEl.appendChild(fond);
+  rend();
+}
+function demonterObjet(it){
+  const acts = [{ type: 'remove_item', itemId: it.id, amount: 1 }].concat((it.demonter || []).filter(function(d){ return d && d.itemId; }).map(function(d){ return { type: 'give_item', itemId: d.itemId, amount: d.qty || 1 }; }));
+  runActions(acts);
+  closeInv(); openInv();
+  try{ hudNotify('\u{1F527} ' + (it.name || it.id) + ' d\xE9mont\xE9', 'gain'); }catch(e){}
+}
+/*  Zones dessinees : un contour en SVG, projete a chaque image comme
+    les points, et qui sert de zone de toucher.                       */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+let zoneSvg = null, zonePolys = [];
+function zonesVide(){
+  if(!zoneSvg){ zoneSvg = document.createElementNS(SVG_NS, 'svg'); zoneSvg.setAttribute('class', 'zone-svg'); mount.appendChild(zoneSvg); }
+  zoneSvg.textContent = ''; zonePolys = [];
+}
+function zoneCree(i, hs){
+  const pg = document.createElementNS(SVG_NS, 'polygon');
+  pg.setAttribute('class', 'zone' + (hs.repere === 'discret' ? ' zone-visible' : ''));
+  zoneSvg.appendChild(pg); zonePolys[i] = pg;
+}
+function zoneCache(i){
+  const pg = zonePolys[i]; if(pg) pg.style.display = 'none';
+  if(markerEls[i]) markerEls[i]._poly = null;
+}
+function zoneProjette(i, hs, w, h){
+  const pg = zonePolys[i]; if(!pg) return;
+  const pts = [];
+  for(let k = 0; k < hs.zone.length; k++){
+    const v = yawPitchToDir(hs.zone[k].yaw, hs.zone[k].pitch).multiplyScalar(100).project(camera);
+    if(v.z > 1){ zoneCache(i); return; }
+    pts.push([(v.x * 0.5 + 0.5) * w, (-v.y * 0.5 + 0.5) * h]);
+  }
+  pg.style.display = '';
+  pg.setAttribute('points', pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '));
+  markerEls[i]._poly = pts;
+}
+function dansPolygone(x, y, pts){
+  let dedans = false;
+  for(let a = 0, b = pts.length - 1; a < pts.length; b = a++){
+    const xi = pts[a][0], yi = pts[a][1], xj = pts[b][0], yj = pts[b][1];
+    if(((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi)) dedans = !dedans;
+  }
+  return dedans;
+}
 function aCollectionner(){ return (GAME.inventory_items || []).filter(function(it){ return it && it.collection; }); }
 function noteCollecte(){
   let neuf = null;
@@ -69363,7 +69616,9 @@ function runSceneEnter(scene){
 let markerEls=[];
 function renderHotspots(){
   markerEls.forEach(e=>e.remove()); markerEls=[];
+  zonesVide();
   (current.hotspots||[]).forEach(hs=>{
+    if(hs.zone && hs.zone.length >= 3) zoneCree(markerEls.length, hs);
     const el=document.createElement('div');
     const locked = missingRequirements(hs, inventory, vars).length > 0;
     let cls = 'hs' + (locked ? ' locked' : '') + ' hs-' + (hs.repere || 'invisible');
@@ -69371,6 +69626,7 @@ function renderHotspots(){
     else if(hs.type === 'navigate' && hs.target && discovered.has(hs.target)) cls += ' hs-vu';
     el.className = cls;
     if(hs.visibleSi && hs.visibleSi.length && reqMissing(hs.visibleSi, inventory, vars).length) el.setAttribute('data-cache', '1');
+    if(hs.decouverte && !vars['__trouve:' + hs.id]) el.setAttribute('data-decouvrir', '1');
     const sz = hs.size || 36;
     el.style.width = sz+'px'; el.style.height = sz+'px';
     mount.appendChild(el); markerEls.push(el);
@@ -86192,6 +86448,7 @@ try{
 
 function activate(hs){
   if(playerScreen!=='playing') return;
+  if(objetEnMain){ const enMain = objetEnMain; finUtiliser(); utiliserObjetSur(hs, enMain); return; }
   const reqs = getRequirements(hs);
   const missing = missingRequirements(hs, inventory, vars);
   if(missing.length){
@@ -86283,6 +86540,7 @@ function openInv(){
   pnlColonnes(box, cfg);
   m.onclick = function(e){ if(e.target === m) closeInv(); };
   if(!HomeSettings.get().reduceMotion && cfg.anim !== 'none') box.classList.add('hud-in-' + cfg.anim);
+  try{ barreObjet(box); }catch(e){}
   try{ hudSeenInventory(); }catch(e){}
   setScreen('inventory');
 }
@@ -86520,12 +86778,17 @@ window.addEventListener('pointerup',e=>{
   let hit=null, bestDist=Infinity;
   (current.hotspots||[]).forEach((hs,i)=>{
     const el=markerEls[i]; if(!el || el.style.display==='none') return;
+    if(hs.zone && el._poly){
+      if(dansPolygone(px, py, el._poly)){ const d0 = Math.hypot(px - parseFloat(el.style.left), py - parseFloat(el.style.top)); if(d0 < bestDist){ hit = hs; bestDist = d0; } }
+      return;
+    }
     const sz=hs.size||36;
     const sx=parseFloat(el.style.left), sy=parseFloat(el.style.top);
     const d=Math.hypot(px-sx, py-sy);
     if(d<=sz/2 && d<bestDist){ hit=hs; bestDist=d; }
   });
   if(hit){
+    if(hit.zone){ const pg = zonePolys[(current.hotspots||[]).indexOf(hit)]; if(pg){ pg.classList.remove('zone-touche'); void pg.getBoundingClientRect(); pg.classList.add('zone-touche'); } }
     if(pendingClickTimer) clearTimeout(pendingClickTimer);
     // d\xE9lai de 0,05s avant de valider le changement de sc\xE8ne : laisse une chance
     // au joueur de reprendre le d\xE9placement de cam\xE9ra sans d\xE9clencher l'action.
@@ -86546,8 +86809,15 @@ function project(){
     const p=dir.clone().multiplyScalar(100);
     const ndc=p.clone().project(camera);
     const el=markerEls[i]; if(!el) return;
-    if(ndc.z>1 || el.getAttribute('data-cache')){ el.style.display='none'; return; }
+    if(el.getAttribute('data-decouvrir') && !el.getAttribute('data-cache')){
+      if(ndc.z < 1 && Math.abs(ndc.x) < 0.2 && Math.abs(ndc.y) < 0.2){
+        vars['__trouve:' + hs.id] = true; el.removeAttribute('data-decouvrir'); el.classList.add('hs-revele');
+        try{ hudPlaySound('notify'); }catch(e){}
+      } else { el.style.display='none'; if(hs.zone) zoneCache(i); return; }
+    }
+    if(ndc.z>1 || el.getAttribute('data-cache')){ el.style.display='none'; if(hs.zone) zoneCache(i); return; }
     el.style.display='flex';
+    if(hs.zone) zoneProjette(i, hs, w, h);
     el.style.left=((ndc.x*0.5+0.5)*w)+'px';
     el.style.top=((-ndc.y*0.5+0.5)*h)+'px';
   });

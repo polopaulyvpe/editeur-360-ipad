@@ -459,7 +459,8 @@
     t = t.replace(/\?\s*$/, "").replace(/\s*\(.*?\)\s*/g, " ").replace(/\s+[—–-]\s+.*$/, "").trim();
     t = t.replace(/^(le|la|les|des|du)\s+/i, "").replace(/^l['’]\s*/i, "");
     t = t.replace(/\s+d(e|u|es)\s+(l['’]\s*|la\s+)?(énigme|jeu|scène)$/i, "");
-    t = t.replace(/^si elle est abandonnée$/i, "Abandon").replace(/^à\s+(la\s+|l['’]\s*)?/i, "");
+    t = t.replace(/^si elle est abandonnée$/i, "Abandon").replace(/^à\s+(la\s+|l['’]\s*)/i, "");
+    t = t.split(" / ")[0].trim();
     t = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
     return t.length > 24 ? t.slice(0, 23) + "…" : t;
   }
