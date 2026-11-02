@@ -36967,7 +36967,102 @@
     const maj = (i, patch) => onChange(liste.map((p, k) => k === i ? { ...p, ...patch } : p));
     return /* @__PURE__ */ import_react.default.createElement("div", { "data-demontage": true }, liste.map((p, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 6, alignItems: "center", marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: p.itemId || "", onChange: (e) => maj(i, { itemId: e.target.value }), style: { ...select, flex: 1, marginTop: 0 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 objet obtenu \u2014"), objets.map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, it.name))), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", value: p.qty || 1, onChange: (e) => maj(i, { qty: parseInt(e.target.value, 10) || 1 }), style: { ...input, width: 56, marginTop: 0 } }), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange(liste.filter((_, k) => k !== i)), style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => onChange([...liste, { itemId: "", qty: 1 }]), style: smallBtn, "data-demontage-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter ce qu'il donne"));
   }
-  function HotspotEditor({ hotspot, scenes, items, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
+  var METEOS = [
+    ["", "Aucune"],
+    ["pluie", "Pluie"],
+    ["neige", "Neige"],
+    ["brouillard", "Brouillard qui passe"],
+    ["poussiere", "Poussi\xE8re dans la lumi\xE8re"],
+    ["lucioles", "Lucioles"],
+    ["feuilles", "Feuilles mortes"],
+    ["braises", "Braises, cendres"]
+  ];
+  var FORCES_METEO = [["1", "L\xE9g\xE8re"], ["2", "Moyenne"], ["3", "Forte"]];
+  var RAYONS_LAMPE = [["petit", "Petit faisceau"], ["moyen", "Faisceau moyen"], ["grand", "Grand faisceau"]];
+  var REVERBS = [
+    ["", "Aucune (dehors, son sec)"],
+    ["piece", "Petite pi\xE8ce"],
+    ["salle", "Grande salle"],
+    ["couloir", "Couloir de pierre"],
+    ["grotte", "Grotte, cave"],
+    ["cathedrale", "\xC9glise, cath\xE9drale"]
+  ];
+  var BAISSE_DIALOGUE = [["1", "La musique ne change pas"], ["0.6", "Elle baisse un peu"], ["0.35", "Elle baisse nettement"], ["0.12", "Elle se tait presque"]];
+  function petitSelect() {
+    return { ...input, marginTop: 4, padding: "5px 8px", fontSize: 11 };
+  }
+  function ImportSon({ audio, setAudio, bus, onRef, libelle }) {
+    return /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "file",
+        accept: "audio/*",
+        style: { display: "block", marginTop: 4, width: "100%", fontSize: 10.5 },
+        title: libelle,
+        onChange: (e) => {
+          const f = e.target.files[0];
+          if (!f) return;
+          const r = new FileReader();
+          r.onload = () => onRef(audioAdd(audio, setAudio, r.result, f.name.replace(/\.[^.]+$/, "").slice(0, 60) || "Son", bus, true));
+          r.readAsDataURL(f);
+        }
+      }
+    );
+  }
+  function AtmosphereScene({ scene, onChange, items }) {
+    const m = scene.meteo || {};
+    const l = scene.lampe || null;
+    const majLampe = (patch) => onChange({ lampe: { ...l, ...patch } });
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 }, "data-atmosphere": true }, "M\xE9t\xE9o et particules", /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: m.type || "",
+        onChange: (e) => onChange({ meteo: e.target.value ? { type: e.target.value, force: m.force || 2 } : void 0 }),
+        style: { ...petitSelect(), flex: 1 },
+        "data-meteo": true
+      },
+      METEOS.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))
+    ), m.type && /* @__PURE__ */ import_react.default.createElement("select", { value: String(m.force || 2), onChange: (e) => onChange({ meteo: { ...m, force: parseInt(e.target.value, 10) } }), style: { ...petitSelect(), width: 82 }, "data-meteo-force": true }, FORCES_METEO.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t)))), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 6, marginTop: 8, color: C.text } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!l, onChange: (e) => onChange({ lampe: e.target.checked ? { rayon: "moyen", nuit: 0.94, objet: "" } : void 0 }), style: { marginTop: 2 }, "data-lampe": true }), "Sc\xE8ne sombre : le joueur l'explore \xE0 la lampe"), l && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 }, "data-lampe-reglages": true }, /* @__PURE__ */ import_react.default.createElement("select", { value: l.rayon || "moyen", onChange: (e) => majLampe({ rayon: e.target.value }), style: petitSelect() }, RAYONS_LAMPE.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, "Obscurit\xE9 \u2014 ", Math.round((l.nuit == null ? 0.94 : l.nuit) * 100), " %"), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "0.5", max: "1", step: "0.01", value: l.nuit == null ? 0.94 : l.nuit, onChange: (e) => majLampe({ nuit: parseFloat(e.target.value) }), style: { width: "100%" } }), /* @__PURE__ */ import_react.default.createElement("select", { value: l.objet || "", onChange: (e) => majLampe({ objet: e.target.value }), style: petitSelect(), "data-lampe-objet": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "Lampe toujours allum\xE9e"), (items || []).map((it) => /* @__PURE__ */ import_react.default.createElement("option", { key: it.id, value: it.id }, "Allum\xE9e seulement avec : ", it.name))), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 3, fontSize: 10 } }, "Le faisceau suit le centre de l'\xE9cran, et le doigt quand le joueur touche le d\xE9cor.")));
+  }
+  function SonsPlusScene({ scene, audio, setAudio, onChange, items, variables, puzzles, scenes }) {
+    const couches = scene.couches || [];
+    const ecrire = (l) => onChange({ couches: l.length ? l : void 0 });
+    const maj = (i, patch) => ecrire(couches.map((c, k) => k === i ? { ...c, ...patch } : c));
+    const baisse = audio.ducking && audio.ducking.dialogue != null ? audio.ducking.dialogue : 0.5;
+    const choixBaisse = BAISSE_DIALOGUE.some(([v]) => parseFloat(v) === baisse) ? String(baisse) : "";
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 }, "data-sons-plus": true }, "R\xE9verb\xE9ration du lieu", /* @__PURE__ */ import_react.default.createElement("select", { value: scene.reverb || "", onChange: (e) => onChange({ reverb: e.target.value || void 0 }), style: petitSelect(), "data-reverb": true }, REVERBS.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 2, fontSize: 10 } }, "Donne de l'\xE9cho aux bruitages, aux voix et aux ambiances (pas \xE0 la musique)."), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 } }, "Couches de musique"), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10, marginBottom: 4 } }, "Des pistes jou\xE9es en m\xEAme temps que la musique, qui entrent en fondu quand leurs conditions sont remplies : la musique s'enrichit \xE0 mesure que le joueur avance."), couches.map((c, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { background: C.ink2, borderRadius: 6, padding: 6, marginBottom: 6 }, "data-couche": i }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text } }, "Couche ", i + 1), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire(couches.filter((_, k) => k !== i)), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(AudioPicker, { audio, value: c.src, onChange: (src) => maj(i, { src }), label: "couche" + i }), /* @__PURE__ */ import_react.default.createElement(ImportSon, { audio, setAudio, bus: "music", onRef: (src) => maj(i, { src }), libelle: "Importer la piste" }), /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "0", max: "1", step: "0.05", value: c.volume == null ? 0.6 : c.volume, onChange: (e) => maj(i, { volume: parseFloat(e.target.value) }), style: { width: "100%" }, title: "Volume" }), /* @__PURE__ */ import_react.default.createElement("div", { style: { margin: "4px 0 2px" } }, "Entre quand (vide : tout de suite) :"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: c.conditions || [], onChange: (conditions) => maj(i, { conditions }), items, variables, puzzles, scenes }))), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", onClick: () => ecrire([...couches, { src: "", volume: 0.6, conditions: [] }]), style: smallBtn, "data-couche-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une couche"), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10 } }, "Pendant les dialogues ", /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 10 } }, "(tout le jeu)")), /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: choixBaisse,
+        onChange: (e) => {
+          const v = parseFloat(e.target.value);
+          setAudio((a) => ({ ...a, ducking: { ...a.ducking || {}, dialogue: v } }));
+        },
+        style: petitSelect(),
+        "data-baisse-dialogue": true
+      },
+      !choixBaisse && /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "Elle baisse (", Math.round(baisse * 100), " %)"),
+      BAISSE_DIALOGUE.map(([v, t]) => /* @__PURE__ */ import_react.default.createElement("option", { key: v, value: v }, t))
+    ));
+  }
+  function SonIndice({ valeur, onChange, audio, setAudio }) {
+    const v = valeur || null;
+    if (!audio) return null;
+    return /* @__PURE__ */ import_react.default.createElement("div", { "data-son-indice": true }, /* @__PURE__ */ import_react.default.createElement(AudioPicker, { audio, value: v ? v.src : "", onChange: (src) => onChange(src ? { volume: 0.8, ...v, src } : void 0), label: "indice" }), setAudio && /* @__PURE__ */ import_react.default.createElement(ImportSon, { audio, setAudio, bus: "sfx", onRef: (src) => onChange({ volume: 0.8, ...v, src }), libelle: "Importer un son" }), v && /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "range",
+        min: "0.1",
+        max: "1",
+        step: "0.05",
+        value: v.volume == null ? 0.8 : v.volume,
+        onChange: (e) => onChange({ ...v, volume: parseFloat(e.target.value) }),
+        style: { width: "100%", marginTop: 4 },
+        title: "Volume"
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, marginTop: 3 } }, "Il joue en boucle depuis ce point, vient de sa direction, et monte quand le joueur se tourne vers lui. Il se tait quand le point est fait ou cach\xE9."));
+  }
+  function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
     const [itemId, setItemId] = (0, import_react.useState)(hotspot.item || "");
@@ -36985,6 +37080,7 @@
     const [reponseDefaut, setReponseDefaut] = (0, import_react.useState)(hotspot.reponseDefaut || "");
     const [zone, setZone] = (0, import_react.useState)(hotspot.zone);
     const [decouverte, setDecouverte] = (0, import_react.useState)(!!hotspot.decouverte);
+    const [sonIndice, setSonIndice] = (0, import_react.useState)(hotspot.sonIndice);
     const sceneDuPoint = scenes.find((s) => (s.hotspots || []).some((h) => h.id === hotspot.id)) || null;
     const [newItemName, setNewItemName] = (0, import_react.useState)("");
     const [newItemDesc, setNewItemDesc] = (0, import_react.useState)("");
@@ -37011,7 +37107,8 @@
         reactions: reactions.filter((r) => r.itemId).length ? reactions.filter((r) => r.itemId) : void 0,
         reponseDefaut: reponseDefaut.trim() || void 0,
         zone: zone && zone.length >= 3 ? zone : void 0,
-        decouverte: decouverte || void 0
+        decouverte: decouverte || void 0,
+        sonIndice: sonIndice && sonIndice.src ? sonIndice : void 0
       });
     };
     return /* @__PURE__ */ import_react.default.createElement("div", { style: panelOverlay }, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...card, width: 360, maxHeight: "92vh", overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: cardHeader }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "Configurer le point cliquable"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: iconBtn }, /* @__PURE__ */ import_react.default.createElement(X, { size: 16, color: C.textDim }))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Type d'action"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, [
@@ -37050,7 +37147,7 @@
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Forme de la zone"), /* @__PURE__ */ import_react.default.createElement(ZoneTrace, { scene: sceneDuPoint, zone, onChange: setZone }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Son qui guide vers ce point"), /* @__PURE__ */ import_react.default.createElement(SonIndice, { valeur: sonIndice, onChange: setSonIndice, audio, setAudio }), /* @__PURE__ */ import_react.default.createElement(Label, null, "Contraintes (optionnel)"), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements, onChange: setRequirements, items, variables, puzzles, scenes }), items.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, marginTop: 6 } }, `Pas encore d'objet cr\xE9\xE9 \u2014 ajoutes-en un depuis "Objet" \xE0 ramasser ci-dessus, ou via le gestionnaire d'objets.`), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, onReposition && /* @__PURE__ */ import_react.default.createElement("button", { onClick: onReposition, style: smallBtn, title: "Choisir un nouvel endroit dans l'image 360\xB0" }, "\u2295 ", hotspot.editor && hotspot.editor.pending ? "Placer dans la sc\xE8ne" : "Repositionner"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: save, style: { ...primaryBtn, flex: 1 } }, "Enregistrer"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onDelete, style: { ...dangerBtn } }, /* @__PURE__ */ import_react.default.createElement(Trash2, { size: 14 })))));
   }
   function LevelBadge({ level, small }) {
     const L = PUZZLE_LEVELS[level] || PUZZLE_LEVELS.link;
@@ -41135,6 +41232,21 @@
       });
     }
     return AUDIO_PREFIX + id;
+  }
+  function AudioPicker({ audio, value, onChange, bus, label }) {
+    const lib = (audio.library || []).filter((e) => !bus || e.bus === bus || !bus);
+    const courant = audioIsRef(value) ? String(value).slice(AUDIO_PREFIX.length) : "";
+    return /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: courant,
+        onChange: (e) => onChange(e.target.value ? AUDIO_PREFIX + e.target.value : ""),
+        style: { ...input, marginTop: 2 },
+        "data-audio-picker": label || ""
+      },
+      /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, value && !audioIsRef(value) ? "\u2014 son import\xE9 directement \u2014" : "\u2014 aucun \u2014"),
+      lib.map((e) => /* @__PURE__ */ import_react.default.createElement("option", { key: e.id, value: e.id }, e.name))
+    );
   }
   var AUDIO_KO_MIME = {
     "audio/ogg": "OGG",
@@ -52374,7 +52486,7 @@
       library: [],
       /*  La musique s'efface pendant le menu Pause : c'est deja le cas  */
       /*  aujourd'hui, au facteur 0.4 pres. On le rend reglable.         */
-      ducking: { pause: 0.4 },
+      ducking: { pause: 0.4, dialogue: 0.5 },
       /*  Taille au-dela de laquelle on cesse de garder un son decode    */
       /*  en memoire, en millions d'octets.                              */
       memoryMB: 48,
@@ -52432,7 +52544,7 @@
       d.library.push(c);
     }
     var duck = src.ducking && typeof src.ducking === "object" ? src.ducking : {};
-    d.ducking = { pause: audioNum(duck.pause, 0.4, 0, 1) };
+    d.ducking = { pause: audioNum(duck.pause, 0.4, 0, 1), dialogue: audioNum(duck.dialogue, 0.5, 0, 1) };
     d.memoryMB = audioNum(src.memoryMB, 48, 4, 512);
     var f = src.fade && typeof src.fade === "object" ? src.fade : {};
     d.fade = { ambience: audioNum(f.ambience, 1.2, 0, 10), music: audioNum(f.music, 0, 0, 10) };
@@ -52721,6 +52833,7 @@
   var aBufBytes = 0;
   var aBufMax = 48e6;
   var aDuckValue = 1;
+  var aDuckDialogue = 1;
   var aMix = { master: 1, music: 1, ambience: 1, voice: 1, sfx: 1, ui: 1 };
   function aHasWindow() {
     return typeof window !== "undefined" && !!window;
@@ -52761,6 +52874,7 @@
       if (!g) continue;
       var v = (game[k] == null ? 1 : game[k]) * (aMix[k] == null ? 1 : aMix[k]);
       if (AUDIO_STREAMED[k]) v = v * aDuckValue;
+      if (k === "music") v = v * aDuckDialogue;
       aSet(g.gain, v);
     }
     if (aMaster) aSet(aMaster.gain, aMix.master == null ? 1 : aMix.master);
@@ -52840,7 +52954,7 @@
     }
     var bus = aGameBuses()[s.bus];
     var mx = aMix[s.bus] == null ? 1 : aMix[s.bus];
-    var duck = AUDIO_STREAMED[s.bus] ? aDuckValue : 1;
+    var duck = (AUDIO_STREAMED[s.bus] ? aDuckValue : 1) * (s.bus === "music" ? aDuckDialogue : 1);
     var f = v * (bus == null ? 1 : bus) * mx * duck * (aMix.master == null ? 1 : aMix.master);
     try {
       s.el.volume = f < 0 ? 0 : f > 1 ? 1 : f;
@@ -68433,6 +68547,8 @@ ${info.warnings.map((w) => `- ${w}`).join("\n")}
       box-shadow:0 0 0 7px #000,0 0 0 8px #2a2f3f,0 25px 70px rgba(0,0,0,.65)}
   #viewer{position:absolute;inset:0;cursor:grab}
   #viewer.dragging{cursor:grabbing}
+  .meteo{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;display:none}
+  .lampe{position:absolute;inset:0;pointer-events:none;display:none}
   .hs{position:absolute;border-radius:50%;pointer-events:none;
       display:flex;align-items:center;justify-content:center;cursor:inherit;
       transform:translate(-50%,-50%);opacity:0;background:transparent;border:none}
@@ -69555,6 +69671,260 @@ function montrerImage(image, texte){
   fond.addEventListener('click', function(){ fond.remove(); });
   document.getElementById('phone-frame').appendChild(fond);
 }
+/* ---- Lot 5 : ambiance et son ------------------------------------- */
+/*  R\xE9verb\xE9ration : un envoi des bus bruitage, voix et ambiance vers
+    une r\xE9ponse impulsionnelle fabriqu\xE9e (bruit qui d\xE9cro\xEEt).          */
+const REVERB_PARAMS = { piece: [0.5, 0.2], salle: [1.6, 0.26], couloir: [1.1, 0.32], grotte: [2.6, 0.34], cathedrale: [4.2, 0.3] };
+let reverbConv = null, reverbWet = null, reverbType = null, reverbIRs = {};
+function reverbIR(type){
+  if(reverbIRs[type]) return reverbIRs[type];
+  const p = REVERB_PARAMS[type], sr = aCtx.sampleRate, n = Math.round(sr * p[0]);
+  const buf = aCtx.createBuffer(2, n, sr);
+  for(let c = 0; c < 2; c++){
+    const d = buf.getChannelData(c);
+    for(let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, type === 'grotte' ? 2.2 : 3.2);
+  }
+  reverbIRs[type] = buf;
+  return buf;
+}
+function reverbScene(){
+  if(!aCtx) return;
+  const type = current && REVERB_PARAMS[current.reverb] ? current.reverb : '';
+  if(type === reverbType) return;
+  const avant = reverbType;
+  reverbType = type;
+  try{
+    if(!reverbConv){
+      reverbConv = aCtx.createConvolver(); reverbWet = aCtx.createGain(); reverbWet.gain.value = 0;
+      reverbConv.connect(reverbWet); reverbWet.connect(aMaster);
+      ['sfx', 'voice', 'ambience'].forEach(function(b){ if(aBusGain[b]) aBusGain[b].connect(reverbConv); });
+    }
+    const monte = function(){ if(reverbType !== type || !type) return; reverbConv.buffer = reverbIR(type); aRamp(reverbWet.gain, REVERB_PARAMS[type][1], 0.8); };
+    if(avant){ aRamp(reverbWet.gain, 0, 0.25); setTimeout(monte, 300); } else monte();
+  }catch(e){}
+}
+/*  Couches de musique : des pistes cal\xE9es sur la musique de la sc\xE8ne,
+    qui montent en fondu quand leurs conditions sont remplies.         */
+function couchesScene(){
+  const st = HomeSettings.get();
+  const jouer = !(!st.music || st.mute);
+  const liste = playerScreen !== 'home' && current && Array.isArray(current.couches) ? current.couches : [];
+  const voulu = {};
+  liste.forEach(function(c){
+    if(!c || !c.src) return;
+    const s = aSrc(c.src); if(!s) return;
+    const ok = !(c.conditions && c.conditions.length && reqMissing(c.conditions, inventory, vars).length);
+    voulu['couche:' + c.src] = { src: s, cible: ok ? (c.volume == null ? 0.6 : c.volume) : 0 };
+  });
+  for(const k in aSlots){ if(k.indexOf('couche:') === 0 && !voulu[k] && !aSlots[k].mourant) aStopStream(k, 1.5); }
+  for(const k in voulu){
+    let s = aSlots[k];
+    if(s && s.mourant){ s.mourant = false; s.wanted = true; s.cible = -1; }
+    if(!s){
+      s = aStream(k, voulu[k].src, { bus: 'music', loop: true, volume: 0, fade: 0, play: jouer });
+      if(!s) continue;
+      const m = aSlots['scene'];
+      if(m && m.el && s.el){ try{ s.el.currentTime = m.el.currentTime || 0; }catch(e){} }
+    }
+    if(jouer && !s.wanted){ s.wanted = true; aSlotPlay(s); }
+    else if(!jouer && s.wanted){ s.wanted = false; aSlotPause(s); }
+    if(s.cible !== voulu[k].cible){
+      s.cible = voulu[k].cible; s.volume = s.cible;
+      if(s.node && aCtx) aRamp(s.node.gain, s.cible, 2); else aSlotVolume(s);
+    }
+  }
+}
+/*  Son qui guide : il vient du point et monte quand on le regarde.    */
+function sonsIndices(yaw, pitch){
+  const voulu = {};
+  if(playerScreen !== 'home' && current) (current.hotspots || []).forEach(function(h, i){
+    if(!h.sonIndice || !h.sonIndice.src || !h.position) return;
+    const el = markerEls[i];
+    if(!el || el.getAttribute('data-cache') || el.classList.contains('hs-fait') || el.classList.contains('hs-vu')) return;
+    const s = aSrc(h.sonIndice.src); if(!s) return;
+    voulu['indice:' + h.id] = { h: h, src: s };
+  });
+  for(const k in aSlots){ if(k.indexOf('indice:') === 0 && !voulu[k] && !aSlots[k].mourant) aStopStream(k, 0.8); }
+  for(const k in voulu){
+    const h = voulu[k].h;
+    let s = aSlots[k];
+    if(s && s.mourant){ s.mourant = false; s.wanted = true; aSlotPlay(s); }
+    if(!s){
+      s = aStream(k, voulu[k].src, { bus: 'ambience', loop: true, volume: 0, fade: 0, yaw: h.position.yaw, pitch: h.position.pitch || 0 });
+      if(!s) continue;
+    }
+    const hp = h.position.pitch || 0;
+    const d = Math.cos(pitch) * Math.cos(hp) * Math.cos(yaw - h.position.yaw) + Math.sin(pitch) * Math.sin(hp);
+    const v = (h.sonIndice.volume == null ? 0.8 : h.sonIndice.volume) * (0.12 + 0.88 * Math.pow(Math.max(0, (d + 1) / 2), 4));
+    if(Math.abs((s.volume || 0) - v) > 0.01){ s.volume = v; aSlotVolume(s); }
+  }
+}
+/*  La musique baisse pendant les dialogues (r\xE9glage du jeu).          */
+function baisseDialogue(){
+  const v = playerScreen === 'dialogue' && aGameAudio && aGameAudio.ducking && aGameAudio.ducking.dialogue != null ? aGameAudio.ducking.dialogue : 1;
+  const change = v !== aDuckDialogue;
+  aDuckDialogue = v;
+  return change;
+}
+/*  M\xE9t\xE9o : des particules dessin\xE9es par-dessus la 360, qui suivent les
+    mouvements de la t\xEAte.                                             */
+const METEO_N = { pluie: 150, neige: 90, brouillard: 7, poussiere: 55, lucioles: 26, feuilles: 22, braises: 45 };
+let meteoCv = null, meteoCtx = null, meteoParts = [], meteoType = '', meteoRaf = 0, meteoYaw = 0, meteoPitch = 0, meteoT = 0;
+function meteoScene(){
+  const m = current && current.meteo && METEO_N[current.meteo.type] ? current.meteo : null;
+  const type = m ? m.type + ':' + (m.force || 2) : '';
+  if(type === meteoType) return;
+  meteoType = type;
+  if(!meteoCv){
+    meteoCv = document.createElement('canvas'); meteoCv.className = 'meteo';
+    mount.insertBefore(meteoCv, renderer.domElement.nextSibling);
+    meteoCtx = meteoCv.getContext('2d');
+  }
+  meteoParts = []; meteoParts.debut = true;
+  if(!m){ meteoCv.style.display = 'none'; if(meteoRaf){ cancelAnimationFrame(meteoRaf); meteoRaf = 0; } return; }
+  meteoCv.style.display = 'block';
+  meteoYaw = yaw; meteoPitch = pitch; meteoT = 0;
+  if(!meteoRaf) meteoRaf = requestAnimationFrame(meteoImage);
+}
+function meteoNouvelle(t, w, h, partout){
+  const p = { x: Math.random() * w, y: partout ? Math.random() * h : -20, z: 0.35 + Math.random() * 0.65, a: Math.random() * 6.283, v: Math.random() };
+  if(t === 'braises' && !partout) p.y = h + 20;
+  if(t === 'poussiere' || t === 'lucioles') p.y = Math.random() * h;
+  if(t === 'brouillard'){ p.r = (0.3 + Math.random() * 0.4) * Math.max(w, h); p.y = Math.random() * h; if(!partout) p.x = -p.r; }
+  return p;
+}
+function meteoImage(now){
+  meteoRaf = 0;
+  if(!meteoType || !meteoCv) return;
+  meteoRaf = requestAnimationFrame(meteoImage);
+  meteoPas(now || performance.now());
+}
+function meteoPas(now){
+  const w = mount.clientWidth, h = mount.clientHeight;
+  if(!w || !h) return;
+  const dt = meteoT ? Math.min(0.05, (now - meteoT) / 1000) : 0.016;
+  meteoT = now;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  if(meteoCv.width !== Math.round(w * dpr) || meteoCv.height !== Math.round(h * dpr)){ meteoCv.width = Math.round(w * dpr); meteoCv.height = Math.round(h * dpr); }
+  const c = meteoCtx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, w, h);
+  const t = meteoType.split(':')[0], force = parseInt(meteoType.split(':')[1], 10) || 2;
+  const n = Math.round(METEO_N[t] * [0, 0.45, 1, 1.9][force] * Math.min(1.6, Math.max(0.6, w * h / 400000)));
+  while(meteoParts.length < n) meteoParts.push(meteoNouvelle(t, w, h, !!meteoParts.debut));
+  meteoParts.debut = false;
+  if(meteoParts.length > n) meteoParts.length = n;
+  /* la t\xEAte tourne : tout le d\xE9cor glisse d'autant */
+  const focale = (h / 2) / Math.tan((camera.fov || 75) * Math.PI / 360);
+  const dyaw = Math.atan2(Math.sin(yaw - meteoYaw), Math.cos(yaw - meteoYaw));
+  const dx = dyaw * focale, dy = (pitch - meteoPitch) * focale;
+  meteoYaw = yaw; meteoPitch = pitch;
+  const s = now / 1000;
+  for(let i = 0; i < meteoParts.length; i++){
+    const p = meteoParts[i];
+    p.x += dx; p.y += dy;
+    const marge = p.r || 40;
+    if(p.x < -marge - 1) p.x += w + 2 * marge; else if(p.x > w + marge + 1) p.x -= w + 2 * marge;
+    let neuf = false;
+    if(t === 'pluie'){
+      const vy = 900 + 600 * p.z; p.y += vy * dt; p.x += vy * 0.1 * dt;
+      c.strokeStyle = 'rgba(200,215,235,' + (0.18 + 0.35 * p.z) + ')'; c.lineWidth = 0.4 + p.z;
+      c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - (12 + 18 * p.z) * 0.1, p.y - (12 + 18 * p.z)); c.stroke();
+      neuf = p.y > h + 30;
+    } else if(t === 'neige'){
+      p.y += (25 + 60 * p.z) * dt; p.x += Math.sin(s * 0.8 + p.a) * 22 * p.z * dt;
+      c.fillStyle = 'rgba(255,255,255,' + (0.45 + 0.45 * p.z) + ')';
+      c.beginPath(); c.arc(p.x, p.y, 0.8 + 2.6 * p.z, 0, 6.283); c.fill();
+      neuf = p.y > h + 10;
+    } else if(t === 'brouillard'){
+      p.x += (10 + 14 * p.v) * dt;
+      const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, 'rgba(215,220,230,' + (0.05 + 0.035 * force) + ')'); g.addColorStop(1, 'rgba(215,220,230,0)');
+      c.fillStyle = g; c.fillRect(p.x - p.r, p.y - p.r, 2 * p.r, 2 * p.r);
+      if(p.y < -p.r) p.y += h + 2 * p.r; else if(p.y > h + p.r) p.y -= h + 2 * p.r;
+    } else if(t === 'poussiere'){
+      p.x += Math.sin(s * 0.3 + p.a) * 7 * dt; p.y += Math.cos(s * 0.25 + p.a) * 6 * dt;
+      c.fillStyle = 'rgba(255,236,195,' + (0.15 + 0.4 * (0.5 + 0.5 * Math.sin(s * 1.4 + p.a * 5))) + ')';
+      c.beginPath(); c.arc(p.x, p.y, 0.6 + 1.5 * p.z, 0, 6.283); c.fill();
+      if(p.y < -10) p.y += h + 20; else if(p.y > h + 10) p.y -= h + 20;
+    } else if(t === 'lucioles'){
+      p.x += Math.sin(s * 0.7 + p.a) * 26 * dt; p.y += Math.cos(s * 0.5 + p.a * 1.3) * 18 * dt;
+      const al = Math.pow(0.5 + 0.5 * Math.sin(s * 1.8 + p.a * 3), 3);
+      const r = 5 + 7 * p.z;
+      const g = c.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, 'rgba(235,255,150,' + al + ')'); g.addColorStop(0.25, 'rgba(200,255,110,' + (al * 0.5) + ')'); g.addColorStop(1, 'rgba(200,255,110,0)');
+      c.fillStyle = g; c.fillRect(p.x - r, p.y - r, 2 * r, 2 * r);
+      if(p.y < -20) p.y += h + 40; else if(p.y > h + 20) p.y -= h + 40;
+    } else if(t === 'feuilles'){
+      p.y += (35 + 50 * p.z) * dt; p.x += (25 + Math.sin(s + p.a) * 45) * dt; p.a += (1 + p.v) * dt;
+      c.save(); c.translate(p.x, p.y); c.rotate(p.a); c.scale(1, Math.cos(p.a * 1.7));
+      c.fillStyle = 'hsla(' + Math.round(18 + p.v * 32) + ',62%,' + Math.round(30 + p.z * 14) + '%,.88)';
+      c.beginPath(); c.ellipse(0, 0, 4 + 5 * p.z, 2 + 2 * p.z, 0, 0, 6.283); c.fill(); c.restore();
+      neuf = p.y > h + 20;
+    } else if(t === 'braises'){
+      p.y -= (35 + 70 * p.z) * dt; p.x += Math.sin(s * 1.3 + p.a) * 20 * dt;
+      c.fillStyle = 'rgba(255,' + Math.round(120 + p.v * 90) + ',40,' + (0.45 + 0.45 * Math.sin(s * 6 + p.a * 7)) + ')';
+      c.beginPath(); c.arc(p.x, p.y, 0.8 + 1.6 * p.z, 0, 6.283); c.fill();
+      neuf = p.y < -20;
+    }
+    if(neuf) meteoParts[i] = meteoNouvelle(t, w, h, false);
+  }
+}
+/*  Lampe : la sc\xE8ne est dans le noir, un faisceau suit le centre de
+    l'\xE9cran, ou le doigt quand le joueur touche le d\xE9cor.               */
+let lampeEl = null, lampeX = 0.5, lampeY = 0.5, lampeCX = 0.5, lampeCY = 0.5, lampeDoigt = 0, lampeVu = {};
+function lampeScene(){
+  const l = current && current.lampe ? current.lampe : null;
+  if(!l){ if(lampeEl) lampeEl.style.display = 'none'; return; }
+  if(!lampeEl){
+    lampeEl = mk('div', 'lampe');
+    mount.appendChild(lampeEl);
+    const suit = function(e){
+      if(e.type === 'pointermove' && !e.buttons) return;
+      const r = mount.getBoundingClientRect();
+      lampeCX = (e.clientX - r.left) / r.width; lampeCY = (e.clientY - r.top) / r.height;
+      lampeDoigt = performance.now() + 1500;
+    };
+    mount.addEventListener('pointerdown', suit, { passive: true });
+    mount.addEventListener('pointermove', suit, { passive: true });
+  }
+  lampeEl.style.display = 'block';
+  lampeDevant();
+  lampeDessine(true);
+  if(l.objet && !(inventory[l.objet] > 0) && !lampeVu[current.id]){
+    lampeVu[current.id] = 1;
+    setTimeout(function(){ try{ hudNotify('Il fait trop sombre pour voir quoi que ce soit.'); }catch(e){} }, 700);
+  }
+}
+function lampeDevant(){ if(lampeEl && lampeEl.style.display === 'block') mount.appendChild(lampeEl); }
+function lampeDessine(force){
+  const l = current && current.lampe;
+  if(!l || !lampeEl) return;
+  if(performance.now() > lampeDoigt){ lampeCX = 0.5; lampeCY = 0.5; }
+  const ax = lampeX, ay = lampeY;
+  lampeX += (lampeCX - lampeX) * 0.2; lampeY += (lampeCY - lampeY) * 0.2;
+  const allumee = !l.objet || inventory[l.objet] > 0;
+  const etat = allumee ? 1 : 2;
+  if(!force && lampeEl._etat === etat && Math.abs(ax - lampeX) < 0.0008 && Math.abs(ay - lampeY) < 0.0008) return;
+  lampeEl._etat = etat;
+  const w = mount.clientWidth, h = mount.clientHeight;
+  const nuit = l.nuit == null ? 0.94 : l.nuit;
+  const r = Math.round(Math.min(w, h) * ({ petit: 0.2, moyen: 0.3, grand: 0.42 }[l.rayon] || 0.3));
+  lampeEl.style.background = allumee
+    ? 'radial-gradient(circle ' + r + 'px at ' + Math.round(lampeX * w) + 'px ' + Math.round(lampeY * h) + 'px, rgba(0,0,0,0) 0%, rgba(0,0,0,' + (nuit * 0.3).toFixed(3) + ') 60%, rgba(0,0,0,' + nuit + ') 100%)'
+    : 'rgba(0,0,0,' + Math.min(0.985, nuit + 0.04) + ')';
+}
+function lot5Tick(y, p){
+  lampeDessine(false);
+  sonsIndices(y, p);
+}
+function ambianceScene(){
+  meteoScene();
+  lampeScene();
+  reverbScene();
+  couchesScene();
+}
+setInterval(function(){ try{ couchesScene(); reverbScene(); }catch(e){} }, 700);
 function loadScene(id, passage){
   if(!passage && passageDemande && passageDemande.cible === id) passage = passageDemande;
   passageDemande = null;
@@ -69574,6 +69944,7 @@ function loadScene(id, passage){
   saveGame();
   runSceneEnter(current);
   syncBruitages(current);
+  try{ ambianceScene(); }catch(e){}
   setTimeout(sceneAutoOuvre, 0);
 }
 /* Bruitages de la scene (timeline des sons) : joues une fois a l'arrivee,
@@ -69631,6 +70002,7 @@ function renderHotspots(){
     el.style.width = sz+'px'; el.style.height = sz+'px';
     mount.appendChild(el); markerEls.push(el);
   });
+  lampeDevant();
 }
 /*  Les reperes d'une enigme jouee dans la scene : poses par le module
     (ctx.scene.reperes), projetes comme les points cliquables, touches
@@ -69809,7 +70181,12 @@ function syncMusic(){
   const st = HomeSettings.get();
   aSetMix(st);
   try{ syncAmbience(); }catch(e){}
+  const dlgChange = baisseDialogue();
   aSetDuck(isPausedScreen(), aGameAudio && aGameAudio.ducking ? aGameAudio.ducking.pause : 0.4);
+  if(dlgChange && aCtx && aBusGain.music){
+    const gm = aGameBuses().music;
+    aRamp(aBusGain.music.gain, (gm == null ? 1 : gm) * (aMix.music == null ? 1 : aMix.music) * aDuckValue * aDuckDialogue, 0.6);
+  }
   if(!m){ aStopStream('scene', musiqueFonduSortie()); return; }
   const src = aSrc(m.src);
   if(!src){ aStopStream('scene', musiqueFonduSortie()); return; }
@@ -71689,7 +72066,7 @@ function defaultAudio() {
 return {
 buses: defaultAudioBuses(),
 library: [],
-ducking: { pause: 0.4 },
+ducking: { pause: 0.4, dialogue: 0.5 },
 memoryMB: 48,
 fade: { ambience: 1.2, music: 0 },
 };
@@ -71752,7 +72129,7 @@ seen[c.id] = true;
 d.library.push(c);
 }
 var duck = src.ducking && typeof src.ducking === 'object' ? src.ducking : {};
-d.ducking = { pause: audioNum(duck.pause, 0.4, 0, 1) };
+d.ducking = { pause: audioNum(duck.pause, 0.4, 0, 1), dialogue: audioNum(duck.dialogue, 0.5, 0, 1) };
 d.memoryMB = audioNum(src.memoryMB, 48, 4, 512);
 var f = src.fade && typeof src.fade === 'object' ? src.fade : {};
 d.fade = { ambience: audioNum(f.ambience, 1.2, 0, 10), music: audioNum(f.music, 0, 0, 10) };
@@ -72017,6 +72394,7 @@ var aBuffers = {};
 var aBufBytes = 0, aBufMax = 48e6;
 var aShots = [];
 var aDuckValue = 1;
+var aDuckDialogue = 1;
 var aMix = { master: 1, music: 1, ambience: 1, voice: 1, sfx: 1, ui: 1 };
 function aHasWindow() { return typeof window !== 'undefined' && !!window; }
 function aSupported() {
@@ -72049,6 +72427,7 @@ var g = aBusGain[k];
 if (!g) continue;
 var v = (game[k] == null ? 1 : game[k]) * (aMix[k] == null ? 1 : aMix[k]);
 if (AUDIO_STREAMED[k]) v = v * aDuckValue;
+if (k === 'music') v = v * aDuckDialogue;
 aSet(g.gain, v);
 }
 if (aMaster) aSet(aMaster.gain, aMix.master == null ? 1 : aMix.master);
@@ -72114,7 +72493,7 @@ return;
 }
 var bus = aGameBuses()[s.bus];
 var mx = aMix[s.bus] == null ? 1 : aMix[s.bus];
-var duck = AUDIO_STREAMED[s.bus] ? aDuckValue : 1;
+var duck = (AUDIO_STREAMED[s.bus] ? aDuckValue : 1) * (s.bus === 'music' ? aDuckDialogue : 1);
 var f = v * (bus == null ? 1 : bus) * mx * duck * (aMix.master == null ? 1 : aMix.master);
 try { s.el.volume = f < 0 ? 0 : f > 1 ? 1 : f; } catch (e) {}
 }
@@ -86804,6 +87183,7 @@ function project(){
   try{ if(hudNeedsCamera()) hudCameraTick(); }catch(e){}
   // sons accroch\xE9s au panorama : ne travaille que si la t\xEAte a boug\xE9
   try{ if(aHasSpatial()) aSpatialTick(yaw, pitch); }catch(e){}
+  try{ lot5Tick(yaw, pitch); }catch(e){}
   (current.hotspots||[]).forEach((hs,i)=>{
     const dir=yawPitchToDir(hs.position.yaw,hs.position.pitch);
     const p=dir.clone().multiplyScalar(100);
@@ -88823,7 +89203,7 @@ loop();
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         type: "range",
@@ -88877,10 +89257,24 @@ loop();
         onPlaceSound: setPlacingSound,
         peutPlacer: !!scene.image
       }
+    ), /* @__PURE__ */ import_react.default.createElement(
+      SonsPlusScene,
+      {
+        scene,
+        audio,
+        setAudio,
+        onChange: (patch) => updateScene(scene.id, patch),
+        items,
+        variables,
+        puzzles,
+        scenes
+      }
     )))))), editingHotspot && /* @__PURE__ */ import_react.default.createElement(
       HotspotEditor,
       {
         hotspot: editingHotspot,
+        audio,
+        setAudio,
         scenes,
         items,
         puzzles,
