@@ -13,7 +13,8 @@ defaults:
 
 jobs:
   ipa:
-    runs-on: macos-15
+    # Les Mac Apple Silicon de GitHub sont souvent saturés : on compile sur un Mac Intel.
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
