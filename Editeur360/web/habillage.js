@@ -968,10 +968,17 @@
   // rendu en cours) : un bouton ne réagissait qu'une fois sur plusieurs. On le
   // déclenche nous-mêmes à la fin d'un toucher bref et immobile.
   var tape = null;
+  var TAPE_AUSSI = "[role='button'], [style*='cursor: pointer']";
+  // Les champs et les zones où l'on fait glisser gardent leur comportement.
+  var HORS_TAPE = "input, textarea, select, label, a, [contenteditable], iframe, canvas, svg, " +
+    "[data-hud-hote], [data-cb-nodes], [data-dlg-canvas], [data-carte-plateau], [data-cine-frise], [data-layer-poignee]";
   document.addEventListener("touchstart", function (e) {
     tape = null;
-    if (e.touches.length !== 1) return;
-    var b = e.target.closest && e.target.closest("button, .e360-q");
+    if (e.touches.length !== 1 || !e.target.closest) return;
+    var b = e.target.closest("button, .e360-q");
+    // Les lignes et cartes cliquables (scènes, calques, objets…) aussi : sur iPad, un
+    // premier toucher sur ce qui change au survol n'était qu'un survol.
+    if (!b && !e.target.closest(HORS_TAPE)) b = e.target.closest(TAPE_AUSSI);
     if (!b || b.disabled) return;
     var t = e.touches[0];
     tape = { b: b, x: t.clientX, y: t.clientY, t: Date.now() };

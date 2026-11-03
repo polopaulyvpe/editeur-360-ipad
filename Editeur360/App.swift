@@ -19,7 +19,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
 ///   library      -> Documents/Editeur 360/library.json
 ///   game:<id>    -> Documents/Editeur 360/jeux/<id>/game.json
 /// Le dossier Documents est visible dans l'app Fichiers (« Sur mon iPad »).
-final class Stockage {
+/// Sans état modifiable : utilisable depuis la file d'écriture en arrière-plan.
+final class Stockage: @unchecked Sendable {
     let racine: URL
     init() {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -90,6 +91,7 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
                                    WKScriptMessageHandler, WKUIDelegate, WKNavigationDelegate {
     private var web: WKWebView!
     private let stockage = Stockage()
+    private let fileStockage = DispatchQueue(label: "editeur360.stockage", qos: .userInitiated)
     private let fichiers = Fichiers()
 
     override var prefersStatusBarHidden: Bool { true }
@@ -132,10 +134,17 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
                                replyHandler: @escaping (Any?, String?) -> Void) {
         guard let d = message.body as? [String: Any], let op = d["op"] as? String else { replyHandler(nil, "requête"); return }
         let cle = d["key"] as? String ?? ""
+        // Lire et écrire un jeu (plusieurs dizaines de Mo) ne bloque plus l'écran :
+        // une file à part, une opération après l'autre ; la réponse revient ensuite.
+        let s = stockage
         switch op {
-        case "get": replyHandler(stockage.lire(cle), nil)
-        case "set": replyHandler(stockage.ecrire(cle, d["value"] as? String ?? ""), nil)
-        case "delete": stockage.supprimer(cle); replyHandler(true, nil)
+        case "get":
+            fileStockage.async { let v = s.lire(cle); DispatchQueue.main.async { replyHandler(v, nil) } }
+        case "set":
+            let valeur = d["value"] as? String ?? ""
+            fileStockage.async { let ok = s.ecrire(cle, valeur); DispatchQueue.main.async { replyHandler(ok, nil) } }
+        case "delete":
+            fileStockage.async { s.supprimer(cle); DispatchQueue.main.async { replyHandler(true, nil) } }
         case "where": replyHandler("Fichiers › Sur mon iPad › Éditeur 360 › Editeur 360", nil)
         default: replyHandler(nil, "inconnu")
         }
