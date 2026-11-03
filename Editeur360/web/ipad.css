@@ -498,3 +498,6 @@ html.e360-texte-grand #root [style*="font-size: 13px"], html.e360-texte-grand #r
 html.e360-texte-tres-grand #root [style*="font-size: 10px"], html.e360-texte-tres-grand #root [style*="font-size: 10.5px"], html.e360-texte-tres-grand #root [style*="font-size: 11px"] { font-size: 15px !important; }
 html.e360-texte-tres-grand #root [style*="font-size: 11.5px"], html.e360-texte-tres-grand #root [style*="font-size: 12px"], html.e360-texte-tres-grand #root [style*="font-size: 12.5px"] { font-size: 16px !important; }
 html.e360-texte-tres-grand #root [style*="font-size: 13px"], html.e360-texte-tres-grand #root button, html.e360-texte-tres-grand #root input, html.e360-texte-tres-grand #root select, html.e360-texte-tres-grand #root textarea { font-size: 17.5px !important; }
+
+/* ---------- Interface : les éléments de l'aperçu, minuscules à 50 %, se touchent plus facilement ---------- */
+#root [data-hud-el]::after { content: ""; position: absolute; inset: -12px; }
