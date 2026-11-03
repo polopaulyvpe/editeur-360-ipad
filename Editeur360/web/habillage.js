@@ -491,7 +491,8 @@
     }
     var on = favoris.indexOf(nom) >= 0;
     if (e.classList.contains("on") !== on) e.classList.toggle("on", on);
-    e.textContent = on ? "★" : "☆";
+    var signe = on ? "★" : "☆";
+    if (e.textContent !== signe) e.textContent = signe;
   }
   function favorisColonne(col) {
     var lignes = {};
@@ -581,7 +582,7 @@
   // Les rubriques d'un panneau, puis ses pages. « fin » : formulaire découpé à chaque
   // libellé de champ, toujours regroupé par thème.
   function decouper(p, fin) {
-    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); });
+    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets") && !estFenetre(k); });
     // Le bouton principal en bas d'une fenêtre reste toujours visible.
     var dernier = kids[kids.length - 1];
     if (dernier && (dernier.tagName === "BUTTON" || (dernier.tagName === "DIV" && dernier.children.length &&
@@ -616,7 +617,7 @@
 
   // Le bas de la vue Liste : narration à gauche, réglages de la scène à droite.
   function decouperScene(p) {
-    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets"); });
+    var kids = Array.prototype.filter.call(p.children, function (k) { return !k.classList.contains("e360-onglets") && !estFenetre(k); });
     if (kids.length !== 2) return null;
     var reglages = Array.prototype.slice.call(kids[1].children);
     var i = 0;
@@ -627,12 +628,17 @@
     return { avant: kids[0], pages: pages, cle: "scene" };
   }
 
+  // Une fenêtre qui s'ouvre par-dessus (éditeur de nœuds, choix d'icône…) est posée par
+  // l'éditeur dans le panneau : elle ne doit jamais être rangée dans un onglet ni masquée.
+  function estFenetre(k) { return !!(k && k.style && k.style.position === "fixed"); }
   function montrerOnglet(p, d, nom, anime) {
+    Array.prototype.forEach.call(p.children, function (k) { if (estFenetre(k) && k.hasAttribute("data-e360-hors-onglet")) k.removeAttribute("data-e360-hors-onglet"); });
     if (choixOnglet[d.cle] !== nom) { choixOnglet[d.cle] = nom; ecrireReglage("e360-onglets", choixOnglet); }
     var vise = d.pages.filter(function (pg) { return pg.nom === nom; })[0] || d.pages[0];
     if (p.getAttribute("data-e360-page") !== vise.nom) p.setAttribute("data-e360-page", vise.nom);
     d.pages.forEach(function (pg) {
       pg.els.forEach(function (el) {
+        if (estFenetre(el)) return;
         if (pg === vise) {
           if (el.hasAttribute("data-e360-hors-onglet")) {
             el.removeAttribute("data-e360-hors-onglet");
@@ -983,9 +989,14 @@
     aides(root);
     ongletsPanneaux(root);
   }
+  // Une passe au plus toutes les 180 ms : sur iPad, chaque passe parcourt toute la page.
+  var dernierePasse = 0;
   function planifier() {
     if (prevu) return;
     prevu = true;
+    var attente = Math.max(0, 180 - (Date.now() - dernierePasse));
+    if (attente > 0) { setTimeout(function () { prevu = false; planifier(); }, attente); return; }
+    dernierePasse = Date.now();
     // Une seule passe, à l'image suivante ; la minuterie sert de filet si les images
     // sont suspendues (vue en arrière-plan).
     var fait = false;
@@ -994,10 +1005,18 @@
     setTimeout(une, 150);
   }
 
+  // Ce qui bouge sans cesse (éditeur de nœuds, plateau, vue 360, aperçus) ne relance pas l'habillage.
+  var ZONES_CALMES = "[data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-el], canvas, svg, iframe";
+  function observer(recs) {
+    for (var i = 0; i < recs.length; i++) {
+      var t = recs[i].target, el = t && t.nodeType === 1 ? t : t && t.parentElement;
+      if (!el || !el.closest || !el.closest(ZONES_CALMES)) { planifier(); return; }
+    }
+  }
   function demarrer() {
     var root = document.getElementById("root");
     if (!root) return;
-    new MutationObserver(planifier).observe(root, { childList: true, subtree: true, characterData: true });
+    new MutationObserver(observer).observe(root, { childList: true, subtree: true, characterData: true });
     planifier();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", demarrer);

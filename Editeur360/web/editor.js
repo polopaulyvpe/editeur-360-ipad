@@ -36385,12 +36385,19 @@
       resize();
       const ro = new ResizeObserver(resize);
       ro.observe(mount);
-      let raf;
+      let raf, derniere = "", dernierRendu = 0;
       const loop = () => {
         const { yaw, pitch } = stateRef.current;
-        camera2.rotation.set(pitch, yaw, 0, "YXZ");
-        renderer.render(scene, camera2);
-        forceTick((t) => (t + 1) % 1e5);
+        const t = performance.now();
+        const sig = yaw.toFixed(4) + "," + pitch.toFixed(4) + "," + camera2.fov + "," + mount.clientWidth + "x" + mount.clientHeight + "," + (mat.map ? mat.map.uuid : "") + (threeRef.current.sale ? "!" : "");
+        if (sig !== derniere || t - dernierRendu > 500) {
+          derniere = sig;
+          dernierRendu = t;
+          threeRef.current.sale = false;
+          camera2.rotation.set(pitch, yaw, 0, "YXZ");
+          renderer.render(scene, camera2);
+          forceTick((x) => (x + 1) % 1e5);
+        }
         raf = requestAnimationFrame(loop);
       };
       loop();
@@ -38345,6 +38352,20 @@
         /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "3px 6px", fontFamily: sans, fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, s.name || s.id)
       ))
     ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Ce que montre la carte"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.liens !== false, onChange: (v) => ecrire({ liens: v }) }, "Les passages entre les lieux"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.vignettes !== false, onChange: (v) => ecrire({ vignettes: v }) }, "Une vignette de chaque lieu"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 8, ...petitTexte } }, "Lieux pas encore visit\xE9s", /* @__PURE__ */ import_react.default.createElement("select", { value: c.inconnues || "grisees", onChange: (e) => ecrire({ inconnues: e.target.value }), style: { ...select, marginTop: 0, width: "auto" }, "data-carte-inconnues": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "grisees" }, "Gris\xE9s, avec un \xAB ? \xBB"), /* @__PURE__ */ import_react.default.createElement("option", { value: "cachees" }, "Cach\xE9s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "visibles" }, "Visibles avec leur nom"))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.voyage !== false, onChange: (v) => ecrire({ voyage: v }) }, "Voyage rapide : toucher un lieu d\xE9j\xE0 visit\xE9 pour s'y rendre"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 8 }, disabled: vignettesEnCours, onClick: () => faireVignettes(true) }, vignettesEnCours ? "Vignettes en cours\u2026" : "Refaire les vignettes"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Quand le joueur a-t-il la carte ?"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Vide : d\xE8s le d\xE9but. Sinon, la carte (et son bouton) n'appara\xEEt qu'une fois les conditions remplies, par exemple quand il a ramass\xE9 l'objet \xAB Carte \xBB. Le jeu l'annonce au moment o\xF9 il l'obtient."), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: c.acquise || [], onChange: (acquise) => ecrire({ acquise }), items, variables, puzzles, scenes }));
+  }
+  function OrdreCalques({ scene, onChange }) {
+    const l = scene.layers || [];
+    if (l.length < 2) return null;
+    const bouge = (i, d) => {
+      const j = i + d;
+      if (j < 0 || j >= l.length) return;
+      const n = l.slice();
+      const t = n[i];
+      n[i] = n[j];
+      n[j] = t;
+      onChange({ layers: n });
+    };
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 }, "data-ordre-calques": true }, "Ordre des calques (le premier passe devant les autres)", l.map((ly, i) => i).reverse().map((i, rang) => /* @__PURE__ */ import_react.default.createElement("div", { key: l[i].id, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 }, "data-calque-rang": rang }, /* @__PURE__ */ import_react.default.createElement("img", { src: l[i].image, alt: "", style: { width: 34, height: 34, objectFit: "contain", background: C.ink2, borderRadius: 4 } }), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text } }, rang === 0 ? "1er plan" : rang + 1 + "e plan", " \xB7 ", l[i].name || "Calque " + (i + 1)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, disabled: i === l.length - 1, onClick: () => bouge(i, 1), title: "Vers l'avant", "data-calque-avant": i }, "\u25B2"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, disabled: i === 0, onClick: () => bouge(i, -1), title: "Vers l'arri\xE8re", "data-calque-arriere": i }, "\u25BC"))));
   }
   function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
@@ -42791,6 +42812,7 @@
   .pz-fus-inter{width:40px;height:70px;border-radius:8px;border:2px solid #444;background:#1a1d24;position:relative;cursor:pointer;padding:0}
   .pz-fus-inter span{position:absolute;left:6px;right:6px;height:26px;bottom:6px;border-radius:5px;background:#8a8f99;transition:all .15s}
   .pz-fus-inter.haut span{bottom:38px;background:var(--pz-accent,var(--accent))}
+  @keyframes pz-cb-tremble{from{transform:translateY(-1.5px) rotate(-4deg)}to{transform:translateY(1.5px) rotate(4deg)}}
   .pz-lock-wide{min-width:96px}
   .pz-lock-wheel{display:flex;flex-direction:column;gap:6px}
   .pz-lock-arrow{font-size:14px}
@@ -46335,6 +46357,7 @@
     ["ev", "\xC9v\xE9nements", "#E8A33D"],
     ["flux", "Flux", "#C9CCD6"],
     ["action", "Actions", "#D9636B"],
+    ["anim", "Animation", "#E07BB4"],
     ["donnee", "Donn\xE9es", "#5FD4D4"],
     ["logique", "Logique", "#6FCF73"],
     ["fin", "Fin", "#F5D96B"]
@@ -47339,6 +47362,7 @@
       setFx({ images: n2 });
     } }, /* @__PURE__ */ import_react.default.createElement(X, { size: 10, color: C.textDim }))))), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Sans image, chaque particule a sa forme dessin\xE9e. Toutes ces images, et les visuels des \xE9l\xE9ments, s'exportent et se r\xE9importent aussi dans \u{1F3A8} DA (dossier \xAB 7-Constructeur \xBB)."));
   }
+  var COURBES9_ED = [["douce", "Doux"], ["lineaire", "R\xE9gulier"], ["rapide", "Rapide puis lent"], ["rebond", "Rebond"], ["elastique", "\xC9lastique"]];
   function CbInspecteurVivant({ p, n, sp, ligne }) {
     const pr = n.props;
     const nomEl = (x) => (x.label || CB_GENRES[x.genre].nom) + " (" + x.id + ")";
@@ -47381,6 +47405,48 @@
         return choix("element", "cassable", "Objet cassable");
       case "a_remplir":
         return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "recipient", "R\xE9cipient"), liste("op", "Faire", [["=", "Amener \xE0"], ["+", "Ajouter"], ["-", "Retirer"]]), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Niveau (%), ou branchez un fil"), /* @__PURE__ */ import_react.default.createElement("input", { value: pr.valeur, onChange: (e) => sp({ valeur: e.target.value }), style: { ...input, marginTop: 0 }, "data-cbi": "valeur" }), nombre("duree", "Dur\xE9e en secondes", { pas: 0.1 }));
+      case "a_deplacer":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), choix("vers", "", "Vers l'\xE9l\xE9ment", "un d\xE9calage (ci-dessous)"), !pr.vers && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, nombre("dx", "D\xE9calage horizontal (px, + vers la droite)"), nombre("dy", "D\xE9calage vertical (px, + vers le bas)")), nombre("duree", "Dur\xE9e (s)", { pas: 0.1 }), liste("courbe", "Mouvement", COURBES9_ED), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Pour un \xE9l\xE9ment qui ne tombe pas (pas un objet soumis \xE0 la gravit\xE9)."));
+      case "a_chemin":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Le chemin passe par ces \xE9l\xE9ments, dans l'ordre : posez des zones ou des images discr\xE8tes comme jalons sur le plateau."), choix("p1", "", "\xC9tape 1"), choix("p2", "", "\xC9tape 2", "\u2014"), choix("p3", "", "\xC9tape 3", "\u2014"), choix("p4", "", "\xC9tape 4", "\u2014"), nombre("duree", "Dur\xE9e du trajet (s)", { pas: 0.1 }), liste("mode", "Trajet", [["une", "Une fois"], ["boucle", "En boucle"], ["allerretour", "Aller-retour sans fin"]]), liste("courbe", "Mouvement", COURBES9_ED));
+      case "a_orbite":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), choix("centre", "", "Autour de", "un point \xE0 sa droite"), nombre("rayon", "Rayon (px)"), nombre("duree", "Dur\xE9e d'un tour (s)", { pas: 0.1 }), nombre("fois", "Combien de tours (0 : sans fin)", { pas: 1 }), liste("sens", "Sens", [["horaire", "Comme une horloge"], ["inverse", "Dans l'autre sens"]]));
+      case "a_regarder":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment qui pivote"), choix("cible", "", "Vers", "le doigt du joueur"), nombre("duree", "Pendant (s, 0 : toujours)", { pas: 0.1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Le haut de l'\xE9l\xE9ment pointe vers la cible : dessinez-le \xAB t\xEAte en haut \xBB."));
+      case "a_aimant":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "Aimant"), liste("mode", "Il", [["attire", "Attire"], ["repousse", "Repousse"]]), nombre("force", "Force (1 : normale)", { pas: 0.1 }), nombre("rayon", "Port\xE9e (px)"), nombre("duree", "Pendant (s)", { pas: 0.1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Agit sur les objets soumis \xE0 la gravit\xE9."));
+      case "a_sprite":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), nombre("fps", "Images par seconde", { pas: 1 }), nombre("fois", "Combien de tours (0 : sans fin)", { pas: 1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Fait d\xE9filer les \xE9tats de l'\xE9l\xE9ment comme les images d'un dessin anim\xE9 : donnez une image \xE0 chaque \xE9tat."));
+      case "a_progressif":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment", "le plateau entier"), liste("quoi", "Changer", [["taille", "La taille"], ["opacite", "L'opacit\xE9"], ["rotation", "L'angle"], ["luminosite", "La luminosit\xE9"], ["flou", "Le flou"]]), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Jusqu'\xE0"), /* @__PURE__ */ import_react.default.createElement("input", { value: pr.valeur, onChange: (e) => sp({ valeur: e.target.value }), style: { ...input, marginTop: 0 }, "data-cbi": "valeur" }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, { taille: "1 : normale, 2 : double", opacite: "0 : invisible, 1 : opaque", rotation: "en degr\xE9s", luminosite: "1 : normale, 0 : noir", flou: "en pixels" }[pr.quoi] || ""), nombre("duree", "Dur\xE9e (s)", { pas: 0.1 }), liste("courbe", "Mouvement", COURBES9_ED));
+      case "a_fondu":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), liste("etat", "Vers l'\xE9tat", [["", "\u2014 choisir \u2014"]].concat((cible ? cible.etats : []).map((e) => [e.id, e.nom]))), nombre("duree", "Dur\xE9e du fondu (s)", { pas: 0.1 }));
+      case "a_attendre":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, nombre("secondes", "Attendre (secondes)", { pas: 0.1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "La suite part apr\xE8s la pause."));
+      case "a_repeter":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, nombre("fois", "Combien de fois", { pas: 1 }), nombre("intervalle", "Pause entre deux fois (s)", { pas: 0.1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "\xAB corps \xBB est jou\xE9 \xE0 chaque fois, \xAB ensuite \xBB \xE0 la fin."));
+      case "a_parallele":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, nombre("apres", "\xAB ensuite \xBB part apr\xE8s (s)", { pas: 0.1 }), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "a, b, c et d partent tous en m\xEAme temps."));
+      case "a_hasard":
+        return /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Une seule des sorties branch\xE9es (a, b ou c) part, tir\xE9e au sort.");
+      case "a_arreter":
+        return choix("element", "", "\xC9l\xE9ment", "toutes les animations");
+      case "a_vitesse":
+        return liste("facteur", "Vitesse du plateau", [["0.25", "Tr\xE8s ralenti (\xD70,25)"], ["0.5", "Ralenti (\xD70,5)"], ["1", "Normale"], ["1.5", "Acc\xE9l\xE9r\xE9 (\xD71,5)"], ["2", "Tr\xE8s acc\xE9l\xE9r\xE9 (\xD72)"]]);
+      case "a_camera":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, liste("mode", "Cam\xE9ra", [["zoom", "Zoomer sur"], ["glisser", "Glisser vers"], ["retour", "Revenir au plan large"], ["secouer", "Secouer"]]), pr.mode !== "retour" && pr.mode !== "secouer" && choix("element", "", "\xC9l\xE9ment", "le centre du plateau"), pr.mode === "zoom" && nombre("zoom", "Zoom (2 : deux fois plus pr\xE8s)", { pas: 0.1 }), nombre("duree", "Dur\xE9e (s)", { pas: 0.1 }));
+      case "a_flash":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, liste("mode", "Effet", [["flash", "\xC9clair blanc"], ["noir", "Fondu au noir"], ["teinte", "Filtre de couleur"], ["retour", "Revenir \xE0 la normale"]]), pr.mode === "teinte" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Couleur"), /* @__PURE__ */ import_react.default.createElement("input", { type: "color", value: pr.couleur || "#ff0000", onChange: (e) => sp({ couleur: e.target.value }) })), nombre("duree", "Dur\xE9e (s)", { pas: 0.1 }));
+      case "a_trainee":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment"), nombre("duree", "Pendant (s)", { pas: 0.1 }));
+      case "a_texte":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "Texte ou compteur"), liste("effet", "Effet", [["machine", "Machine \xE0 \xE9crire"], ["compteur", "Nombre qui d\xE9file"], ["tremble", "Lettres qui tremblent"]]), pr.effet === "compteur" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Jusqu'\xE0"), /* @__PURE__ */ import_react.default.createElement("input", { value: pr.valeur, onChange: (e) => sp({ valeur: e.target.value }), style: { ...input, marginTop: 0 } })), nombre("duree", "Dur\xE9e (s)", { pas: 0.1 }));
+      case "a_projecteur":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, liste("mode", "Faire", [["allumer", "Allumer"], ["eteindre", "\xC9teindre"]]), pr.mode !== "eteindre" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "Suit", "le doigt du joueur"), nombre("rayon", "Rayon de lumi\xE8re (px)"), nombre("noirceur", "Obscurit\xE9 (0 \xE0 1)", { pas: 0.05 }), nombre("duree", "Pendant (s, 0 : jusqu'\xE0 \xAB \xC9teindre \xBB)", { pas: 0.1 })));
+      case "ev_anim_fin":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "", "\xC9l\xE9ment", "n'importe lequel"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Part \xE0 la fin d'un \xAB Animer \xBB, d'un d\xE9placement, d'un chemin, d'un fondu\u2026 (pas d'une animation sans fin)."));
+      case "ev_zone":
+        return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "objet", "Objet", "n'importe quel objet"), choix("zone", "zone", "Zone", "n'importe quelle zone"), liste("quand", "Quand il", [["entre", "Entre"], ["sort", "Sort"]]));
       case "d_niveau":
         return /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, choix("element", "recipient", "R\xE9cipient"), /* @__PURE__ */ import_react.default.createElement("div", { style: cbPetitTexte }, "Rend le niveau, de 0 \xE0 100."));
       case "d_fait":
@@ -47423,6 +47489,48 @@
         return (nomEl || "\u2014") + (pr.fige ? " : figer" : " : lib\xE9rer");
       case "a_remplir":
         return (nomEl || "\u2014") + " " + (pr.op === "=" ? "\u2192" : pr.op) + " " + pr.valeur + " %";
+      case "a_deplacer":
+        return (nomEl || "\u2014") + (pr.vers ? " \u2192 " + ((cbElement(p, pr.vers) || {}).label || pr.vers) : " de " + pr.dx + ", " + pr.dy) + " \xB7 " + pr.duree + " s";
+      case "a_chemin":
+        return (nomEl || "\u2014") + " \xB7 " + [pr.p1, pr.p2, pr.p3, pr.p4].filter(Boolean).length + " \xE9tape(s) \xB7 " + ({ une: "une fois", boucle: "en boucle", allerretour: "aller-retour" }[pr.mode] || "");
+      case "a_orbite":
+        return (nomEl || "\u2014") + " \xB7 rayon " + pr.rayon + " \xB7 " + pr.duree + " s";
+      case "a_regarder":
+        return (nomEl || "\u2014") + " \u2192 " + (pr.cible ? (cbElement(p, pr.cible) || {}).label || pr.cible : "le doigt");
+      case "a_aimant":
+        return (nomEl || "\u2014") + " " + (pr.mode === "repousse" ? "repousse" : "attire") + " \xB7 " + pr.duree + " s";
+      case "a_sprite":
+        return (nomEl || "\u2014") + " \xB7 " + pr.fps + " im/s";
+      case "a_progressif":
+        return (nomEl || "le plateau") + " \xB7 " + pr.quoi + " \u2192 " + pr.valeur;
+      case "a_fondu":
+        return (nomEl || "\u2014") + " \u2192 " + (((cbElement(p, pr.element) || { etats: [] }).etats.find((e) => e.id === pr.etat) || {}).nom || "?");
+      case "a_attendre":
+        return pr.secondes + " s";
+      case "a_repeter":
+        return pr.fois + " fois" + (pr.intervalle > 0 ? " \xB7 toutes les " + pr.intervalle + " s" : "");
+      case "a_parallele":
+        return "ensuite apr\xE8s " + pr.apres + " s";
+      case "a_hasard":
+        return "a, b ou c";
+      case "a_arreter":
+        return nomEl || "tout";
+      case "a_vitesse":
+        return "\xD7" + pr.facteur;
+      case "a_camera":
+        return ({ zoom: "zoom", glisser: "glisser", retour: "plan large", secouer: "secouer" }[pr.mode] || pr.mode) + (nomEl && pr.mode !== "retour" ? " \xB7 " + nomEl : "");
+      case "a_flash":
+        return ({ flash: "\xE9clair", noir: "fondu au noir", teinte: "filtre", retour: "normal" }[pr.mode] || pr.mode) + " \xB7 " + pr.duree + " s";
+      case "a_trainee":
+        return (nomEl || "\u2014") + " \xB7 " + pr.duree + " s";
+      case "a_texte":
+        return (nomEl || "\u2014") + " \xB7 " + ({ machine: "machine \xE0 \xE9crire", compteur: "compteur", tremble: "tremble" }[pr.effet] || "");
+      case "a_projecteur":
+        return pr.mode === "eteindre" ? "\xE9teindre" : "suit " + (nomEl || "le doigt");
+      case "ev_anim_fin":
+        return nomEl || "n'importe lequel";
+      case "ev_zone":
+        return (nomEl || "un objet") + (pr.quand === "sort" ? " sort de " : " entre dans ") + (pr.zone ? (cbElement(p, pr.zone) || {}).label || pr.zone : "une zone");
       default:
         return "";
     }
@@ -47447,6 +47555,12 @@
         return nom + " tombe du plateau";
       case "niveau":
         return nom + " \xE0 " + ev.niveau + " %";
+      case "animfin":
+        return "Fin d'animation de " + nom;
+      case "zone":
+        return nom + (ev.entre ? " entre dans " : " sort de ") + ev.zone;
+      case "reprise":
+        return "Reprise apr\xE8s une pause";
       case "fait":
         return "\u2192 " + nom + " : " + ev.quoi;
       case "niveauchange":
@@ -64748,6 +64862,27 @@
     ev_repos: { cat: "ev", nom: "Quand un objet s\u2019arr\xEAte", sorties: [["go", "exec"]], props: { element: "" } },
     ev_sortie: { cat: "ev", nom: "Quand un objet tombe du plateau", sorties: [["go", "exec"]], props: { element: "" } },
     ev_niveau: { cat: "ev", nom: "Quand un niveau atteint\u2026", sorties: [["go", "exec"]], props: { element: "", op: "\u2265", valeur: 50 } },
+    a_deplacer: { cat: "anim", nom: "D\xE9placer vers", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", vers: "", dx: 0, dy: 0, duree: 1, courbe: "douce" } },
+    a_chemin: { cat: "anim", nom: "Suivre un chemin", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", p1: "", p2: "", p3: "", p4: "", duree: 3, mode: "une", courbe: "lineaire" } },
+    a_orbite: { cat: "anim", nom: "Tourner autour", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", centre: "", rayon: 60, duree: 3, fois: 0, sens: "horaire" } },
+    a_regarder: { cat: "anim", nom: "Regarder vers", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", cible: "", duree: 0 } },
+    a_aimant: { cat: "anim", nom: "Aimant", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", mode: "attire", force: 1, rayon: 150, duree: 3 } },
+    a_sprite: { cat: "anim", nom: "Faire d\xE9filer les \xE9tats", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", fps: 6, fois: 0 } },
+    a_progressif: { cat: "anim", nom: "Changer progressivement", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", quoi: "taille", valeur: "1.5", duree: 1, courbe: "douce" } },
+    a_fondu: { cat: "anim", nom: "Fondu vers un \xE9tat", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", etat: "", duree: 0.6 } },
+    a_attendre: { cat: "flux", nom: "Attendre", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { secondes: 1 } },
+    a_repeter: { cat: "flux", nom: "R\xE9p\xE9ter", entrees: [["in", "exec"]], sorties: [["corps", "exec"], ["ensuite", "exec"]], props: { fois: 3, intervalle: 0.5 } },
+    a_parallele: { cat: "flux", nom: "En m\xEAme temps", entrees: [["in", "exec"]], sorties: [["a", "exec"], ["b", "exec"], ["c", "exec"], ["d", "exec"], ["ensuite", "exec"]], props: { apres: 1 } },
+    a_hasard: { cat: "flux", nom: "Au hasard", entrees: [["in", "exec"]], sorties: [["a", "exec"], ["b", "exec"], ["c", "exec"]], props: {} },
+    a_arreter: { cat: "anim", nom: "Arr\xEAter les animations", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "" } },
+    a_vitesse: { cat: "anim", nom: "Ralenti ou acc\xE9l\xE9r\xE9", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { facteur: "0.5" } },
+    a_camera: { cat: "anim", nom: "Cam\xE9ra du plateau", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { mode: "zoom", element: "", zoom: 1.8, duree: 0.8 } },
+    a_flash: { cat: "anim", nom: "Flash et assombrir", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { mode: "flash", couleur: "#ff0000", duree: 0.4 } },
+    a_trainee: { cat: "anim", nom: "Tra\xEEn\xE9e", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", duree: 1 } },
+    a_texte: { cat: "anim", nom: "Texte anim\xE9", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", effet: "machine", duree: 1.5, valeur: "" } },
+    a_projecteur: { cat: "anim", nom: "Projecteur", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", mode: "allumer", rayon: 90, noirceur: 0.85, duree: 0 } },
+    ev_anim_fin: { cat: "ev", nom: "Quand une animation se termine", sorties: [["go", "exec"]], props: { element: "" } },
+    ev_zone: { cat: "ev", nom: "Quand un objet entre ou sort d\u2019une zone", sorties: [["go", "exec"]], props: { element: "", zone: "", quand: "entre" } },
     a_animer: { cat: "action", nom: "Animer", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", effet: "secousse", duree: 0, fois: 1 } },
     a_particules: { cat: "action", nom: "Particules", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", effet: "etincelles", quantite: 30, couleur: "" } },
     a_impulsion: { cat: "action", nom: "Pousser un objet", entrees: [["in", "exec"]], sorties: [["ensuite", "exec"]], props: { element: "", angle: -90, force: 700 } },
@@ -64790,12 +64925,36 @@
     ev_repos: { element: 1 },
     ev_sortie: { element: 1 },
     a_animer: { element: 1 },
-    a_particules: { element: 1 }
+    a_particules: { element: 1 },
+    a_deplacer: { vers: 1 },
+    a_chemin: { p2: 1, p3: 1, p4: 1 },
+    a_orbite: { centre: 1 },
+    a_regarder: { cible: 1 },
+    a_progressif: { element: 1 },
+    a_arreter: { element: 1 },
+    a_camera: { element: 1 },
+    a_projecteur: { element: 1 },
+    ev_anim_fin: { element: 1 },
+    ev_zone: { element: 1, zone: 1 }
   };
   var CB_COULEURS = ["#3a3f4f", "#E8A33D", "#6FCF73", "#5FD4D4", "#D9636B", "#A98BE8"];
   var CB_BUDGET = 400;
   var CB_CASCADE = 60;
   var CB_EFFETS = {
+    ecraser: { nom: "\xC9craser et \xE9tirer", duree: 0.55, fois: 1, courbe: "ease-out", cles: [
+      { transform: "scale(1,1)" },
+      { transform: "scale(1.3,0.7)" },
+      { transform: "scale(0.85,1.2)" },
+      { transform: "scale(1.08,0.94)" },
+      { transform: "scale(1,1)" }
+    ] },
+    gelatine: { nom: "G\xE9latine", duree: 0.8, fois: 1, courbe: "ease-in-out", cles: [
+      { transform: "scale(1,1)" },
+      { transform: "scale(0.9,1.1)" },
+      { transform: "scale(1.1,0.9)" },
+      { transform: "scale(0.95,1.05)" },
+      { transform: "scale(1,1)" }
+    ] },
     secousse: { nom: "Secousse", duree: 0.5, fois: 1, courbe: "ease-in-out", cles: [
       { transform: "translateX(0px)" },
       { transform: "translateX(-10px)" },
@@ -65841,12 +66000,499 @@
         }
       });
     }
+    var vitesse9 = 1, aimants9 = [], decal9 = {}, transfo9 = {}, regards9 = {}, voile9 = null, projo9 = null, zonesEtat9 = {}, doigt9 = null, aZone9 = null;
+    var COURBES9 = { douce: "ease-in-out", lineaire: "linear", rebond: "cubic-bezier(.3,1.6,.5,1)", elastique: "cubic-bezier(.5,-0.4,.3,1.5)", rapide: "ease-out" };
+    function nd9(id) {
+      var x = id ? o.noeuds()[id] : null;
+      return x || null;
+    }
+    function centre9(id) {
+      var el = cbElement(p, id);
+      if (!el) return null;
+      var b = corps[id];
+      if (b) return { x: b.x, y: b.y };
+      var d = decal9[id] || { x: 0, y: 0 };
+      return { x: el.x + el.w / 2 + d.x, y: el.y + el.h / 2 + d.y };
+    }
+    function centreDom9(id) {
+      var nd = nd9(id);
+      if (!nd || !nd.ani.getBoundingClientRect) return centre9(id);
+      var r = nd.ani.getBoundingClientRect(), pr = o.plateau.getBoundingClientRect(), e = pr.width / Math.max(1, p.board.w) || 1;
+      return { x: (r.left + r.width / 2 - pr.left) / e, y: (r.top + r.height / 2 - pr.top) / e };
+    }
+    function suitDoigt9() {
+      if (o.plateau.__doigt9) return;
+      o.plateau.__doigt9 = true;
+      var f = function(e) {
+        try {
+          doigt9 = point(e);
+        } catch (x) {
+        }
+      };
+      o.plateau.addEventListener("pointermove", f);
+      o.plateau.addEventListener("pointerdown", f);
+    }
+    function fin9(id) {
+      try {
+        o.envoie({ type: "animfin", element: id || "" });
+      } catch (e) {
+      }
+    }
+    function joue9(cible, cles, opts, id) {
+      if (!cible || typeof cible.animate !== "function") {
+        fin9(id);
+        return null;
+      }
+      try {
+        var a = cible.animate(cles, opts);
+        a.playbackRate = vitesse9;
+        if (opts.iterations !== Infinity) a.onfinish = function() {
+          fin9(id);
+        };
+        return a;
+      } catch (e) {
+        fin9(id);
+        return null;
+      }
+    }
+    function bouge9(id, pts, duree, courbe, iterations, direction) {
+      var nd = nd9(id);
+      if (!nd) return;
+      var d0 = decal9[id] || { x: 0, y: 0 };
+      var cles = [{ translate: d0.x + "px " + d0.y + "px" }].concat(pts.map(function(q) {
+        return { translate: q.x + "px " + q.y + "px" };
+      }));
+      if (nd.__bouge) {
+        try {
+          nd.__bouge.cancel();
+        } catch (e) {
+        }
+      }
+      nd.__bouge = joue9(nd.ani, cles, { duration: Math.max(40, duree * 1e3), easing: COURBES9[courbe] || "ease-in-out", iterations: iterations || 1, direction: direction || "normal", fill: "forwards" }, id);
+      if (!iterations || iterations === 1) {
+        var der = pts[pts.length - 1];
+        decal9[id] = { x: der.x, y: der.y };
+      }
+    }
+    function deplacer9(q) {
+      var id = q.element, el = cbElement(p, id);
+      if (!el || corps[id]) return;
+      var d0 = decal9[id] || { x: 0, y: 0 }, cible;
+      if (q.vers) {
+        var c = centre9(q.vers);
+        if (!c) return;
+        cible = { x: c.x - (el.x + el.w / 2), y: c.y - (el.y + el.h / 2) };
+      } else cible = { x: d0.x + (q.dx || 0), y: d0.y + (q.dy || 0) };
+      bouge9(id, [cible], q.duree || 1, q.courbe, 1);
+    }
+    function chemin9(q) {
+      var id = q.element, el = cbElement(p, id);
+      if (!el || corps[id]) return;
+      var pts = [q.p1, q.p2, q.p3, q.p4].filter(function(k) {
+        return !!k;
+      }).map(function(k) {
+        var c = centre9(k);
+        return c ? { x: c.x - (el.x + el.w / 2), y: c.y - (el.y + el.h / 2) } : null;
+      }).filter(function(k) {
+        return !!k;
+      });
+      if (!pts.length) return;
+      var boucle2 = q.mode === "boucle", ar = q.mode === "allerretour";
+      if (boucle2) pts.push(decal9[id] || { x: 0, y: 0 });
+      bouge9(id, pts, q.duree || 3, q.courbe || "lineaire", boucle2 || ar ? Infinity : 1, ar ? "alternate" : "normal");
+    }
+    function orbite9(q) {
+      var id = q.element, el = cbElement(p, id), nd = nd9(id);
+      if (!el || !nd || corps[id]) return;
+      var r = Math.max(5, q.rayon || 60), sens = q.sens === "inverse" ? -1 : 1;
+      var moi = { x: el.x + el.w / 2 + (decal9[id] || { x: 0 }).x, y: el.y + el.h / 2 + (decal9[id] || { y: 0 }).y };
+      var c = q.centre ? centre9(q.centre) : { x: moi.x + r, y: moi.y };
+      if (!c) return;
+      var a0 = Math.atan2(moi.y - c.y, moi.x - c.x), pts = [];
+      for (var i = 0; i <= 24; i++) {
+        var a = a0 + sens * i * Math.PI * 2 / 24;
+        pts.push({ translate: c.x + Math.cos(a) * r - (el.x + el.w / 2) + "px " + (c.y + Math.sin(a) * r - (el.y + el.h / 2)) + "px" });
+      }
+      if (nd.__bouge) {
+        try {
+          nd.__bouge.cancel();
+        } catch (e) {
+        }
+      }
+      nd.__bouge = joue9(nd.ani, pts, { duration: Math.max(200, (q.duree || 3) * 1e3), iterations: q.fois > 0 ? q.fois : Infinity, easing: "linear", fill: "forwards" }, id);
+    }
+    function regarder9(q) {
+      if (!nd9(q.element)) return;
+      if (!q.cible) suitDoigt9();
+      regards9[q.element] = { cible: q.cible, fin: q.duree > 0 ? performance.now() + q.duree * 1e3 : Infinity };
+      if (!regarder9.raf) tourne9();
+    }
+    function tourne9() {
+      regarder9.raf = requestAnimationFrame(function() {
+        regarder9.raf = 0;
+        var encore = false, t = performance.now();
+        for (var id in regards9) {
+          if (!Object.prototype.hasOwnProperty.call(regards9, id)) continue;
+          var r = regards9[id], nd = nd9(id);
+          if (!nd || t > r.fin) {
+            delete regards9[id];
+            if (nd) fin9(id);
+            continue;
+          }
+          encore = true;
+          var c = r.cible ? centreDom9(r.cible) : doigt9, me = centreDom9(id);
+          if (!c || !me) continue;
+          nd.ani.style.rotate = Math.round(Math.atan2(c.y - me.y, c.x - me.x) * 180 / Math.PI + 90) + "deg";
+        }
+        if (encore && o.plateau.isConnected) tourne9();
+      });
+    }
+    function aimant9(q) {
+      aimants9.push({ id: q.element, force: (q.mode === "repousse" ? -1 : 1) * Math.max(0.1, q.force || 1), rayon: Math.max(20, q.rayon || 150), fin: performance.now() + Math.max(0.2, q.duree || 3) * 1e3 });
+      for (var k in corps) {
+        corps[k].calme = 0;
+        corps[k].repos = false;
+      }
+      demarre();
+    }
+    function aimante9(b, dt) {
+      var t = performance.now();
+      for (var i = aimants9.length - 1; i >= 0; i--) {
+        var m = aimants9[i];
+        if (t > m.fin) {
+          aimants9.splice(i, 1);
+          continue;
+        }
+        if (b.el.id === m.id) continue;
+        var c = centre9(m.id);
+        if (!c) continue;
+        var dx = c.x - b.x, dy = c.y - b.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (d > m.rayon) continue;
+        var k = m.force * 0.5 * (1 - d / m.rayon) * dt * 120;
+        b.x += dx / d * k;
+        b.y += dy / d * k;
+        b.calme = 0;
+        b.repos = false;
+      }
+    }
+    function progressif9(q) {
+      var id = q.element, nd = id ? nd9(id) : null, cible = nd ? nd.ani : o.plateau;
+      var cle = id || "__plateau";
+      var t = transfo9[cle] || (transfo9[cle] = { scale: 1, opacity: 1, rotate: 0, lum: 1, flou: 0 });
+      var v = parseFloat(q.valeur);
+      if (isNaN(v)) v = 1;
+      var filtre = function() {
+        return "brightness(" + t.lum + ") blur(" + t.flou + "px)";
+      };
+      var avant = {}, apres = {};
+      if (q.quoi === "taille") {
+        avant.scale = String(t.scale);
+        t.scale = Math.max(0, v);
+        apres.scale = String(t.scale);
+      } else if (q.quoi === "opacite") {
+        avant.opacity = t.opacity;
+        t.opacity = Math.max(0, Math.min(1, v));
+        apres.opacity = t.opacity;
+      } else if (q.quoi === "rotation") {
+        avant.rotate = t.rotate + "deg";
+        t.rotate = v;
+        apres.rotate = v + "deg";
+      } else {
+        avant.filter = filtre();
+        if (q.quoi === "flou") t.flou = Math.max(0, v);
+        else t.lum = Math.max(0, v);
+        apres.filter = filtre();
+      }
+      joue9(cible, [avant, apres], { duration: Math.max(40, (q.duree || 1) * 1e3), easing: COURBES9[q.courbe] || "ease-in-out", fill: "forwards" }, id);
+    }
+    function fondu9(q) {
+      var nd = nd9(q.element);
+      if (nd) joue9(nd.ani, [{ opacity: 0.08 }, { opacity: 1 }], { duration: Math.max(80, (q.duree || 0.6) * 1e3), easing: "ease-out" }, q.element);
+    }
+    function arreter9(q) {
+      var ids = q.element ? [q.element] : Object.keys(o.noeuds());
+      ids.forEach(function(id) {
+        var nd = nd9(id);
+        if (!nd) return;
+        try {
+          nd.ani.getAnimations().forEach(function(a) {
+            a.pause();
+          });
+        } catch (e) {
+        }
+        delete regards9[id];
+      });
+      if (!q.element) {
+        aimants9 = [];
+        if (projo9) {
+          projo9.remove();
+          projo9 = null;
+        }
+        try {
+          o.plateau.getAnimations().forEach(function(a) {
+            a.pause();
+          });
+        } catch (e) {
+        }
+      }
+    }
+    function vitesseMonde9(q) {
+      vitesse9 = Math.max(0.1, Math.min(4, parseFloat(q.facteur) || 1));
+      try {
+        o.plateau.getAnimations({ subtree: true }).forEach(function(a) {
+          a.playbackRate = vitesse9;
+        });
+      } catch (e) {
+      }
+    }
+    function camera9(q) {
+      var pl = o.plateau;
+      if (q.mode === "secouer") {
+        animer("", "secousse", q.duree || 0.5, 1, function() {
+          fin9("");
+        });
+        return;
+      }
+      var c = q.element ? centre9(q.element) : { x: p.board.w / 2, y: p.board.h / 2 };
+      if (!c) return;
+      var cam = pl.__cam || { z: 1, x: 0, y: 0 };
+      var z = q.mode === "retour" ? 1 : q.mode === "glisser" ? cam.z : Math.max(1, Math.min(4, q.zoom || 1.8));
+      var nx = q.mode === "retour" ? 0 : p.board.w / 2 - c.x, ny = q.mode === "retour" ? 0 : p.board.h / 2 - c.y;
+      joue9(
+        pl,
+        [{ scale: String(cam.z), translate: cam.x + "px " + cam.y + "px" }, { scale: String(z), translate: nx + "px " + ny + "px" }],
+        { duration: Math.max(80, (q.duree || 0.8) * 1e3), easing: "ease-in-out", fill: "forwards" },
+        ""
+      );
+      pl.__cam = { z, x: nx, y: ny };
+    }
+    function flash9(q) {
+      var pl = o.plateau;
+      if (!voile9) {
+        voile9 = document.createElement("div");
+        voile9.className = "pz-cb-voile";
+        voile9.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:50;opacity:0";
+      }
+      if (!voile9.isConnected) pl.appendChild(voile9);
+      var vers = q.mode === "noir" ? 1 : q.mode === "teinte" ? 0.4 : 0;
+      voile9.style.background = q.mode === "flash" ? "#ffffff" : q.mode === "teinte" ? q.couleur || "#ff0000" : "#000000";
+      var de = parseFloat(voile9.style.opacity) || 0;
+      var cles = q.mode === "flash" ? [{ opacity: 0.95 }, { opacity: 0 }] : [{ opacity: de }, { opacity: vers }];
+      var a = joue9(voile9, cles, { duration: Math.max(80, (q.duree || 0.4) * 1e3), easing: "ease-out", fill: "forwards" }, "");
+      if (a) {
+        var fin = a.onfinish;
+        a.onfinish = function() {
+          voile9.style.opacity = String(q.mode === "flash" ? 0 : vers);
+          if (fin) fin();
+        };
+      }
+    }
+    function trainee9(q) {
+      var nd = nd9(q.element);
+      if (!nd) return;
+      var fin = performance.now() + Math.max(0.2, q.duree || 1) * 1e3;
+      var tic = setInterval(function() {
+        if (performance.now() > fin || !nd.n.isConnected) {
+          clearInterval(tic);
+          fin9(q.element);
+          return;
+        }
+        var r = nd.ani.getBoundingClientRect(), pr = o.plateau.getBoundingClientRect(), e = pr.width / Math.max(1, p.board.w) || 1;
+        var g = nd.n.cloneNode(true);
+        g.removeAttribute("data-cb-el");
+        g.removeAttribute("data-pz-el");
+        g.removeAttribute("tabindex");
+        g.style.transform = "translate(" + Math.round((r.left - pr.left) / e) + "px," + Math.round((r.top - pr.top) / e) + "px)";
+        g.style.pointerEvents = "none";
+        g.style.opacity = "0.45";
+        g.style.transition = "opacity .45s";
+        o.plateau.appendChild(g);
+        requestAnimationFrame(function() {
+          g.style.opacity = "0";
+        });
+        setTimeout(function() {
+          g.remove();
+        }, 500);
+      }, 60);
+    }
+    function nombreDe9(s) {
+      var out = "", vu = false;
+      for (var i = 0; i < s.length; i++) {
+        var ch = s.charAt(i);
+        if (ch >= "0" && ch <= "9" || ch === "-" && !vu || ch === ".") {
+          out += ch;
+          vu = true;
+        } else if (vu) break;
+      }
+      var v = parseFloat(out);
+      return isNaN(v) ? 0 : v;
+    }
+    function texte9(q) {
+      var nd = nd9(q.element);
+      if (!nd || !nd.lab) return;
+      var lab = nd.lab, txt = lab.textContent || "", d = Math.max(0.2, q.duree || 1.5) * 1e3, t0 = performance.now();
+      if (q.effet === "machine") {
+        lab.textContent = "";
+        var tape = function() {
+          var k = Math.min(txt.length, Math.round((performance.now() - t0) / d * txt.length));
+          lab.textContent = txt.slice(0, k);
+          if (k < txt.length) requestAnimationFrame(tape);
+          else fin9(q.element);
+        };
+        tape();
+      } else if (q.effet === "compteur") {
+        var de = nombreDe9(txt), a = parseFloat(q.valeur);
+        if (isNaN(a)) a = de;
+        var pas9 = function() {
+          var k = Math.min(1, (performance.now() - t0) / d);
+          lab.textContent = String(Math.round(de + (a - de) * k));
+          if (k < 1) requestAnimationFrame(pas9);
+          else fin9(q.element);
+        };
+        pas9();
+      } else {
+        lab.textContent = "";
+        for (var i = 0; i < txt.length; i++) {
+          var s = document.createElement("span");
+          s.textContent = txt.charAt(i);
+          s.style.display = "inline-block";
+          s.style.animation = "pz-cb-tremble .18s " + (i * 0.03).toFixed(2) + "s ease-in-out infinite alternate";
+          lab.appendChild(s);
+        }
+        setTimeout(function() {
+          if (lab.isConnected) lab.textContent = txt;
+          fin9(q.element);
+        }, d);
+      }
+    }
+    function projecteur9(q) {
+      if (projo9) {
+        projo9.remove();
+        projo9 = null;
+      }
+      if (q.mode === "eteindre") return;
+      if (!q.element) suitDoigt9();
+      var v = document.createElement("div");
+      v.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:49";
+      o.plateau.appendChild(v);
+      projo9 = v;
+      var fin = q.duree > 0 ? performance.now() + q.duree * 1e3 : Infinity, r = Math.max(20, q.rayon || 90), nuit = Math.max(0.3, Math.min(1, q.noirceur || 0.85));
+      var tic = function() {
+        if (projo9 !== v) return;
+        if (performance.now() > fin || !v.isConnected) {
+          v.remove();
+          if (projo9 === v) projo9 = null;
+          fin9(q.element);
+          return;
+        }
+        var c = q.element ? centreDom9(q.element) : doigt9 || { x: p.board.w / 2, y: p.board.h / 2 };
+        if (c) v.style.background = "radial-gradient(circle " + r + "px at " + Math.round(c.x) + "px " + Math.round(c.y) + "px, rgba(0,0,0,0) 0%, rgba(0,0,0," + (nuit * 0.4).toFixed(2) + ") 65%, rgba(0,0,0," + nuit + ") 100%)";
+        requestAnimationFrame(tic);
+      };
+      tic();
+    }
+    function zones9() {
+      if (aZone9 === null) aZone9 = p.graphe.noeuds.some(function(n) {
+        return n.type === "ev_zone";
+      });
+      if (!aZone9) return;
+      var zs = null;
+      for (var k in corps) {
+        var b = corps[k];
+        if (b.sorti) continue;
+        if (!zs) zs = p.elements.filter(function(x) {
+          return x.genre === "zone";
+        });
+        var dedans = "";
+        for (var i = 0; i < zs.length; i++) {
+          var z = zs[i];
+          if (b.x >= z.x && b.x <= z.x + z.w && b.y >= z.y && b.y <= z.y + z.h) {
+            dedans = z.id;
+            break;
+          }
+        }
+        var avant = zonesEtat9[k] || "";
+        if (dedans !== avant) {
+          zonesEtat9[k] = dedans;
+          if (avant) o.envoie({ type: "zone", element: k, zone: avant, entre: false });
+          if (dedans) o.envoie({ type: "zone", element: k, zone: dedans, entre: true });
+        }
+      }
+    }
+    function effet9(f) {
+      var q = f.props || {};
+      switch (f.type) {
+        case "v_deplacer":
+          deplacer9(q);
+          break;
+        case "v_chemin":
+          chemin9(q);
+          break;
+        case "v_orbite":
+          orbite9(q);
+          break;
+        case "v_regarder":
+          regarder9(q);
+          break;
+        case "v_aimant":
+          aimant9(q);
+          break;
+        case "v_progressif":
+          progressif9(q);
+          break;
+        case "v_fondu":
+          fondu9(q);
+          break;
+        case "v_arreter":
+          arreter9(q);
+          break;
+        case "v_vitesse":
+          vitesseMonde9(q);
+          break;
+        case "v_camera":
+          camera9(q);
+          break;
+        case "v_flash":
+          flash9(q);
+          break;
+        case "v_trainee":
+          trainee9(q);
+          break;
+        case "v_texte":
+          texte9(q);
+          break;
+        case "v_projecteur":
+          projecteur9(q);
+          break;
+        default:
+          return false;
+      }
+      return true;
+    }
     function effets(liste) {
       for (var i = 0; i < liste.length; i++) {
         var f = liste[i], b = f.element ? corps[f.element] : null, el = f.element ? cbElement(p, f.element) : null;
         switch (f.type) {
+          case "v_deplacer":
+          case "v_chemin":
+          case "v_orbite":
+          case "v_regarder":
+          case "v_aimant":
+          case "v_progressif":
+          case "v_fondu":
+          case "v_arreter":
+          case "v_vitesse":
+          case "v_camera":
+          case "v_flash":
+          case "v_trainee":
+          case "v_texte":
+          case "v_projecteur":
+            effet9(f);
+            break;
           case "animer":
-            animer(f.element, f.effet, f.duree, f.fois);
+            animer(f.element, f.effet, f.duree, f.fois, f.fois === 0 ? null : function() {
+              fin9(f.element);
+            });
             break;
           case "particules": {
             var x = p.board.w / 2, y = p.board.h / 2;
@@ -66112,6 +66758,7 @@
         b.py = b.y;
         b.x += vx + gx;
         b.y += vy + gy;
+        if (aimants9.length) aimante9(b, dt);
         if (b.rond) b.rot += vx / Math.max(4, b.r);
       }
       for (var c = 0; c < cordes.length; c++) {
@@ -66676,6 +67323,7 @@
       raf = 0;
       if (eteint || !o.plateau.isConnected) return;
       var dt = dernier ? Math.min(0.05, (t - dernier) / 1e3) : PAS;
+      dt *= vitesse9;
       dernier = t;
       var ed = !!o.edition();
       if (ed !== edition) {
@@ -66692,6 +67340,7 @@
           n++;
         }
         if (n >= 8) reste = 0;
+        zones9();
       } else horloge += dt;
       avanceEffets(dt);
       dessine();
@@ -67293,6 +67942,72 @@
             }
           }
           break;
+        case "a_attendre":
+          res.effets.push({ type: "reprise", apres: Math.max(0, pr.secondes || 0), noeuds: (idx.sorties[noeudId + ".ensuite"] || []).map(function(l) {
+            return l.vers;
+          }) });
+          suite = "_";
+          break;
+        case "a_repeter": {
+          var nf9 = Math.max(1, Math.min(99, Math.round(pr.fois) || 1)), cl9 = idx.sorties[noeudId + ".corps"] || [];
+          if (pr.intervalle > 0) {
+            for (var c9 = 0; c9 < cl9.length; c9++) execute(cl9[c9].vers, profondeur + 1);
+            if (nf9 > 1) {
+              res.effets.push({ type: "reprise", apres: pr.intervalle, repeter: noeudId, reste: nf9 - 1 });
+              suite = "_";
+            } else suite = "ensuite";
+          } else {
+            for (var it9 = 0; it9 < nf9 && !res.boucle; it9++) for (var c8 = 0; c8 < cl9.length; c8++) execute(cl9[c8].vers, profondeur + 1);
+            suite = "ensuite";
+          }
+          break;
+        }
+        case "a_parallele": {
+          ["a", "b", "c", "d"].forEach(function(s92) {
+            var lp9 = idx.sorties[noeudId + "." + s92] || [];
+            for (var q9 = 0; q9 < lp9.length; q9++) execute(lp9[q9].vers, profondeur + 1);
+          });
+          if (pr.apres > 0) {
+            res.effets.push({ type: "reprise", apres: pr.apres, noeuds: (idx.sorties[noeudId + ".ensuite"] || []).map(function(l) {
+              return l.vers;
+            }) });
+            suite = "_";
+          } else suite = "ensuite";
+          break;
+        }
+        case "a_hasard": {
+          var ch9 = ["a", "b", "c"].filter(function(s92) {
+            return (idx.sorties[noeudId + "." + s92] || []).length > 0;
+          });
+          suite = ch9.length ? ch9[Math.floor(Math.random() * ch9.length)] : "_";
+          break;
+        }
+        case "a_sprite": {
+          var sp9 = cbElement(p, pr.element);
+          if (sp9 && sp9.etats.length > 1) res.effets.push({ type: "reprise", apres: 1 / Math.max(1, Math.min(30, pr.fps || 6)), sprite: sp9.id, reste: pr.fois > 0 ? Math.round(pr.fois) * sp9.etats.length : -1, fps: pr.fps });
+          break;
+        }
+        case "a_fondu":
+          if (cbElement(p, pr.element) && pr.etat) {
+            changeEtat(pr.element, pr.etat);
+            res.effets.push({ type: "v_fondu", element: pr.element, props: pr });
+          }
+          break;
+        case "a_deplacer":
+        case "a_chemin":
+        case "a_orbite":
+        case "a_regarder":
+        case "a_aimant":
+        case "a_progressif":
+        case "a_arreter":
+        case "a_vitesse":
+        case "a_camera":
+        case "a_flash":
+        case "a_trainee":
+        case "a_texte":
+        case "a_projecteur":
+          res.effets.push({ type: "v_" + n.type.slice(2), element: pr.element || "", props: pr });
+          break;
         case "a_animer":
           res.effets.push({ type: "animer", element: pr.element, effet: pr.effet, duree: pr.duree, fois: Math.round(pr.fois) });
           break;
@@ -67363,6 +68078,31 @@
         changeNiveau(ev.element, ev.niveau);
         continue;
       }
+      if (ev.type === "reprise") {
+        if (ev.repeter) {
+          var rn9 = idx.noeuds[ev.repeter];
+          if (rn9) {
+            var rc9 = idx.sorties[rn9.id + ".corps"] || [];
+            for (var r9 = 0; r9 < rc9.length; r9++) execute(rc9[r9].vers, 1);
+            if (ev.reste > 1) res.effets.push({ type: "reprise", apres: rn9.props.intervalle, repeter: rn9.id, reste: ev.reste - 1 });
+            else {
+              var re9 = idx.sorties[rn9.id + ".ensuite"] || [];
+              for (var s9 = 0; s9 < re9.length; s9++) execute(re9[s9].vers, 1);
+            }
+          }
+        } else if (ev.sprite) {
+          var se9 = cbElement(p, ev.sprite);
+          if (se9 && se9.etats.length > 1) {
+            var ie9 = 0;
+            for (var k9 = 0; k9 < se9.etats.length; k9++) if (se9.etats[k9].id === etat.etats[se9.id]) ie9 = k9;
+            changeEtat(se9.id, se9.etats[(ie9 + 1) % se9.etats.length].id);
+            if (ev.reste !== 1) res.effets.push({ type: "reprise", apres: 1 / Math.max(1, Math.min(30, ev.fps || 6)), sprite: se9.id, reste: ev.reste > 0 ? ev.reste - 1 : -1, fps: ev.fps });
+          }
+        } else (ev.noeuds || []).forEach(function(id9) {
+          execute(id9, 1);
+        });
+        continue;
+      }
       if (ev.type === "fixe" || ev.type === "valeur" || ev.type === "depot") {
         var g = cbElement(p, ev.element);
         if (!g || etat.caches[g.id] || etat.verrous[g.id]) continue;
@@ -67400,6 +68140,8 @@
         if (ev.type === "choc" && nd.type === "ev_choc" && (ev.force || 0) >= pp.force && (!pp.element || pp.element === ev.element) && (!pp.autre || pp.autre === ev.autre)) part = true;
         if (ev.type === "repos" && nd.type === "ev_repos" && (!pp.element || pp.element === ev.element)) part = true;
         if (ev.type === "sortie" && nd.type === "ev_sortie" && (!pp.element || pp.element === ev.element)) part = true;
+        if (ev.type === "animfin" && nd.type === "ev_anim_fin" && (!pp.element || pp.element === ev.element)) part = true;
+        if (ev.type === "zone" && nd.type === "ev_zone" && (!pp.element || pp.element === ev.element) && (!pp.zone || pp.zone === ev.zone) && (pp.quand === "sort" ? !ev.entre : !!ev.entre)) part = true;
         if (ev.type === "niveauchange" && nd.type === "ev_niveau" && pp.element === ev.element && cbSeuil(ev.apres, pp.op, pp.valeur) && !cbSeuil(ev.avant, pp.op, pp.valeur)) part = true;
         if (!part) continue;
         journal.push({ noeud: nd.id });
@@ -67767,7 +68509,7 @@
     },
     mount: function(host, ctx) {
       var p = ctx.params;
-      var etat = cbEtatInitial(p), noeudsEls = {}, minuteries = [], echelle = 1, fini = false;
+      var etat = cbEtatInitial(p), noeudsEls = {}, minuteries = [], echelle = 1, fini = false, reprises9 = {};
       var wrap = motEl("div", "pz-cb");
       host.textContent = "";
       host.appendChild(wrap);
@@ -68148,7 +68890,25 @@
         for (var s = 0; s < res.sons.length; s++) ctx.sound(res.sons[s]);
         if (res.messages.length) msg.textContent = res.messages[res.messages.length - 1];
         maj();
-        if (res.effets && res.effets.length) monde.effets(res.effets);
+        if (res.effets && res.effets.length) monde.effets(res.effets.filter(function(f9) {
+          if (f9.type === "v_arreter") {
+            (f9.element ? [f9.element] : Object.keys(reprises9)).forEach(function(k) {
+              (reprises9[k] || []).forEach(function(t) {
+                clearTimeout(t);
+              });
+              reprises9[k] = [];
+            });
+            return true;
+          }
+          if (f9.type !== "reprise") return true;
+          var t9 = setTimeout(function() {
+            if (!fini && host.isConnected) applique(cbTraite(p, etat, { type: "reprise", noeuds: f9.noeuds, repeter: f9.repeter, reste: f9.reste, sprite: f9.sprite, fps: f9.fps }, externe()));
+          }, Math.max(0, f9.apres || 0) * 1e3);
+          minuteries.push(t9);
+          var cle9 = f9.sprite || f9.repeter || "_";
+          (reprises9[cle9] = reprises9[cle9] || []).push(t9);
+          return false;
+        }));
         ctx.emit("progress");
         if (res.boucle && typeof console !== "undefined") console.warn("Constructeur : un encha\xEEnement de r\xE8gles a \xE9t\xE9 coup\xE9.");
         if (res.echec) {
@@ -71580,7 +72340,7 @@ function chargerImageScene(force){
   imageAffichee = cle;
   texturePrete = false;
   if(vImg.image){
-    const onOk = tex=>{ texturePrete = true; mat.map=tex; mat.color.set(0xffffff); mat.needsUpdate=true; };
+    const onOk = tex=>{ texturePrete = true; mat.map=tex; mat.color.set(0xffffff); mat.needsUpdate=true; needsRedraw(); };
     const onFail = ()=>{ texturePrete = true; mat.map=null; mat.color.set(0x2a2f3f); mat.needsUpdate=true; };
     if(vImg.imageFormat==='hdr'){
       const hdrSrc = vImg.image;
@@ -73358,6 +74118,7 @@ function renderHotspots(){
     mount.appendChild(el); markerEls.push(el);
   });
   lampeDevant();
+  needsRedraw();
 }
 /*  Les reperes d'une enigme jouee dans la scene : poses par le module
     (ctx.scene.reperes), projetes comme les points cliquables, touches
@@ -73466,6 +74227,7 @@ function renderLayers(){
     if(Array.isArray(ly.frames) && ly.frames.length > 1){ let k = 0; el._anim = setInterval(function(){ k = (k + 1) % ly.frames.length; el.src = ly.frames[k]; }, 1000 / Math.max(1, Math.min(30, ly.fps || 8))); }
     mount.appendChild(el); layerEls.push(el);
   });
+  needsRedraw();
 }
 /* ---- \xC9nigmes externes : \xE9tat et moteur d'actions du jeu export\xE9 ---- */
 let vars = initialVars(GAME.variables);
@@ -84523,6 +85285,27 @@ ev_gratte:    { cat: 'ev', nom: 'Quand la surface est gratt\xE9e', sorties: [['g
 ev_repos:     { cat: 'ev', nom: 'Quand un objet s\u2019arr\xEAte', sorties: [['go', 'exec']], props: { element: '' } },
 ev_sortie:    { cat: 'ev', nom: 'Quand un objet tombe du plateau', sorties: [['go', 'exec']], props: { element: '' } },
 ev_niveau:    { cat: 'ev', nom: 'Quand un niveau atteint\u2026', sorties: [['go', 'exec']], props: { element: '', op: '\u2265', valeur: 50 } },
+a_deplacer:   { cat: 'anim', nom: 'D\xE9placer vers', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', vers: '', dx: 0, dy: 0, duree: 1, courbe: 'douce' } },
+a_chemin:     { cat: 'anim', nom: 'Suivre un chemin', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', p1: '', p2: '', p3: '', p4: '', duree: 3, mode: 'une', courbe: 'lineaire' } },
+a_orbite:     { cat: 'anim', nom: 'Tourner autour', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', centre: '', rayon: 60, duree: 3, fois: 0, sens: 'horaire' } },
+a_regarder:   { cat: 'anim', nom: 'Regarder vers', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', cible: '', duree: 0 } },
+a_aimant:     { cat: 'anim', nom: 'Aimant', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', mode: 'attire', force: 1, rayon: 150, duree: 3 } },
+a_sprite:     { cat: 'anim', nom: 'Faire d\xE9filer les \xE9tats', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', fps: 6, fois: 0 } },
+a_progressif: { cat: 'anim', nom: 'Changer progressivement', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', quoi: 'taille', valeur: '1.5', duree: 1, courbe: 'douce' } },
+a_fondu:      { cat: 'anim', nom: 'Fondu vers un \xE9tat', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', etat: '', duree: 0.6 } },
+a_attendre:   { cat: 'flux', nom: 'Attendre', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { secondes: 1 } },
+a_repeter:    { cat: 'flux', nom: 'R\xE9p\xE9ter', entrees: [['in', 'exec']], sorties: [['corps', 'exec'], ['ensuite', 'exec']], props: { fois: 3, intervalle: 0.5 } },
+a_parallele:  { cat: 'flux', nom: 'En m\xEAme temps', entrees: [['in', 'exec']], sorties: [['a', 'exec'], ['b', 'exec'], ['c', 'exec'], ['d', 'exec'], ['ensuite', 'exec']], props: { apres: 1 } },
+a_hasard:     { cat: 'flux', nom: 'Au hasard', entrees: [['in', 'exec']], sorties: [['a', 'exec'], ['b', 'exec'], ['c', 'exec']], props: {} },
+a_arreter:    { cat: 'anim', nom: 'Arr\xEAter les animations', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '' } },
+a_vitesse:    { cat: 'anim', nom: 'Ralenti ou acc\xE9l\xE9r\xE9', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { facteur: '0.5' } },
+a_camera:     { cat: 'anim', nom: 'Cam\xE9ra du plateau', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { mode: 'zoom', element: '', zoom: 1.8, duree: 0.8 } },
+a_flash:      { cat: 'anim', nom: 'Flash et assombrir', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { mode: 'flash', couleur: '#ff0000', duree: 0.4 } },
+a_trainee:    { cat: 'anim', nom: 'Tra\xEEn\xE9e', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', duree: 1 } },
+a_texte:      { cat: 'anim', nom: 'Texte anim\xE9', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', effet: 'machine', duree: 1.5, valeur: '' } },
+a_projecteur: { cat: 'anim', nom: 'Projecteur', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', mode: 'allumer', rayon: 90, noirceur: 0.85, duree: 0 } },
+ev_anim_fin:  { cat: 'ev', nom: 'Quand une animation se termine', sorties: [['go', 'exec']], props: { element: '' } },
+ev_zone:      { cat: 'ev', nom: 'Quand un objet entre ou sort d\u2019une zone', sorties: [['go', 'exec']], props: { element: '', zone: '', quand: 'entre' } },
 a_animer:     { cat: 'action', nom: 'Animer', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', effet: 'secousse', duree: 0, fois: 1 } },
 a_particules: { cat: 'action', nom: 'Particules', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', effet: 'etincelles', quantite: 30, couleur: '' } },
 a_impulsion:  { cat: 'action', nom: 'Pousser un objet', entrees: [['in', 'exec']], sorties: [['ensuite', 'exec']], props: { element: '', angle: -90, force: 700 } },
@@ -84558,11 +85341,17 @@ recipient: { nom: 'R\xE9cipient (liquide)', etats: ['normal'], cycle: false },
 emetteur: { nom: '\xC9metteur de particules', etats: ['normal'], cycle: false },
 };
 var CB_VIDE_PERMIS = { ev_depot: { element: 1, zone: 1 }, d_dans_zone: { element: 1 }, a_renvoyer: { element: 1, zone: 1 },
-ev_choc: { element: 1 }, ev_repos: { element: 1 }, ev_sortie: { element: 1 }, a_animer: { element: 1 }, a_particules: { element: 1 } };
+ev_choc: { element: 1 }, ev_repos: { element: 1 }, ev_sortie: { element: 1 }, a_animer: { element: 1 }, a_particules: { element: 1 },
+a_deplacer: { vers: 1 }, a_chemin: { p2: 1, p3: 1, p4: 1 }, a_orbite: { centre: 1 }, a_regarder: { cible: 1 }, a_progressif: { element: 1 },
+a_arreter: { element: 1 }, a_camera: { element: 1 }, a_projecteur: { element: 1 }, ev_anim_fin: { element: 1 }, ev_zone: { element: 1, zone: 1 } };
 var CB_COULEURS = ['#3a3f4f', '#E8A33D', '#6FCF73', '#5FD4D4', '#D9636B', '#A98BE8'];
 var CB_BUDGET = 400;
 var CB_CASCADE = 60;
 var CB_EFFETS = {
+ecraser: { nom: '\xC9craser et \xE9tirer', duree: 0.55, fois: 1, courbe: 'ease-out', cles: [
+{ transform: 'scale(1,1)' }, { transform: 'scale(1.3,0.7)' }, { transform: 'scale(0.85,1.2)' }, { transform: 'scale(1.08,0.94)' }, { transform: 'scale(1,1)' }] },
+gelatine: { nom: 'G\xE9latine', duree: 0.8, fois: 1, courbe: 'ease-in-out', cles: [
+{ transform: 'scale(1,1)' }, { transform: 'scale(0.9,1.1)' }, { transform: 'scale(1.1,0.9)' }, { transform: 'scale(0.95,1.05)' }, { transform: 'scale(1,1)' }] },
 secousse: { nom: 'Secousse', duree: 0.5, fois: 1, courbe: 'ease-in-out', cles: [
 { transform: 'translateX(0px)' }, { transform: 'translateX(-10px)' }, { transform: 'translateX(9px)' },
 { transform: 'translateX(-7px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(0px)' }] },
@@ -85163,11 +85952,315 @@ if (n.getAttribute('data-cb-cache') === '1') n.style.display = 'none';
 try { if (nd.ani.getAnimations) nd.ani.getAnimations().forEach(function (a) { if (a.effect && a.effect.getComputedTiming && a.playState === 'finished') a.cancel(); }); } catch (e) {}
 });
 }
-function effets(liste) {
+  /* ---- Lot 11 : les blocs d'animation, c\xF4t\xE9 monde ------------------- */
+  var vitesse9 = 1, aimants9 = [], decal9 = {}, transfo9 = {}, regards9 = {}, voile9 = null, projo9 = null, zonesEtat9 = {}, doigt9 = null, aZone9 = null;
+  var COURBES9 = { douce: 'ease-in-out', lineaire: 'linear', rebond: 'cubic-bezier(.3,1.6,.5,1)', elastique: 'cubic-bezier(.5,-0.4,.3,1.5)', rapide: 'ease-out' };
+  function nd9(id) { var x = id ? o.noeuds()[id] : null; return x || null; }
+  function centre9(id) {
+    var el = cbElement(p, id);
+    if (!el) return null;
+    var b = corps[id];
+    if (b) return { x: b.x, y: b.y };
+    var d = decal9[id] || { x: 0, y: 0 };
+    return { x: el.x + el.w / 2 + d.x, y: el.y + el.h / 2 + d.y };
+  }
+  /*  Le centre r\xE9el \xE0 l'\xE9cran, pendant un mouvement (projecteur, regard). */
+  function centreDom9(id) {
+    var nd = nd9(id);
+    if (!nd || !nd.ani.getBoundingClientRect) return centre9(id);
+    var r = nd.ani.getBoundingClientRect(), pr = o.plateau.getBoundingClientRect(), e = pr.width / Math.max(1, p.board.w) || 1;
+    return { x: (r.left + r.width / 2 - pr.left) / e, y: (r.top + r.height / 2 - pr.top) / e };
+  }
+  function suitDoigt9() {
+    if (o.plateau.__doigt9) return;
+    o.plateau.__doigt9 = true;
+    var f = function (e) { try { doigt9 = point(e); } catch (x) {} };
+    o.plateau.addEventListener('pointermove', f);
+    o.plateau.addEventListener('pointerdown', f);
+  }
+  function fin9(id) { try { o.envoie({ type: 'animfin', element: id || '' }); } catch (e) {} }
+  function joue9(cible, cles, opts, id) {
+    if (!cible || typeof cible.animate !== 'function') { fin9(id); return null; }
+    try {
+      var a = cible.animate(cles, opts);
+      a.playbackRate = vitesse9;
+      if (opts.iterations !== Infinity) a.onfinish = function () { fin9(id); };
+      return a;
+    } catch (e) { fin9(id); return null; }
+  }
+  function bouge9(id, pts, duree, courbe, iterations, direction) {
+    var nd = nd9(id);
+    if (!nd) return;
+    var d0 = decal9[id] || { x: 0, y: 0 };
+    var cles = [{ translate: d0.x + 'px ' + d0.y + 'px' }].concat(pts.map(function (q) { return { translate: q.x + 'px ' + q.y + 'px' }; }));
+    if (nd.__bouge) { try { nd.__bouge.cancel(); } catch (e) {} }
+    nd.__bouge = joue9(nd.ani, cles, { duration: Math.max(40, duree * 1000), easing: COURBES9[courbe] || 'ease-in-out', iterations: iterations || 1, direction: direction || 'normal', fill: 'forwards' }, id);
+    if (!iterations || iterations === 1) { var der = pts[pts.length - 1]; decal9[id] = { x: der.x, y: der.y }; }
+  }
+  function deplacer9(q) {
+    var id = q.element, el = cbElement(p, id);
+    if (!el || corps[id]) return;
+    var d0 = decal9[id] || { x: 0, y: 0 }, cible;
+    if (q.vers) { var c = centre9(q.vers); if (!c) return; cible = { x: c.x - (el.x + el.w / 2), y: c.y - (el.y + el.h / 2) }; }
+    else cible = { x: d0.x + (q.dx || 0), y: d0.y + (q.dy || 0) };
+    bouge9(id, [cible], q.duree || 1, q.courbe, 1);
+  }
+  function chemin9(q) {
+    var id = q.element, el = cbElement(p, id);
+    if (!el || corps[id]) return;
+    var pts = [q.p1, q.p2, q.p3, q.p4].filter(function (k) { return !!k; }).map(function (k) {
+      var c = centre9(k);
+      return c ? { x: c.x - (el.x + el.w / 2), y: c.y - (el.y + el.h / 2) } : null;
+    }).filter(function (k) { return !!k; });
+    if (!pts.length) return;
+    var boucle = q.mode === 'boucle', ar = q.mode === 'allerretour';
+    if (boucle) pts.push(decal9[id] || { x: 0, y: 0 });
+    bouge9(id, pts, q.duree || 3, q.courbe || 'lineaire', boucle || ar ? Infinity : 1, ar ? 'alternate' : 'normal');
+  }
+  function orbite9(q) {
+    var id = q.element, el = cbElement(p, id), nd = nd9(id);
+    if (!el || !nd || corps[id]) return;
+    var r = Math.max(5, q.rayon || 60), sens = q.sens === 'inverse' ? -1 : 1;
+    var moi = { x: el.x + el.w / 2 + (decal9[id] || { x: 0 }).x, y: el.y + el.h / 2 + (decal9[id] || { y: 0 }).y };
+    var c = q.centre ? centre9(q.centre) : { x: moi.x + r, y: moi.y };
+    if (!c) return;
+    var a0 = Math.atan2(moi.y - c.y, moi.x - c.x), pts = [];
+    for (var i = 0; i <= 24; i++) {
+      var a = a0 + sens * i * Math.PI * 2 / 24;
+      pts.push({ translate: (c.x + Math.cos(a) * r - (el.x + el.w / 2)) + 'px ' + (c.y + Math.sin(a) * r - (el.y + el.h / 2)) + 'px' });
+    }
+    if (nd.__bouge) { try { nd.__bouge.cancel(); } catch (e) {} }
+    nd.__bouge = joue9(nd.ani, pts, { duration: Math.max(200, (q.duree || 3) * 1000), iterations: q.fois > 0 ? q.fois : Infinity, easing: 'linear', fill: 'forwards' }, id);
+  }
+  function regarder9(q) {
+    if (!nd9(q.element)) return;
+    if (!q.cible) suitDoigt9();
+    regards9[q.element] = { cible: q.cible, fin: q.duree > 0 ? performance.now() + q.duree * 1000 : Infinity };
+    if (!regarder9.raf) tourne9();
+  }
+  function tourne9() {
+    regarder9.raf = requestAnimationFrame(function () {
+      regarder9.raf = 0;
+      var encore = false, t = performance.now();
+      for (var id in regards9) {
+        if (!Object.prototype.hasOwnProperty.call(regards9, id)) continue;
+        var r = regards9[id], nd = nd9(id);
+        if (!nd || t > r.fin) { delete regards9[id]; if (nd) fin9(id); continue; }
+        encore = true;
+        var c = r.cible ? centreDom9(r.cible) : doigt9, me = centreDom9(id);
+        if (!c || !me) continue;
+        nd.ani.style.rotate = Math.round(Math.atan2(c.y - me.y, c.x - me.x) * 180 / Math.PI + 90) + 'deg';
+      }
+      if (encore && o.plateau.isConnected) tourne9();
+    });
+  }
+  function aimant9(q) {
+    aimants9.push({ id: q.element, force: (q.mode === 'repousse' ? -1 : 1) * Math.max(0.1, q.force || 1), rayon: Math.max(20, q.rayon || 150), fin: performance.now() + Math.max(0.2, q.duree || 3) * 1000 });
+    for (var k in corps) { corps[k].calme = 0; corps[k].repos = false; }
+    demarre();
+  }
+  function aimante9(b, dt) {
+    var t = performance.now();
+    for (var i = aimants9.length - 1; i >= 0; i--) {
+      var m = aimants9[i];
+      if (t > m.fin) { aimants9.splice(i, 1); continue; }
+      if (b.el.id === m.id) continue;
+      var c = centre9(m.id);
+      if (!c) continue;
+      var dx = c.x - b.x, dy = c.y - b.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+      if (d > m.rayon) continue;
+      /*  Un petit pas vers l'aimant \xE0 chaque pas de simulation : la
+          m\xE9thode de Verlet en fait une vitesse qui grandit.         */
+      var k = m.force * 0.5 * (1 - d / m.rayon) * dt * 120;
+      b.x += dx / d * k; b.y += dy / d * k;
+      b.calme = 0; b.repos = false;
+    }
+  }
+  function progressif9(q) {
+    var id = q.element, nd = id ? nd9(id) : null, cible = nd ? nd.ani : o.plateau;
+    var cle = id || '__plateau';
+    var t = transfo9[cle] || (transfo9[cle] = { scale: 1, opacity: 1, rotate: 0, lum: 1, flou: 0 });
+    var v = parseFloat(q.valeur);
+    if (isNaN(v)) v = 1;
+    var filtre = function () { return 'brightness(' + t.lum + ') blur(' + t.flou + 'px)'; };
+    var avant = {}, apres = {};
+    if (q.quoi === 'taille') { avant.scale = String(t.scale); t.scale = Math.max(0, v); apres.scale = String(t.scale); }
+    else if (q.quoi === 'opacite') { avant.opacity = t.opacity; t.opacity = Math.max(0, Math.min(1, v)); apres.opacity = t.opacity; }
+    else if (q.quoi === 'rotation') { avant.rotate = t.rotate + 'deg'; t.rotate = v; apres.rotate = v + 'deg'; }
+    else { avant.filter = filtre(); if (q.quoi === 'flou') t.flou = Math.max(0, v); else t.lum = Math.max(0, v); apres.filter = filtre(); }
+    joue9(cible, [avant, apres], { duration: Math.max(40, (q.duree || 1) * 1000), easing: COURBES9[q.courbe] || 'ease-in-out', fill: 'forwards' }, id);
+  }
+  function fondu9(q) {
+    var nd = nd9(q.element);
+    if (nd) joue9(nd.ani, [{ opacity: 0.08 }, { opacity: 1 }], { duration: Math.max(80, (q.duree || 0.6) * 1000), easing: 'ease-out' }, q.element);
+  }
+  function arreter9(q) {
+    var ids = q.element ? [q.element] : Object.keys(o.noeuds());
+    ids.forEach(function (id) {
+      var nd = nd9(id);
+      if (!nd) return;
+      try { nd.ani.getAnimations().forEach(function (a) { a.pause(); }); } catch (e) {}
+      delete regards9[id];
+    });
+    if (!q.element) {
+      aimants9 = [];
+      if (projo9) { projo9.remove(); projo9 = null; }
+      try { o.plateau.getAnimations().forEach(function (a) { a.pause(); }); } catch (e) {}
+    }
+  }
+  function vitesseMonde9(q) {
+    vitesse9 = Math.max(0.1, Math.min(4, parseFloat(q.facteur) || 1));
+    try { o.plateau.getAnimations({ subtree: true }).forEach(function (a) { a.playbackRate = vitesse9; }); } catch (e) {}
+  }
+  function camera9(q) {
+    var pl = o.plateau;
+    if (q.mode === 'secouer') { animer('', 'secousse', q.duree || 0.5, 1, function () { fin9(''); }); return; }
+    var c = q.element ? centre9(q.element) : { x: p.board.w / 2, y: p.board.h / 2 };
+    if (!c) return;
+    var cam = pl.__cam || { z: 1, x: 0, y: 0 };
+    var z = q.mode === 'retour' ? 1 : q.mode === 'glisser' ? cam.z : Math.max(1, Math.min(4, q.zoom || 1.8));
+    var nx = q.mode === 'retour' ? 0 : p.board.w / 2 - c.x, ny = q.mode === 'retour' ? 0 : p.board.h / 2 - c.y;
+    joue9(pl, [{ scale: String(cam.z), translate: cam.x + 'px ' + cam.y + 'px' }, { scale: String(z), translate: nx + 'px ' + ny + 'px' }],
+      { duration: Math.max(80, (q.duree || 0.8) * 1000), easing: 'ease-in-out', fill: 'forwards' }, '');
+    pl.__cam = { z: z, x: nx, y: ny };
+  }
+  function flash9(q) {
+    var pl = o.plateau;
+    if (!voile9) {
+      voile9 = document.createElement('div');
+      voile9.className = 'pz-cb-voile';
+      voile9.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:50;opacity:0';
+    }
+    if (!voile9.isConnected) pl.appendChild(voile9);
+    var vers = q.mode === 'noir' ? 1 : q.mode === 'teinte' ? 0.4 : 0;
+    voile9.style.background = q.mode === 'flash' ? '#ffffff' : q.mode === 'teinte' ? (q.couleur || '#ff0000') : '#000000';
+    var de = parseFloat(voile9.style.opacity) || 0;
+    var cles = q.mode === 'flash' ? [{ opacity: 0.95 }, { opacity: 0 }] : [{ opacity: de }, { opacity: vers }];
+    var a = joue9(voile9, cles, { duration: Math.max(80, (q.duree || 0.4) * 1000), easing: 'ease-out', fill: 'forwards' }, '');
+    if (a) { var fin = a.onfinish; a.onfinish = function () { voile9.style.opacity = String(q.mode === 'flash' ? 0 : vers); if (fin) fin(); }; }
+  }
+  function trainee9(q) {
+    var nd = nd9(q.element);
+    if (!nd) return;
+    var fin = performance.now() + Math.max(0.2, q.duree || 1) * 1000;
+    var tic = setInterval(function () {
+      if (performance.now() > fin || !nd.n.isConnected) { clearInterval(tic); fin9(q.element); return; }
+      var r = nd.ani.getBoundingClientRect(), pr = o.plateau.getBoundingClientRect(), e = pr.width / Math.max(1, p.board.w) || 1;
+      var g = nd.n.cloneNode(true);
+      g.removeAttribute('data-cb-el'); g.removeAttribute('data-pz-el'); g.removeAttribute('tabindex');
+      g.style.transform = 'translate(' + Math.round((r.left - pr.left) / e) + 'px,' + Math.round((r.top - pr.top) / e) + 'px)';
+      g.style.pointerEvents = 'none'; g.style.opacity = '0.45'; g.style.transition = 'opacity .45s';
+      o.plateau.appendChild(g);
+      requestAnimationFrame(function () { g.style.opacity = '0'; });
+      setTimeout(function () { g.remove(); }, 500);
+    }, 60);
+  }
+  function nombreDe9(s) {
+    var out = '', vu = false;
+    for (var i = 0; i < s.length; i++) { var ch = s.charAt(i); if ((ch >= '0' && ch <= '9') || (ch === '-' && !vu) || ch === '.') { out += ch; vu = true; } else if (vu) break; }
+    var v = parseFloat(out);
+    return isNaN(v) ? 0 : v;
+  }
+  function texte9(q) {
+    var nd = nd9(q.element);
+    if (!nd || !nd.lab) return;
+    var lab = nd.lab, txt = lab.textContent || '', d = Math.max(0.2, q.duree || 1.5) * 1000, t0 = performance.now();
+    if (q.effet === 'machine') {
+      lab.textContent = '';
+      var tape = function () {
+        var k = Math.min(txt.length, Math.round((performance.now() - t0) / d * txt.length));
+        lab.textContent = txt.slice(0, k);
+        if (k < txt.length) requestAnimationFrame(tape); else fin9(q.element);
+      };
+      tape();
+    } else if (q.effet === 'compteur') {
+      var de = nombreDe9(txt), a = parseFloat(q.valeur);
+      if (isNaN(a)) a = de;
+      var pas9 = function () {
+        var k = Math.min(1, (performance.now() - t0) / d);
+        lab.textContent = String(Math.round(de + (a - de) * k));
+        if (k < 1) requestAnimationFrame(pas9); else fin9(q.element);
+      };
+      pas9();
+    } else {
+      lab.textContent = '';
+      for (var i = 0; i < txt.length; i++) {
+        var s = document.createElement('span');
+        s.textContent = txt.charAt(i);
+        s.style.display = 'inline-block';
+        s.style.animation = 'pz-cb-tremble .18s ' + (i * 0.03).toFixed(2) + 's ease-in-out infinite alternate';
+        lab.appendChild(s);
+      }
+      setTimeout(function () { if (lab.isConnected) lab.textContent = txt; fin9(q.element); }, d);
+    }
+  }
+  function projecteur9(q) {
+    if (projo9) { projo9.remove(); projo9 = null; }
+    if (q.mode === 'eteindre') return;
+    if (!q.element) suitDoigt9();
+    var v = document.createElement('div');
+    v.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:49';
+    o.plateau.appendChild(v);
+    projo9 = v;
+    var fin = q.duree > 0 ? performance.now() + q.duree * 1000 : Infinity, r = Math.max(20, q.rayon || 90), nuit = Math.max(0.3, Math.min(1, q.noirceur || 0.85));
+    var tic = function () {
+      if (projo9 !== v) return;
+      if (performance.now() > fin || !v.isConnected) { v.remove(); if (projo9 === v) projo9 = null; fin9(q.element); return; }
+      var c = q.element ? centreDom9(q.element) : (doigt9 || { x: p.board.w / 2, y: p.board.h / 2 });
+      if (c) v.style.background = 'radial-gradient(circle ' + r + 'px at ' + Math.round(c.x) + 'px ' + Math.round(c.y) + 'px, rgba(0,0,0,0) 0%, rgba(0,0,0,' + (nuit * 0.4).toFixed(2) + ') 65%, rgba(0,0,0,' + nuit + ') 100%)';
+      requestAnimationFrame(tic);
+    };
+    tic();
+  }
+  /*  Un objet qui entre dans une zone, ou en sort.                     */
+  function zones9() {
+    if (aZone9 === null) aZone9 = p.graphe.noeuds.some(function (n) { return n.type === 'ev_zone'; });
+    if (!aZone9) return;
+    var zs = null;
+    for (var k in corps) {
+      var b = corps[k];
+      if (b.sorti) continue;
+      if (!zs) zs = p.elements.filter(function (x) { return x.genre === 'zone'; });
+      var dedans = '';
+      for (var i = 0; i < zs.length; i++) { var z = zs[i]; if (b.x >= z.x && b.x <= z.x + z.w && b.y >= z.y && b.y <= z.y + z.h) { dedans = z.id; break; } }
+      var avant = zonesEtat9[k] || '';
+      if (dedans !== avant) {
+        zonesEtat9[k] = dedans;
+        if (avant) o.envoie({ type: 'zone', element: k, zone: avant, entre: false });
+        if (dedans) o.envoie({ type: 'zone', element: k, zone: dedans, entre: true });
+      }
+    }
+  }
+  function effet9(f) {
+    var q = f.props || {};
+    switch (f.type) {
+      case 'v_deplacer': deplacer9(q); break;
+      case 'v_chemin': chemin9(q); break;
+      case 'v_orbite': orbite9(q); break;
+      case 'v_regarder': regarder9(q); break;
+      case 'v_aimant': aimant9(q); break;
+      case 'v_progressif': progressif9(q); break;
+      case 'v_fondu': fondu9(q); break;
+      case 'v_arreter': arreter9(q); break;
+      case 'v_vitesse': vitesseMonde9(q); break;
+      case 'v_camera': camera9(q); break;
+      case 'v_flash': flash9(q); break;
+      case 'v_trainee': trainee9(q); break;
+      case 'v_texte': texte9(q); break;
+      case 'v_projecteur': projecteur9(q); break;
+      default: return false;
+    }
+    return true;
+  }
+
+  function effets(liste) {
 for (var i = 0; i < liste.length; i++) {
 var f = liste[i], b = f.element ? corps[f.element] : null, el = f.element ? cbElement(p, f.element) : null;
 switch (f.type) {
-case 'animer': animer(f.element, f.effet, f.duree, f.fois); break;
+case 'v_deplacer': case 'v_chemin': case 'v_orbite': case 'v_regarder': case 'v_aimant': case 'v_progressif': case 'v_fondu':
+case 'v_arreter': case 'v_vitesse': case 'v_camera': case 'v_flash': case 'v_trainee': case 'v_texte': case 'v_projecteur':
+  effet9(f); break;
+case 'animer': animer(f.element, f.effet, f.duree, f.fois, f.fois === 0 ? null : function () { fin9(f.element); }); break;
 case 'particules': {
 var x = p.board.w / 2, y = p.board.h / 2;
 if (b) { x = b.x; y = b.y; } else if (el) { x = el.x + el.w / 2; y = el.y + el.h / 2; }
@@ -85329,6 +86422,7 @@ if (b.fige) { b.px = b.x; b.py = b.y; continue; }
 var vx = (b.x - b.px) * 0.999, vy = (b.y - b.py) * 0.999;
 b.px = b.x; b.py = b.y;
 b.x += vx + gx; b.y += vy + gy;
+if (aimants9.length) aimante9(b, dt);
 if (b.rond) b.rot += vx / Math.max(4, b.r);
 }
 for (var c = 0; c < cordes.length; c++) {
@@ -85707,6 +86801,7 @@ function boucle(t) {
 raf = 0;
 if (eteint || !o.plateau.isConnected) return;
 var dt = dernier ? Math.min(0.05, (t - dernier) / 1000) : PAS;
+dt *= vitesse9;
 dernier = t;
 var ed = !!o.edition();
 if (ed !== edition) { edition = ed; o.refait(); return; }
@@ -85715,6 +86810,7 @@ reste += dt;
 var n = 0;
 while (reste >= PAS && n < 8) { pas(PAS); reste -= PAS; n++; }
 if (n >= 8) reste = 0;
+zones9();
 } else horloge += dt;
 avanceEffets(dt);
 dessine();
@@ -86150,6 +87246,37 @@ if (de.genre !== 'deplacable') continue;
 if (pr.element ? de.id === pr.element : (!pr.zone || etat.places[de.id] === pr.zone)) { delete etat.places[de.id]; delete etat.pos[de.id]; }
 }
 break;
+case 'a_attendre': res.effets.push({ type: 'reprise', apres: Math.max(0, pr.secondes || 0), noeuds: (idx.sorties[noeudId + '.ensuite'] || []).map(function (l) { return l.vers; }) }); suite = '_'; break;
+case 'a_repeter': {
+  var nf9 = Math.max(1, Math.min(99, Math.round(pr.fois) || 1)), cl9 = idx.sorties[noeudId + '.corps'] || [];
+  if (pr.intervalle > 0) {
+    for (var c9 = 0; c9 < cl9.length; c9++) execute(cl9[c9].vers, profondeur + 1);
+    if (nf9 > 1) { res.effets.push({ type: 'reprise', apres: pr.intervalle, repeter: noeudId, reste: nf9 - 1 }); suite = '_'; } else suite = 'ensuite';
+  } else {
+    for (var it9 = 0; it9 < nf9 && !res.boucle; it9++) for (var c8 = 0; c8 < cl9.length; c8++) execute(cl9[c8].vers, profondeur + 1);
+    suite = 'ensuite';
+  }
+  break;
+}
+case 'a_parallele': {
+  ['a', 'b', 'c', 'd'].forEach(function (s9) { var lp9 = idx.sorties[noeudId + '.' + s9] || []; for (var q9 = 0; q9 < lp9.length; q9++) execute(lp9[q9].vers, profondeur + 1); });
+  if (pr.apres > 0) { res.effets.push({ type: 'reprise', apres: pr.apres, noeuds: (idx.sorties[noeudId + '.ensuite'] || []).map(function (l) { return l.vers; }) }); suite = '_'; } else suite = 'ensuite';
+  break;
+}
+case 'a_hasard': {
+  var ch9 = ['a', 'b', 'c'].filter(function (s9) { return (idx.sorties[noeudId + '.' + s9] || []).length > 0; });
+  suite = ch9.length ? ch9[Math.floor(Math.random() * ch9.length)] : '_';
+  break;
+}
+case 'a_sprite': {
+  var sp9 = cbElement(p, pr.element);
+  if (sp9 && sp9.etats.length > 1) res.effets.push({ type: 'reprise', apres: 1 / Math.max(1, Math.min(30, pr.fps || 6)), sprite: sp9.id, reste: pr.fois > 0 ? Math.round(pr.fois) * sp9.etats.length : -1, fps: pr.fps });
+  break;
+}
+case 'a_fondu': if (cbElement(p, pr.element) && pr.etat) { changeEtat(pr.element, pr.etat); res.effets.push({ type: 'v_fondu', element: pr.element, props: pr }); } break;
+case 'a_deplacer': case 'a_chemin': case 'a_orbite': case 'a_regarder': case 'a_aimant': case 'a_progressif': case 'a_arreter': case 'a_vitesse':
+case 'a_camera': case 'a_flash': case 'a_trainee': case 'a_texte': case 'a_projecteur':
+  res.effets.push({ type: 'v_' + n.type.slice(2), element: pr.element || '', props: pr }); break;
 case 'a_animer': res.effets.push({ type: 'animer', element: pr.element, effet: pr.effet, duree: pr.duree, fois: Math.round(pr.fois) }); break;
 case 'a_particules': res.effets.push({ type: 'particules', element: pr.element, effet: pr.effet, quantite: Math.max(1, Math.min(300, Math.round(pr.quantite))), couleur: pr.couleur }); break;
 case 'a_impulsion': res.effets.push({ type: 'impulsion', element: pr.element, angle: pr.angle, force: pr.force }); break;
@@ -86194,6 +87321,26 @@ if (fe && !etat.caches[fe.id]) marqueFait(fe.id, ev.type);
 continue;
 }
 if (ev.type === 'niveau') { changeNiveau(ev.element, ev.niveau); continue; }
+if (ev.type === 'reprise') {
+  if (ev.repeter) {
+    var rn9 = idx.noeuds[ev.repeter];
+    if (rn9) {
+      var rc9 = idx.sorties[rn9.id + '.corps'] || [];
+      for (var r9 = 0; r9 < rc9.length; r9++) execute(rc9[r9].vers, 1);
+      if (ev.reste > 1) res.effets.push({ type: 'reprise', apres: rn9.props.intervalle, repeter: rn9.id, reste: ev.reste - 1 });
+      else { var re9 = idx.sorties[rn9.id + '.ensuite'] || []; for (var s9 = 0; s9 < re9.length; s9++) execute(re9[s9].vers, 1); }
+    }
+  } else if (ev.sprite) {
+    var se9 = cbElement(p, ev.sprite);
+    if (se9 && se9.etats.length > 1) {
+      var ie9 = 0;
+      for (var k9 = 0; k9 < se9.etats.length; k9++) if (se9.etats[k9].id === etat.etats[se9.id]) ie9 = k9;
+      changeEtat(se9.id, se9.etats[(ie9 + 1) % se9.etats.length].id);
+      if (ev.reste !== 1) res.effets.push({ type: 'reprise', apres: 1 / Math.max(1, Math.min(30, ev.fps || 6)), sprite: se9.id, reste: ev.reste > 0 ? ev.reste - 1 : -1, fps: ev.fps });
+    }
+  } else (ev.noeuds || []).forEach(function (id9) { execute(id9, 1); });
+  continue;
+}
 if (ev.type === 'fixe' || ev.type === 'valeur' || ev.type === 'depot') {
 var g = cbElement(p, ev.element);
 if (!g || etat.caches[g.id] || etat.verrous[g.id]) continue;
@@ -86230,6 +87377,8 @@ if (ev.type === 'fait' && pp.element === ev.element && ((nd.type === 'ev_coupe' 
 if (ev.type === 'choc' && nd.type === 'ev_choc' && (ev.force || 0) >= pp.force && (!pp.element || pp.element === ev.element) && (!pp.autre || pp.autre === ev.autre)) part = true;
 if (ev.type === 'repos' && nd.type === 'ev_repos' && (!pp.element || pp.element === ev.element)) part = true;
 if (ev.type === 'sortie' && nd.type === 'ev_sortie' && (!pp.element || pp.element === ev.element)) part = true;
+if (ev.type === 'animfin' && nd.type === 'ev_anim_fin' && (!pp.element || pp.element === ev.element)) part = true;
+if (ev.type === 'zone' && nd.type === 'ev_zone' && (!pp.element || pp.element === ev.element) && (!pp.zone || pp.zone === ev.zone) && (pp.quand === 'sort' ? !ev.entre : !!ev.entre)) part = true;
 if (ev.type === 'niveauchange' && nd.type === 'ev_niveau' && pp.element === ev.element && cbSeuil(ev.apres, pp.op, pp.valeur) && !cbSeuil(ev.avant, pp.op, pp.valeur)) part = true;
 if (!part) continue;
 journal.push({ noeud: nd.id });
@@ -86515,7 +87664,7 @@ return q;
 outline: function (p) { return p.elements.map(function (e) { return { id: e.id, kind: 'element', label: e.label || CB_GENRES[e.genre].nom }; }); },
 mount: function (host, ctx) {
 var p = ctx.params;
-var etat = cbEtatInitial(p), noeudsEls = {}, minuteries = [], echelle = 1, fini = false;
+var etat = cbEtatInitial(p), noeudsEls = {}, minuteries = [], echelle = 1, fini = false, reprises9 = {};
 var wrap = motEl('div', 'pz-cb');
 host.textContent = '';
 host.appendChild(wrap);
@@ -86807,7 +87956,20 @@ if (ctx.debug) { try { ctx.debug({ ev: res.evenement, journal: res.journal, etat
 for (var s = 0; s < res.sons.length; s++) ctx.sound(res.sons[s]);
 if (res.messages.length) msg.textContent = res.messages[res.messages.length - 1];
 maj();
-if (res.effets && res.effets.length) monde.effets(res.effets);
+if (res.effets && res.effets.length) monde.effets(res.effets.filter(function (f9) {
+  if (f9.type === 'v_arreter') {
+    (f9.element ? [f9.element] : Object.keys(reprises9)).forEach(function (k) { (reprises9[k] || []).forEach(function (t) { clearTimeout(t); }); reprises9[k] = []; });
+    return true;
+  }
+  if (f9.type !== 'reprise') return true;
+  var t9 = setTimeout(function () {
+    if (!fini && host.isConnected) applique(cbTraite(p, etat, { type: 'reprise', noeuds: f9.noeuds, repeter: f9.repeter, reste: f9.reste, sprite: f9.sprite, fps: f9.fps }, externe()));
+  }, Math.max(0, f9.apres || 0) * 1000);
+  minuteries.push(t9);
+  var cle9 = f9.sprite || f9.repeter || '_';
+  (reprises9[cle9] = reprises9[cle9] || []).push(t9);
+  return false;
+}));
 ctx.emit('progress');
 if (res.boucle && typeof console !== 'undefined') console.warn('Constructeur : un encha\xEEnement de r\xE8gles a \xE9t\xE9 coup\xE9.');
 if (res.echec) { monde.echec(); ctx.emit('failed'); }
@@ -91044,13 +92206,23 @@ function project(){
   });
 }
 // declare en var : setScreen() peut appeler needsRedraw() avant cette ligne
-var idleFrames = 0;
+var idleFrames = 0, derniereVue = '', dernierLeger = 0;
+function videoActive(){ try{ return !!(videoEl && !videoEl.paused); }catch(e){ return false; } }
+function enMouvement(){ try{ return !!dragging; }catch(e){ return false; } }
+function lampeBouge(){ try{ return !!(lampeEl && lampeEl.style.display === 'block' && (Math.abs(lampeX - lampeCX) > 0.002 || Math.abs(lampeY - lampeCY) > 0.002)); }catch(e){ return false; } }
 function needsRedraw(){ idleFrames = 0; }
 function loop(){
   if(animsCamera.length){ const t = performance.now(); animsCamera = animsCamera.filter(function(f){ return !f(t); }); }
   camera.rotation.set(pitch,yaw,0,'YXZ');
   // la scene 360 ne bouge pas pendant un dialogue : on arrete de la redessiner
-  const frozen = playerScreen === 'dialogue' && idleFrames > 4;
+  const vueSig = yaw.toFixed(4) + ',' + pitch.toFixed(4) + ',' + camera.fov.toFixed(2) + ',' + mount.clientWidth + 'x' + mount.clientHeight + ',' + (mat.map ? mat.map.uuid : '');
+  if(vueSig !== derniereVue){ derniereVue = vueSig; idleFrames = 0; }
+  const anime = animsCamera.length || sceneTicks.length || sceneMarques.length || bulles.length || videoActive() || enMouvement() || BANDE_ANNONCE || lampeBouge();
+  const frozen = (playerScreen === 'dialogue' && idleFrames > 4) || (!anime && idleFrames > 20);
+  if(frozen){
+    const t9 = performance.now();
+    if(t9 - dernierLeger > 200){ dernierLeger = t9; try{ lot5Tick(yaw, pitch); }catch(e){} try{ lot678Tick(yaw, pitch); }catch(e){} }
+  }
   if(!frozen){
     renderer.render(scene,camera);
     project();
@@ -93121,7 +94293,7 @@ loop();
         variables,
         dialogues
       }
-    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement(VideoScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement(CycleScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement(RetoucheScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement(AtmosphereScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items }), /* @__PURE__ */ import_react.default.createElement(VideoScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement(CycleScene, { scene, onChange: (patch) => updateScene(scene.id, patch), items, variables, puzzles, scenes }), /* @__PURE__ */ import_react.default.createElement(RetoucheScene, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement(OrdreCalques, { scene, onChange: (patch) => updateScene(scene.id, patch) }), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 } }, "Musique d'ambiance", scene.music && scene.music.src ? /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, "data-scene-music-name": true }, "\u{1F3B5} ", audioPlayable(audio, scene.music.src).name || scene.music.name || "audio"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => updateScene(scene.id, { music: void 0 }), style: iconBtn, title: "Retirer" }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger }))), /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         type: "range",
