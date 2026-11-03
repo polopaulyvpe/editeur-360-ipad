@@ -35902,6 +35902,14 @@
             vars[cle] = a.texte;
             effects.push({ kind: "fragment", action: a });
           }
+        } else if (a.type === "carnet" && a.id) {
+          const cle = "__carnet:" + a.id;
+          if (!vars[cle]) {
+            vars[cle] = 1;
+            effects.push({ kind: "carnet", action: a });
+          }
+        } else if (a.type === "cinematique" && a.cineId) {
+          effects.push({ kind: "cinematique", action: a });
         } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image" || a.type === "bulle") {
           effects.push({ kind: a.type, action: a });
         }
@@ -36094,7 +36102,9 @@
     ["fin", "Terminer le jeu (une fin)"],
     ["ajouter", "Ajouter \xE0 une variable (compteur, relation)"],
     ["bulle", "Bulle de parole dans la 360"],
-    ["fragment", "R\xE9v\xE9ler un fragment (m\xE9ta-\xE9nigme)"]
+    ["fragment", "R\xE9v\xE9ler un fragment (m\xE9ta-\xE9nigme)"],
+    ["carnet", "Ajouter un document au carnet"],
+    ["cinematique", "Jouer une cin\xE9matique"]
   ];
   var VARIABLE_TYPES = [["boolean", "Vrai / Faux"], ["number", "Nombre"], ["text", "Texte"]];
   var puzzleProviders = /* @__PURE__ */ new Map();
@@ -36376,11 +36386,13 @@
       const mesh = new Mesh(geo, mat);
       scene.add(mesh);
       threeRef.current = { renderer, camera: camera2, scene, mesh, mat };
+      let taille = "";
       const resize = () => {
         const w = mount.clientWidth, h = mount.clientHeight;
         renderer.setSize(w, h);
         camera2.aspect = w / h;
         camera2.updateProjectionMatrix();
+        taille = w + "x" + h;
       };
       resize();
       const ro = new ResizeObserver(resize);
@@ -36389,14 +36401,15 @@
       const loop = () => {
         const { yaw, pitch } = stateRef.current;
         const t = performance.now();
-        const sig = yaw.toFixed(4) + "," + pitch.toFixed(4) + "," + camera2.fov + "," + mount.clientWidth + "x" + mount.clientHeight + "," + (mat.map ? mat.map.uuid : "") + (threeRef.current.sale ? "!" : "");
-        if (sig !== derniere || t - dernierRendu > 500) {
+        const sig = yaw.toFixed(4) + "," + pitch.toFixed(4) + "," + camera2.fov + "," + taille + "," + (mat.map ? mat.map.uuid : "") + (threeRef.current.sale ? "!" : "");
+        const change = sig !== derniere;
+        if (change || t - dernierRendu > 2e3) {
           derniere = sig;
           dernierRendu = t;
           threeRef.current.sale = false;
           camera2.rotation.set(pitch, yaw, 0, "YXZ");
           renderer.render(scene, camera2);
-          forceTick((x) => (x + 1) % 1e5);
+          if (change) forceTick((x) => (x + 1) % 1e5);
         }
         raf = requestAnimationFrame(loop);
       };
@@ -36432,9 +36445,7 @@
           try {
             const canvas = decodeHDRToCanvas(image, 1);
             const tex = new CanvasTexture(canvas);
-            mat.map = tex;
-            mat.color.set(16777215);
-            mat.needsUpdate = true;
+            poserTexture(mat, reduireTexture(tex));
           } catch (e) {
             console.error("HDR:", e);
             fail();
@@ -36443,10 +36454,11 @@
       } else {
         const loader = new TextureLoader();
         loader.load(image, (tex) => {
-          if (cancelled) return;
-          mat.map = tex;
-          mat.color.set(16777215);
-          mat.needsUpdate = true;
+          if (cancelled) {
+            tex.dispose();
+            return;
+          }
+          poserTexture(mat, reduireTexture(tex));
         });
       }
       return () => {
@@ -37121,7 +37133,9 @@
       langues: {
         codes: (Array.isArray(la.codes) ? la.codes : []).filter((l) => l && l.code).map((l) => ({ code: String(l.code).slice(0, 12), nom: String(l.nom || l.code).slice(0, 40) })),
         textes: la.textes && typeof la.textes === "object" ? la.textes : {}
-      }
+      },
+      cinematiques: normalizeCinematiques(s.cinematiques),
+      introCine: String(s.introCine || "")
     };
   }
   var petitTexte = { fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.45 };
@@ -38180,26 +38194,6 @@
       }
     ), frames.length > 1 && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 6, ...petitTexte } }, frames.length, " images \xB7", /* @__PURE__ */ import_react.default.createElement("input", { type: "number", min: "1", max: "30", value: layer.fps || 8, onChange: (e) => onSave({ fps: parseFloat(e.target.value) || 8 }), style: { ...input, width: 56, marginTop: 0 } }), " images/s", /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => onSave({ frames: void 0 }) }, "Retirer l'animation")));
   }
-  function pleinEcranTest(frame, on) {
-    try {
-      const d = frame && frame.contentDocument;
-      if (!d || !d.head) return;
-      let st = d.getElementById("e360-plein");
-      if (on && !st) {
-        st = d.createElement("style");
-        st.id = "e360-plein";
-        st.textContent = "html,body{display:block!important;background:#000!important}#phone-frame{width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;box-shadow:none!important;margin:0!important}";
-        d.head.appendChild(st);
-      } else if (!on && st) st.remove();
-      setTimeout(() => {
-        try {
-          frame.contentWindow.dispatchEvent(new Event("resize"));
-        } catch (e) {
-        }
-      }, 60);
-    } catch (e) {
-    }
-  }
   function liensCarte(scenes) {
     const out = [], vus = {};
     scenes.forEach((s) => parcourirJeu(s.hotspots || [], (o) => {
@@ -38367,6 +38361,785 @@
     };
     return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.35 }, "data-ordre-calques": true }, "Ordre des calques (le premier passe devant les autres)", l.map((ly, i) => i).reverse().map((i, rang) => /* @__PURE__ */ import_react.default.createElement("div", { key: l[i].id, style: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 }, "data-calque-rang": rang }, /* @__PURE__ */ import_react.default.createElement("img", { src: l[i].image, alt: "", style: { width: 34, height: 34, objectFit: "contain", background: C.ink2, borderRadius: 4 } }), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, color: C.text } }, rang === 0 ? "1er plan" : rang + 1 + "e plan", " \xB7 ", l[i].name || "Calque " + (i + 1)), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, disabled: i === l.length - 1, onClick: () => bouge(i, 1), title: "Vers l'avant", "data-calque-avant": i }, "\u25B2"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, disabled: i === 0, onClick: () => bouge(i, -1), title: "Vers l'arri\xE8re", "data-calque-arriere": i }, "\u25BC"))));
   }
+  function hudPoserGeo(x, fmt, g) {
+    const chaine = uiFormatChain(fmt);
+    let out = { ...x };
+    Object.keys(g).forEach((prop) => {
+      const f = chaine.filter((c) => x.formats && x.formats[c] && x.formats[c][prop] !== void 0)[0];
+      if (f) out = { ...out, formats: { ...out.formats, [f]: { ...out.formats[f], [prop]: g[prop] } } };
+      else out[prop] = g[prop];
+    });
+    return out;
+  }
+  function hudPropDelta(r, handle, dx, dy) {
+    if (handle.length !== 2 || !r.width || !r.height) return { dx, dy };
+    const sx = handle.indexOf("e") >= 0 ? 1 : -1, sy = handle.indexOf("s") >= 0 ? 1 : -1;
+    const s = (sx * dx / r.width + sy * dy / r.height) / 2;
+    return { dx: sx * s * r.width, dy: sy * s * r.height };
+  }
+  function hudResizeRect(r, handle, dx, dy) {
+    let { left, top, width, height } = r;
+    if (handle.indexOf("e") >= 0) width += dx;
+    if (handle.indexOf("w") >= 0) {
+      left += dx;
+      width -= dx;
+    }
+    if (handle.indexOf("s") >= 0) height += dy;
+    if (handle.indexOf("n") >= 0) {
+      top += dy;
+      height -= dy;
+    }
+    if (width < 6) {
+      if (handle.indexOf("w") >= 0) left -= 6 - width;
+      width = 6;
+    }
+    if (height < 6) {
+      if (handle.indexOf("n") >= 0) top -= 6 - height;
+      height = 6;
+    }
+    return { left, top, width, height };
+  }
+  function hudAimante(moved, others, frame, tol) {
+    const xs = [0, frame.w / 2, frame.w], ys = [0, frame.h / 2, frame.h];
+    others.forEach((r) => {
+      xs.push(r.left, r.left + r.width / 2, r.left + r.width);
+      ys.push(r.top, r.top + r.height / 2, r.top + r.height);
+    });
+    const mx = [moved.x, moved.x + moved.w / 2, moved.x + moved.w];
+    const my = [moved.y, moved.y + moved.h / 2, moved.y + moved.h];
+    let bx = null, by = null;
+    xs.forEach((v) => mx.forEach((m) => {
+      const d = v - m;
+      if (Math.abs(d) <= tol && (bx === null || Math.abs(d) < Math.abs(bx.d))) bx = { d, v };
+    }));
+    ys.forEach((v) => my.forEach((m) => {
+      const d = v - m;
+      if (Math.abs(d) <= tol && (by === null || Math.abs(d) < Math.abs(by.d))) by = { d, v };
+    }));
+    const guides = [];
+    if (bx) guides.push({ x: bx.v, y: null });
+    if (by) guides.push({ x: null, y: by.v });
+    return { dx: bx ? bx.d : 0, dy: by ? by.d : 0, guides };
+  }
+  function hudApercuMessage(host, msg) {
+    try {
+      const f = host && host.querySelector("iframe[data-hud-preview]");
+      if (f && f.contentWindow) f.contentWindow.postMessage(msg, "*");
+    } catch (e) {
+    }
+  }
+  var HUD_MODELES = [
+    { id: "vie", icon: "\u2665", label: "Barre de vie", elements: () => [
+      {
+        type: "stateIcon",
+        name: "C\u0153ur",
+        anchor: "top-left",
+        offset: { x: 16, y: 12, unit: "px" },
+        size: { w: 30, h: 30, unit: "px" },
+        props: { states: [{ id: "st_1", label: "", icon: { kind: "builtin", name: "heart" } }], whenNone: "first" },
+        style: { surface: { type: "none" } }
+      },
+      { type: "gauge", name: "Vie", anchor: "top-left", offset: { x: 54, y: 20, unit: "px" }, size: { w: 150, h: 14, unit: "px" }, style: { surface: { type: "none" } } }
+    ] },
+    { id: "boutons", icon: "\u2630", label: "Boutons du coin", elements: () => [
+      {
+        type: "button",
+        name: "Pause",
+        anchor: "top-right",
+        offset: { x: 12, y: 12, unit: "px" },
+        size: { w: 48, h: 48, unit: "px" },
+        props: { action: { type: "open_pause" }, icon: { kind: "builtin", name: "menu" } }
+      },
+      {
+        type: "button",
+        name: "Sac \xE0 dos",
+        anchor: "top-right",
+        offset: { x: 12, y: 68, unit: "px" },
+        size: { w: 48, h: 48, unit: "px" },
+        props: { action: { type: "open_inventory" }, icon: { kind: "builtin", name: "backpack" } }
+      },
+      {
+        type: "button",
+        name: "Carte",
+        anchor: "top-right",
+        offset: { x: 12, y: 124, unit: "px" },
+        size: { w: 48, h: 48, unit: "px" },
+        props: { action: { type: "open_map" }, icon: { kind: "builtin", name: "map" } }
+      }
+    ] },
+    { id: "rapide", icon: "\u25A6", label: "Objets en bas", elements: () => [
+      { type: "quickBar", name: "Objets \xE0 port\xE9e", anchor: "bottom-center", offset: { x: 0, y: 16, unit: "px" }, size: { w: 248, h: 60, unit: "px" } }
+    ] },
+    { id: "lieu", icon: "\u{1F9ED}", label: "Boussole et lieu", elements: () => [
+      { type: "compass", name: "Boussole", anchor: "top-center", offset: { x: 0, y: 14, unit: "px" }, size: { w: 180, h: 28, unit: "px" } },
+      { type: "sceneName", name: "Nom du lieu", anchor: "top-center", offset: { x: 0, y: 50, unit: "px" }, size: { w: 220, h: 34, unit: "px" } }
+    ] },
+    { id: "chrono", icon: "\u23F1", label: "Compte \xE0 rebours", elements: () => [
+      { type: "timer", name: "Temps restant", anchor: "top-right", offset: { x: 16, y: 16, unit: "px" }, size: { w: 96, h: 36, unit: "px" } }
+    ] },
+    { id: "minicarte", icon: "\u{1F5FA}", label: "Mini-carte", elements: () => [
+      { type: "minimap", name: "Mini-carte", anchor: "bottom-right", offset: { x: 16, y: 16, unit: "px" }, size: { w: 140, h: 140, unit: "px" } }
+    ] },
+    { id: "viseur", icon: "\u271B", label: "R\xE9ticule", elements: () => [
+      { type: "crosshair", name: "R\xE9ticule", anchor: "middle-center", offset: { x: 0, y: 0, unit: "px" }, size: { w: 28, h: 28, unit: "px" }, style: { surface: { type: "none" } } }
+    ] }
+  ];
+  function preparerTest(html) {
+    if (!html) return "";
+    let h = html.replace(/env\(safe-area-inset-(top|right|bottom|left)\s*(,\s*0px\s*)?\)/g, (m, c) => "var(--e360-sa-" + c.charAt(0) + ",0px)");
+    const st = '<style id="e360-format">html,body{display:block!important;background:#000!important;margin:0!important;padding:0!important;overflow:hidden}#phone-frame{width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;border-radius:0!important;box-shadow:none!important;margin:0!important}</style>';
+    const i = h.indexOf("</head>");
+    return i >= 0 ? h.slice(0, i) + st + h.slice(i) : st + h;
+  }
+  var FORMAT_TEST_CLE = "e360-format-test";
+  function lireFormatTest() {
+    try {
+      const v = JSON.parse(localStorage.getItem(FORMAT_TEST_CLE));
+      if (v && v.id) return v;
+    } catch (e) {
+    }
+    return { id: "iphone", paysage: false, reel: false };
+  }
+  var ECHELLE_REELLE = 0.865;
+  function TestJeu({ html, onClose, onEffacer, scenes, items, variables }) {
+    const [fmt, setFmt] = (0, import_react.useState)(lireFormatTest);
+    const ecrireFmt = (p) => {
+      const n = { ...fmt, ...p };
+      setFmt(n);
+      try {
+        localStorage.setItem(FORMAT_TEST_CLE, JSON.stringify(n));
+      } catch (e) {
+      }
+    };
+    const [debug, setDebug] = (0, import_react.useState)(false);
+    const frameRef = (0, import_react.useRef)(null);
+    const scenRef = (0, import_react.useRef)(null);
+    const [place, setPlace] = (0, import_react.useState)({ w: 900, h: 640 });
+    const doc = (0, import_react.useMemo)(() => preparerTest(html), [html]);
+    const plein = fmt.id === "plein";
+    const app = APPAREILS.filter((a) => a.id === fmt.id)[0] || APPAREILS[0];
+    const pivote = !plein && !!fmt.paysage && app.type !== "desktop";
+    (0, import_react.useEffect)(() => {
+      const el = scenRef.current;
+      if (!el) return;
+      const lit = () => setPlace({ w: el.clientWidth || 900, h: el.clientHeight || 640 });
+      lit();
+      if (typeof ResizeObserver === "undefined") return;
+      const ro = new ResizeObserver(lit);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, [debug, plein]);
+    const w = plein ? place.w : pivote ? app.h : app.w;
+    const h = plein ? place.h : pivote ? app.w : app.h;
+    const sa = plein ? { t: 0, r: 0, b: 0, l: 0 } : pivote ? { t: 0, r: 0, b: 0, l: 0, ...app.paysage } : { t: app.safe.t, b: app.safe.b, l: 0, r: 0 };
+    const bez = plein ? { t: 0, r: 0, b: 0, l: 0 } : app.bouton ? pivote ? { t: 14, b: 14, l: 62, r: 62 } : { t: 62, b: 62, l: 14, r: 14 } : app.type === "desktop" ? { t: 12, b: 12, l: 12, r: 12 } : { t: 11, b: 11, l: 11, r: 11 };
+    const W = w + bez.l + bez.r, H = h + bez.t + bez.b;
+    const ajuste = Math.min((place.w - 32) / W, (place.h - 32) / H, 1);
+    const k = plein ? 1 : fmt.reel && app.type !== "desktop" ? ECHELLE_REELLE : ajuste;
+    const poserFormat = () => {
+      try {
+        const f = frameRef.current;
+        const r = f.contentDocument.documentElement;
+        [["t", sa.t], ["r", sa.r], ["b", sa.b], ["l", sa.l]].forEach(([c, v]) => r.style.setProperty("--e360-sa-" + c, (v || 0) + "px"));
+        try {
+          f.contentWindow.eval("try{ dlgInsets = null; }catch(e){}");
+        } catch (e) {
+        }
+        f.contentWindow.dispatchEvent(new Event("resize"));
+      } catch (e) {
+      }
+    };
+    (0, import_react.useEffect)(() => {
+      poserFormat();
+    }, [fmt.id, fmt.paysage, w, h]);
+    const rayon = plein ? 0 : app.r;
+    const ecran = /* @__PURE__ */ import_react.default.createElement(
+      "iframe",
+      {
+        title: "Test du jeu",
+        srcDoc: doc,
+        ref: frameRef,
+        onLoad: poserFormat,
+        allow: "fullscreen",
+        sandbox: "allow-scripts allow-same-origin allow-popups allow-forms",
+        "data-test-iframe": true,
+        style: { width: plein ? "100vw" : w, height: plein ? "100vh" : h, border: "none", display: "block", background: "#000" }
+      }
+    );
+    const appareil = plein ? /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 96, background: "#000" }, "data-test-plein-ecran": true }, ecran, /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => ecrireFmt({ id: fmt.avant || "iphone" }),
+        "data-test-plein-sortie": true,
+        style: { ...smallBtn, position: "fixed", top: "calc(10px + env(safe-area-inset-top, 0px))", left: 10, zIndex: 97, background: "rgba(16,19,27,.85)" }
+      },
+      "\u2715 Quitter le plein \xE9cran"
+    )) : /* @__PURE__ */ import_react.default.createElement("div", { style: { width: W * k, height: H * k, position: "relative", flexShrink: 0, margin: "auto" }, "data-test-appareil": app.id }, /* @__PURE__ */ import_react.default.createElement("div", { style: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      width: W,
+      height: H,
+      transform: `scale(${k})`,
+      transformOrigin: "0 0",
+      background: app.type === "desktop" ? "#1b1e26" : "#0b0c10",
+      borderRadius: rayon ? rayon + Math.max(bez.l, bez.t) : 10,
+      boxShadow: "0 0 0 2px #3a3f4d, 0 30px 80px rgba(0,0,0,.65)"
+    } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", left: bez.l, top: bez.t, width: w, height: h, borderRadius: rayon, overflow: "hidden", background: "#000" } }, ecran, app.ile && /* @__PURE__ */ import_react.default.createElement("div", { style: pivote ? { position: "absolute", left: 11, top: h / 2 - 63, width: 37, height: 126, borderRadius: 20, background: "#000", pointerEvents: "none" } : { position: "absolute", top: 11, left: w / 2 - 63, width: 126, height: 37, borderRadius: 20, background: "#000", pointerEvents: "none" } }), app.trou && /* @__PURE__ */ import_react.default.createElement("div", { style: pivote ? { position: "absolute", left: 10, top: h / 2 - 6, width: 12, height: 12, borderRadius: 6, background: "#000", pointerEvents: "none" } : { position: "absolute", top: 10, left: w / 2 - 6, width: 12, height: 12, borderRadius: 6, background: "#000", pointerEvents: "none" } }), (app.ile || app.trou) && /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", bottom: 8, left: w / 2 - (pivote ? 100 : 67), width: pivote ? 200 : 134, height: 5, borderRadius: 3, background: "rgba(255,255,255,.55)", pointerEvents: "none" } })), app.bouton && /* @__PURE__ */ import_react.default.createElement("div", { style: pivote ? { position: "absolute", right: 6, top: H / 2 - 25, width: 50, height: 50, borderRadius: 25, border: "2px solid #3a3f4d", boxSizing: "border-box" } : { position: "absolute", bottom: 6, left: W / 2 - 25, width: 50, height: 50, borderRadius: 25, border: "2px solid #3a3f4d", boxSizing: "border-box" } })));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 90, background: "#07090d", display: "flex", flexDirection: "column" }, "data-test-jeu": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", padding: "calc(8px + env(safe-area-inset-top, 0px)) 12px 8px", borderBottom: `1px solid ${C.line}`, background: C.panel } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 12, color: C.textDim, marginRight: 2 } }, "Tester sur"), APPAREILS.map((a) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: a.id,
+        onClick: () => ecrireFmt({ id: a.id }),
+        "data-test-format": a.id,
+        style: { ...pillBtn(fmt.id === a.id), flex: "none", fontSize: 12, padding: "6px 10px" }
+      },
+      a.type === "phone" ? "\u{1F4F1}" : a.type === "tablet" ? "\u25AD" : "\u{1F5A5}",
+      " ",
+      a.court
+    )), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => ecrireFmt({ id: "plein", avant: fmt.id === "plein" ? fmt.avant : fmt.id }),
+        "data-test-format": "plein",
+        style: { ...pillBtn(plein), flex: "none", fontSize: 12, padding: "6px 10px" }
+      },
+      "\u26F6 Plein \xE9cran"
+    ), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 1, alignSelf: "stretch", background: C.line, margin: "0 4px" } }), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => ecrireFmt({ paysage: !fmt.paysage }),
+        disabled: plein || app.type === "desktop",
+        "data-test-pivoter": true,
+        style: { ...smallBtn, opacity: plein || app.type === "desktop" ? 0.4 : 1 }
+      },
+      fmt.paysage ? "\u25AD Paysage" : "\u25AF Portrait"
+    ), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => ecrireFmt({ reel: !fmt.reel }),
+        disabled: plein || app.type === "desktop",
+        "data-test-reel": true,
+        style: { ...pillBtn(!!fmt.reel), flex: "none", fontSize: 12, padding: "6px 10px", opacity: plein || app.type === "desktop" ? 0.4 : 1 },
+        title: "Le t\xE9l\xE9phone \xE0 sa vraie taille sur l'\xE9cran de l'iPad"
+      },
+      "\u{1F4CF} Taille r\xE9elle"
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11, color: C.textDim }, "data-test-taille": true }, plein ? "Tout l'\xE9cran" : `${w} \xD7 ${h} points \xB7 ${Math.round(k * 100)} %`), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setDebug(!debug), style: { ...pillBtn(debug), flex: "none", fontSize: 12, padding: "6px 10px" }, "data-test-debug": true }, "\u{1F41E} D\xE9bogage"), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        onClick: () => {
+          onEffacer();
+          setTimeout(() => {
+            try {
+              frameRef.current.contentWindow.location.reload();
+            } catch (e) {
+            }
+          }, 50);
+        },
+        style: smallBtn,
+        title: "Supprime la sauvegarde de test de ce jeu et relance le test"
+      },
+      "\u21BA Effacer la sauvegarde"
+    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onClose, style: primaryBtn, "data-test-fermer": true }, "Fermer le test")), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", minHeight: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { ref: scenRef, style: { flex: 1, minWidth: 0, overflow: "auto", display: "flex", padding: 16, boxSizing: "border-box" } }, appareil), debug && /* @__PURE__ */ import_react.default.createElement(DebugTest, { frameRef, scenes, items, variables })));
+  }
+  function DebugTest({ frameRef, scenes, items, variables }) {
+    const [etat, setEtat] = (0, import_react.useState)(null);
+    const [brouillon, setBrouillon] = (0, import_react.useState)({});
+    const [aller, setAller] = (0, import_react.useState)("");
+    const lireEtat = () => {
+      try {
+        const w = frameRef.current.contentWindow;
+        const s = w.eval("JSON.stringify({ vars: vars, inventory: inventory, scene: current ? current.id : '', ecran: typeof playerScreen === 'string' ? playerScreen : '' })");
+        setEtat(JSON.parse(s));
+      } catch (e) {
+        setEtat({ erreur: true });
+      }
+    };
+    (0, import_react.useEffect)(() => {
+      lireEtat();
+      const t = setInterval(lireEtat, 1200);
+      return () => clearInterval(t);
+    }, []);
+    const exec = (code) => {
+      try {
+        frameRef.current.contentWindow.eval(code + "; try{ renderHotspots(); }catch(e){} try{ hudSync(); }catch(e){} try{ saveGame(); }catch(e){}");
+      } catch (e) {
+      }
+      setTimeout(lireEtat, 60);
+    };
+    const valeur = (t) => /^-?[0-9]+(\.[0-9]+)?$/.test(t) ? parseFloat(t) : t === "true" || t === "oui" ? true : t === "false" || t === "non" ? false : t;
+    const poserVar = (k, v) => exec("vars[" + JSON.stringify(k) + "] = " + JSON.stringify(v));
+    const titre = (t) => /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, letterSpacing: ".08em", textTransform: "uppercase", color: C.textDim, margin: "14px 0 6px" } }, t);
+    const ligne = { display: "flex", alignItems: "center", gap: 6, marginBottom: 4, fontFamily: sans, fontSize: 12, color: C.text };
+    if (!etat) return null;
+    const vs = etat && etat.vars || {};
+    const inv = etat && etat.inventory || {};
+    const autres = Object.keys(vs).filter((k) => k.indexOf("__") !== 0 && !variables.some((v) => v.key === k));
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 300, flexShrink: 0, borderLeft: `1px solid ${C.line}`, background: C.panel, padding: 12, overflowY: "auto" }, "data-debug-test": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontWeight: 600, color: C.text } }, "\u{1F41E} D\xE9bogage"), etat.erreur ? /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Le jeu n'est pas encore lanc\xE9.") : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "En direct dans la partie de test. Rien n'est chang\xE9 dans ton jeu."), titre("Sc\xE8ne"), /* @__PURE__ */ import_react.default.createElement("div", { style: ligne }, /* @__PURE__ */ import_react.default.createElement("select", { value: aller || etat.scene, onChange: (e) => setAller(e.target.value), style: { ...select, marginTop: 0, flex: 1 }, "data-debug-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id, s.id === etat.scene ? " (ici)" : ""))), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-debug-aller": true, onClick: () => {
+      const id = aller || etat.scene;
+      exec("loadScene(" + JSON.stringify(id) + ")");
+      setAller("");
+    } }, "Aller")), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        style: { ...smallBtn, width: "100%", justifyContent: "center" },
+        "data-debug-tout-voir": true,
+        onClick: () => exec("GAME.scenes.forEach(function(s){ discovered.add(s.id); })")
+      },
+      "Tous les lieux d\xE9couverts (carte)"
+    ), titre("Variables"), !variables.length && !autres.length && /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Aucune variable."), variables.concat(autres.map((k) => ({ key: k, label: k }))).map((v) => {
+      const cur = vs[v.key];
+      if (typeof cur === "boolean" || cur === void 0 && v.type === "boolean") {
+        return /* @__PURE__ */ import_react.default.createElement("label", { key: v.key, style: ligne }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!cur, onChange: (e) => poserVar(v.key, e.target.checked), "data-debug-var": v.key }), /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, v.label || v.key));
+      }
+      const aff = brouillon[v.key] !== void 0 ? brouillon[v.key] : cur === void 0 ? "" : String(cur);
+      const valider = () => {
+        if (brouillon[v.key] === void 0) return;
+        poserVar(v.key, valeur(brouillon[v.key]));
+        setBrouillon((b) => {
+          const n = { ...b };
+          delete n[v.key];
+          return n;
+        });
+      };
+      return /* @__PURE__ */ import_react.default.createElement("div", { key: v.key, style: ligne }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, title: v.key }, v.label || v.key), /* @__PURE__ */ import_react.default.createElement(
+        "input",
+        {
+          value: aff,
+          "data-debug-var": v.key,
+          onChange: (e) => setBrouillon({ ...brouillon, [v.key]: e.target.value }),
+          onBlur: valider,
+          onKeyDown: (e) => {
+            if (e.key === "Enter") valider();
+          },
+          style: { ...input, marginTop: 0, width: 90, padding: "5px 7px", fontSize: 12 }
+        }
+      ));
+    }), titre("Sac \xE0 dos"), !items.length && /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Ce jeu n'a pas d'objets."), items.map((it) => {
+      const n = parseFloat(inv[it.id]) || 0;
+      const cle = JSON.stringify(it.id);
+      return /* @__PURE__ */ import_react.default.createElement("div", { key: it.id, style: ligne }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: n ? 1 : 0.55 } }, it.name || it.id), /* @__PURE__ */ import_react.default.createElement(
+        "button",
+        {
+          style: { ...smallBtn, padding: "4px 9px" },
+          disabled: !n,
+          "data-debug-moins": it.id,
+          onClick: () => exec("if((inventory[" + cle + "]||0) <= 1) delete inventory[" + cle + "]; else inventory[" + cle + "] -= 1")
+        },
+        "\u2212"
+      ), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 20, textAlign: "center" } }, n), /* @__PURE__ */ import_react.default.createElement(
+        "button",
+        {
+          style: { ...smallBtn, padding: "4px 9px" },
+          "data-debug-plus": it.id,
+          onClick: () => exec("inventory[" + cle + "] = (inventory[" + cle + "]||0) + 1")
+        },
+        "+"
+      ));
+    })));
+  }
+  function RepliqueVariantes({ node, onChange }) {
+    const v = node.variantes || [];
+    const [ouvert, setOuvert] = (0, import_react.useState)(v.length > 0 || !!node.dejaDit);
+    if (!ouvert) {
+      return /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 6 }, onClick: () => setOuvert(true), "data-variantes-ouvrir": true }, "\u{1F3B2} Varier cette r\xE9plique");
+    }
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 8, border: `1px solid ${C.line}`, borderRadius: 6, padding: 8 }, "data-variantes": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text, fontWeight: 600 } }, "Autres fa\xE7ons de le dire"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "\xC0 chaque fois que l'on repasse par ici, le personnage dit une autre version : il ne se r\xE9p\xE8te pas."), v.map((t, i) => /* @__PURE__ */ import_react.default.createElement("div", { key: i, style: { display: "flex", gap: 4, marginTop: 5 } }, /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: t,
+        rows: 2,
+        "data-variante": i,
+        onChange: (e) => onChange({ variantes: v.map((x, j) => j === i ? e.target.value : x) }),
+        placeholder: "Encore toi ? Bon\u2026",
+        style: { ...input, marginTop: 0, flex: 1, resize: "vertical", fontFamily: sans }
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: iconBtn, title: "Retirer", onClick: () => onChange({ variantes: v.filter((_, j) => j !== i) }) }, /* @__PURE__ */ import_react.default.createElement(X, { size: 12, color: C.danger })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => onChange({ variantes: v.concat([""]) }), "data-variante-ajout": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Une autre version"), v.length > 0 && /* @__PURE__ */ import_react.default.createElement("select", { value: node.varier || "ordre", onChange: (e) => onChange({ varier: e.target.value }), style: { ...select, marginTop: 0, width: "auto", flex: 1 }, "data-varier": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "ordre" }, "Chacune \xE0 son tour"), /* @__PURE__ */ import_react.default.createElement("option", { value: "hasard" }, "Au hasard"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "Quand on revient alors qu'il l'a d\xE9j\xE0 dit (facultatif) :"), /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: node.dejaDit || "",
+        rows: 2,
+        onChange: (e) => onChange({ dejaDit: e.target.value }),
+        "data-deja-dit": true,
+        placeholder: "Je te l'ai d\xE9j\xE0 dit : la cl\xE9 est sous le pot.",
+        style: { ...input, marginTop: 4, resize: "vertical", fontFamily: sans }
+      }
+    ));
+  }
+  var CINES_EDITEUR = [];
+  function ActionLot12({ a, update }) {
+    if (a.type === "carnet") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("input", { value: a.titre || "", onChange: (e) => update({ titre: e.target.value }), placeholder: "Lettre du gardien", style: { ...input, marginTop: 0 }, "data-carnet-titre": true }), /* @__PURE__ */ import_react.default.createElement(
+        "textarea",
+        {
+          value: a.texte || "",
+          onChange: (e) => update({ texte: e.target.value }),
+          placeholder: "Le contenu du document\u2026",
+          style: { ...input, minHeight: 60, resize: "vertical", marginTop: 6 },
+          "data-carnet-texte": true
+        }
+      ), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: a.image, onChange: (image) => update({ image }), libelle: "Image du document (facultatif)" }), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Le joueur le relit quand il veut, dans son journal (rubrique Documents)."));
+    }
+    if (a.type === "cinematique") {
+      return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: a.cineId || "", onChange: (e) => update({ cineId: e.target.value }), style: { ...select, marginTop: 0 }, "data-cine-choix": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 cin\xE9matique \u2014"), CINES_EDITEUR.map((c) => /* @__PURE__ */ import_react.default.createElement("option", { key: c.id, value: c.id }, c.nom))), !CINES_EDITEUR.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Cr\xE9e d'abord une cin\xE9matique : \xAB \u{1F3AC} Cin\xE9matiques \xBB, dans la colonne de gauche."), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: a.attendre !== false, onChange: (v) => update({ attendre: v }) }, "Les actions suivantes attendent la fin de la cin\xE9matique"));
+    }
+    return null;
+  }
+  function normalizeCinematiques(l) {
+    const num = (v, d, lo, hi) => {
+      const n = parseFloat(v);
+      return isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d;
+    };
+    return (Array.isArray(l) ? l : []).filter((c) => c && c.id).map((c) => ({
+      id: String(c.id),
+      nom: String(c.nom || "Cin\xE9matique").slice(0, 60),
+      sceneId: String(c.sceneId || ""),
+      duree: num(c.duree, 6, 0.5, 120),
+      passer: c.passer !== false,
+      bandes: c.bandes !== false,
+      interface: !!c.interface,
+      cles: (Array.isArray(c.cles) ? c.cles : []).filter(Boolean).map((x) => ({ t: num(x.t, 0, 0, 120), yaw: num(x.yaw, 0, -1e3, 1e3), pitch: num(x.pitch, 0, -1.6, 1.6), fov: num(x.fov, 75, 20, 110) })).sort((p, q) => p.t - q.t),
+      textes: (Array.isArray(c.textes) ? c.textes : []).filter(Boolean).map((x) => ({
+        t: num(x.t, 0, 0, 120),
+        d: num(x.d, 3, 0.3, 60),
+        texte: String(x.texte || "").slice(0, 400),
+        place: ["haut", "centre", "bas"].indexOf(x.place) >= 0 ? x.place : "bas"
+      })),
+      sons: (Array.isArray(c.sons) ? c.sons : []).filter(Boolean).map((x) => ({ t: num(x.t, 0, 0, 120), soundId: String(x.soundId || ""), volume: num(x.volume, 1, 0, 1) })),
+      fondus: (Array.isArray(c.fondus) ? c.fondus : []).filter(Boolean).map((x) => ({
+        t: num(x.t, 0, 0, 120),
+        d: num(x.d, 1, 0.1, 20),
+        couleur: x.couleur === "blanc" ? "blanc" : "noir",
+        sens: x.sens === "ouvre" ? "ouvre" : "ferme"
+      }))
+    }));
+  }
+  var CINE_PISTES = [
+    ["cles", "\u{1F3A5} Cam\xE9ra"],
+    ["textes", "\u{1F4AC} Textes"],
+    ["sons", "\u{1F50A} Sons"],
+    ["fondus", "\u25D0 Fondus"]
+  ];
+  function CineFrise({ c, tete, setTete, choix, setChoix, onMaj }) {
+    const [glisse, setGlisse] = (0, import_react.useState)(null);
+    const tempsDe = (ev, el) => {
+      const r = el.getBoundingClientRect();
+      return Math.round(Math.max(0, Math.min(c.duree, (ev.clientX - r.left) / Math.max(1, r.width) * c.duree)) * 10) / 10;
+    };
+    const pct = (t) => Math.max(0, Math.min(c.duree, t)) / c.duree * 100 + "%";
+    const graduations = [];
+    const pas = c.duree > 40 ? 10 : c.duree > 16 ? 5 : c.duree > 6 ? 2 : 1;
+    for (let s = 0; s <= c.duree + 1e-3; s += pas) graduations.push(s);
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 10, userSelect: "none" }, "data-cine-frise": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 92, flexShrink: 0 } }), /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        style: { flex: 1, position: "relative", height: 22, cursor: "pointer", touchAction: "none", borderBottom: `1px solid ${C.line}` },
+        "data-cine-regle": true,
+        onPointerDown: (e) => {
+          const el = e.currentTarget;
+          setTete(tempsDe(e, el));
+          try {
+            el.setPointerCapture(e.pointerId);
+          } catch (x) {
+          }
+        },
+        onPointerMove: (e) => {
+          if (e.buttons || e.pointerType === "touch") setTete(tempsDe(e, e.currentTarget));
+        }
+      },
+      graduations.map((s) => /* @__PURE__ */ import_react.default.createElement("span", { key: s, style: { position: "absolute", left: pct(s), top: 2, transform: "translateX(-50%)", fontFamily: sans, fontSize: 10, color: C.textDim } }, s, "s"))
+    )), CINE_PISTES.map(([piste, nom]) => /* @__PURE__ */ import_react.default.createElement("div", { key: piste, style: { display: "flex", alignItems: "center", marginTop: 4 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 92, flexShrink: 0, fontFamily: sans, fontSize: 11.5, color: C.text } }, nom), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, position: "relative", height: 34, background: C.ink2, borderRadius: 6 }, "data-cine-piste": piste }, /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", left: pct(tete), top: -4, bottom: -4, width: 2, background: C.cyan, pointerEvents: "none", zIndex: 2 } }), (c[piste] || []).map((x, i) => {
+      const t = glisse && glisse.piste === piste && glisse.i === i ? glisse.t : x.t;
+      const large = piste === "textes" || piste === "fondus";
+      const on = choix && choix.piste === piste && choix.i === i;
+      return /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          key: i,
+          "data-cine-repere": piste + ":" + i,
+          onPointerDown: (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            setChoix({ piste, i });
+            const pisteEl = e.currentTarget.parentElement;
+            try {
+              e.currentTarget.setPointerCapture(e.pointerId);
+            } catch (er) {
+            }
+            const x0 = e.clientX, t0 = x.t;
+            const r = pisteEl.getBoundingClientRect();
+            const d = { piste, i, t: t0, pid: e.pointerId };
+            setGlisse(d);
+            const move = (ev) => {
+              if (ev.pointerId !== d.pid) return;
+              d.t = Math.round(Math.max(0, Math.min(c.duree, t0 + (ev.clientX - x0) / Math.max(1, r.width) * c.duree)) * 10) / 10;
+              setGlisse({ ...d });
+            };
+            const fin = (ev) => {
+              if (ev.pointerId !== d.pid) return;
+              window.removeEventListener("pointermove", move);
+              window.removeEventListener("pointerup", fin);
+              window.removeEventListener("pointercancel", fin);
+              setGlisse(null);
+              if (d.t !== t0) onMaj({ [piste]: c[piste].map((y, j) => j === i ? { ...y, t: d.t } : y) });
+            };
+            window.addEventListener("pointermove", move);
+            window.addEventListener("pointerup", fin);
+            window.addEventListener("pointercancel", fin);
+          },
+          style: {
+            position: "absolute",
+            top: 4,
+            bottom: 4,
+            left: pct(t),
+            touchAction: "none",
+            cursor: "grab",
+            zIndex: on ? 3 : 1,
+            width: large ? `max(14px, ${Math.min(x.d || 1, c.duree - t) / c.duree * 100}%)` : 14,
+            marginLeft: large ? 0 : -7,
+            borderRadius: large ? 5 : 7,
+            boxSizing: "border-box",
+            background: on ? C.amber : piste === "cles" ? "#5FD4D4" : piste === "textes" ? "#E8A33D99" : piste === "sons" ? "#9B8CFF" : x.couleur === "blanc" ? "#ddd" : "#555",
+            border: on ? "2px solid #fff" : "1px solid rgba(0,0,0,.4)"
+          }
+        }
+      );
+    })))));
+  }
+  function CinematiquesJeu({ meta, setMeta, scenes, onTester, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const liste = o.cinematiques;
+    const ecrire = (patch) => setMeta((m) => ({ ...m, options: { ...normalizeOptionsJeu(m.options), ...patch } }));
+    const [selId, setSelId] = (0, import_react.useState)(liste[0] ? liste[0].id : "");
+    const [tete, setTete] = (0, import_react.useState)(0);
+    const [choix, setChoix] = (0, import_react.useState)(null);
+    const audioLib = useAudioLib();
+    const c = liste.filter((x2) => x2.id === selId)[0] || null;
+    const majC = (p) => ecrire({ cinematiques: liste.map((x2) => x2.id === c.id ? { ...x2, ...p } : x2) });
+    const nouvelle = () => {
+      const id = "cine_" + Math.random().toString(36).slice(2, 8);
+      ecrire({ cinematiques: liste.concat([{
+        id,
+        nom: "Cin\xE9matique " + (liste.length + 1),
+        sceneId: "",
+        duree: 6,
+        passer: true,
+        bandes: true,
+        interface: false,
+        cles: [],
+        textes: [],
+        sons: [],
+        fondus: [{ t: 0, d: 1, couleur: "noir", sens: "ouvre" }]
+      }]) });
+      setSelId(id);
+      setChoix(null);
+      setTete(0);
+    };
+    const scene = c ? scenes.filter((s) => s.id === c.sceneId)[0] || scenes[0] : null;
+    const ajouter = (piste) => {
+      const l = (c[piste] || []).slice();
+      const t = Math.min(tete, c.duree);
+      const dernier = l.length ? l[l.length - 1] : null;
+      if (piste === "cles") l.push({ t, yaw: dernier ? dernier.yaw : 0, pitch: dernier ? dernier.pitch : 0, fov: dernier ? dernier.fov : 75 });
+      if (piste === "textes") l.push({ t, d: 2.5, texte: "", place: "bas" });
+      if (piste === "sons") l.push({ t, soundId: "", volume: 1 });
+      if (piste === "fondus") l.push({ t, d: 1, couleur: "noir", sens: dernier && dernier.sens === "ferme" ? "ouvre" : "ferme" });
+      majC({ [piste]: l });
+      setChoix({ piste, i: l.length - 1 });
+    };
+    const x = c && choix && (c[choix.piste] || [])[choix.i];
+    const majX = (p) => majC({ [choix.piste]: c[choix.piste].map((y, j) => j === choix.i ? { ...y, ...p } : y) });
+    const nb = (label, v, onV, opts) => /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 12, color: C.text, marginTop: 6 } }, label, /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "number",
+        step: opts && opts.pas || 0.1,
+        min: opts && opts.min || 0,
+        max: opts && opts.max,
+        value: v,
+        onChange: (e) => onV(parseFloat(e.target.value) || 0),
+        style: { ...input, width: 74, marginTop: 0 }
+      }
+    ));
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "\u{1F3AC} Cin\xE9matiques", onClose, largeur: 680, data: "cinematiques" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Une petite sc\xE8ne jou\xE9e toute seule : la cam\xE9ra bouge d'un point de vue \xE0 l'autre, des textes apparaissent, des sons partent, l'\xE9cran s'ouvre ou se ferme au noir. On la lance avec l'action \xAB Jouer une cin\xE9matique \xBB, ou au d\xE9but d'une nouvelle partie."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 } }, liste.map((x2) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: x2.id,
+        onClick: () => {
+          setSelId(x2.id);
+          setChoix(null);
+          setTete(0);
+        },
+        "data-cine": x2.id,
+        style: { ...pillBtn(x2.id === selId), flex: "none", fontSize: 12, padding: "6px 10px" }
+      },
+      x2.nom,
+      o.introCine === x2.id ? " \xB7 intro" : ""
+    )), /* @__PURE__ */ import_react.default.createElement("button", { onClick: nouvelle, style: smallBtn, "data-cine-nouvelle": true }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Nouvelle cin\xE9matique")), !c ? /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 12 } }, "Aucune cin\xE9matique pour l'instant.") : /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap", alignItems: "flex-end" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 2, minWidth: 160 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Nom"), /* @__PURE__ */ import_react.default.createElement("input", { value: c.nom, onChange: (e) => majC({ nom: e.target.value }), style: { ...input, marginTop: 0 }, "data-cine-nom": true })), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 2, minWidth: 160 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "O\xF9 elle se joue"), /* @__PURE__ */ import_react.default.createElement("select", { value: c.sceneId, onChange: (e) => majC({ sceneId: e.target.value }), style: { ...select, marginTop: 0 }, "data-cine-scene": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "La sc\xE8ne o\xF9 l'on se trouve"), scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name || s.id)))), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 90 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Dur\xE9e (s)"), /* @__PURE__ */ import_react.default.createElement(
+      "input",
+      {
+        type: "number",
+        min: "0.5",
+        max: "120",
+        step: "0.5",
+        value: c.duree,
+        onChange: (e) => majC({ duree: Math.max(0.5, Math.min(120, parseFloat(e.target.value) || 1)) }),
+        style: { ...input, marginTop: 0 },
+        "data-cine-duree": true
+      }
+    ))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.passer, onChange: (v) => majC({ passer: v }) }, "Le joueur peut la passer"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.bandes, onChange: (v) => majC({ bandes: v }) }, "Bandes noires de cin\xE9ma"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.interface, onChange: (v) => majC({ interface: v }) }, "Garder l'interface visible"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: o.introCine === c.id, onChange: (v) => ecrire({ introCine: v ? c.id : "" }), data: "cine-intro" }, "Jou\xE9e au d\xE9but d'une nouvelle partie")), /* @__PURE__ */ import_react.default.createElement(CineFrise, { c, tete, setTete, choix, setChoix, onMaj: majC }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, marginRight: 4 } }, "Ajouter \xE0 ", tete.toFixed(1), " s :"), CINE_PISTES.map(([piste, nom]) => /* @__PURE__ */ import_react.default.createElement("button", { key: piste, style: smallBtn, onClick: () => ajouter(piste), "data-cine-ajout": piste }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " ", nom))), x && /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 12, background: C.ink2, borderRadius: 8, padding: 10 }, "data-cine-reglage": choix.piste }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 12.5, fontWeight: 600, color: C.text, flex: 1 } }, (CINE_PISTES.filter((p) => p[0] === choix.piste)[0] || [])[1]), nb("\xC0", x.t, (v) => majX({ t: Math.max(0, Math.min(c.duree, v)) }), { max: c.duree }), (choix.piste === "textes" || choix.piste === "fondus") && nb("pendant", x.d, (v) => majX({ d: Math.max(0.1, v) })), /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        type: "button",
+        style: iconBtn,
+        title: "Supprimer",
+        "data-cine-suppr": true,
+        onClick: () => {
+          majC({ [choix.piste]: c[choix.piste].filter((_, j) => j !== choix.i) });
+          setChoix(null);
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement(X, { size: 14, color: C.danger })
+    )), choix.piste === "cles" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(
+      RegardChoix,
+      {
+        scene,
+        value: { yaw: x.yaw, pitch: x.pitch },
+        vide: "Choisis o\xF9 regarde la cam\xE9ra",
+        onChange: (v) => v && majX({ yaw: v.yaw, pitch: v.pitch })
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontFamily: sans, fontSize: 12, color: C.text, marginTop: 8 } }, "Zoom (champ de vision ", Math.round(x.fov), "\xB0)", /* @__PURE__ */ import_react.default.createElement("input", { type: "range", min: "20", max: "110", value: x.fov, onChange: (e) => majX({ fov: parseFloat(e.target.value) }), style: { flex: 1 }, "data-cine-fov": true })), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Entre deux rep\xE8res, la cam\xE9ra glisse en douceur. Avant le premier, elle part de l\xE0 o\xF9 le joueur regarde.")), choix.piste === "textes" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(
+      "textarea",
+      {
+        value: x.texte,
+        onChange: (e) => majX({ texte: e.target.value }),
+        placeholder: "Trois jours plus tard\u2026",
+        rows: 2,
+        style: { ...input, marginTop: 8, resize: "vertical", fontFamily: sans },
+        "data-cine-texte": true
+      }
+    ), /* @__PURE__ */ import_react.default.createElement("select", { value: x.place, onChange: (e) => majX({ place: e.target.value }), style: { ...select, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "haut" }, "En haut"), /* @__PURE__ */ import_react.default.createElement("option", { value: "centre" }, "Au centre"), /* @__PURE__ */ import_react.default.createElement("option", { value: "bas" }, "En bas"))), choix.piste === "sons" && ((audioLib.library || []).length === 0 ? /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 6 } }, "Aucun son import\xE9. Ajoutes-en dans \xAB G\xE9rer les sons \xBB.") : /* @__PURE__ */ import_react.default.createElement(
+      "select",
+      {
+        value: audioIsRef(x.soundId) ? String(x.soundId).slice(AUDIO_PREFIX.length) : "",
+        "data-cine-son": true,
+        onChange: (e) => majX({ soundId: e.target.value ? AUDIO_PREFIX + e.target.value : "" }),
+        style: { ...select, marginTop: 6 }
+      },
+      /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 son \u2014"),
+      (audioLib.library || []).map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name, " (", AUDIO_BUS_LABELS[s.bus], ")"))
+    )), choix.piste === "fondus" && /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement("select", { value: x.sens, onChange: (e) => majX({ sens: e.target.value }), style: { ...select, marginTop: 0, flex: 1 }, "data-cine-sens": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "ferme" }, "L'\xE9cran se ferme"), /* @__PURE__ */ import_react.default.createElement("option", { value: "ouvre" }, "L'\xE9cran s'ouvre")), /* @__PURE__ */ import_react.default.createElement("select", { value: x.couleur, onChange: (e) => majX({ couleur: e.target.value }), style: { ...select, marginTop: 0, flex: 1 } }, /* @__PURE__ */ import_react.default.createElement("option", { value: "noir" }, "au noir"), /* @__PURE__ */ import_react.default.createElement("option", { value: "blanc" }, "au blanc")))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 14 } }, /* @__PURE__ */ import_react.default.createElement("button", { style: { ...primaryBtn, flex: 1 }, onClick: () => onTester(c), "data-cine-tester": true }, "\u25B6 Voir la cin\xE9matique dans le jeu"), /* @__PURE__ */ import_react.default.createElement("button", { style: dangerBtn, onClick: () => {
+      ecrire({ cinematiques: liste.filter((y) => y.id !== c.id), introCine: o.introCine === c.id ? "" : o.introCine });
+      setSelId("");
+      setChoix(null);
+    } }, "Supprimer"))));
+  }
+  function poidsTexte(n) {
+    return n > 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko";
+  }
+  function poidsDataUrl(s) {
+    return s && typeof s === "string" ? Math.round(s.length * 0.75) : 0;
+  }
+  async function compresserImage360(src, maxW, q) {
+    const im = await new Promise((ok, ko) => {
+      const i = new Image();
+      i.onload = () => ok(i);
+      i.onerror = ko;
+      i.src = src;
+    });
+    const w0 = im.naturalWidth, h0 = im.naturalHeight;
+    const r = Math.min(1, maxW / w0);
+    const w = Math.round(w0 * r), h = Math.round(h0 * r);
+    const cv = document.createElement("canvas");
+    cv.width = w;
+    cv.height = h;
+    cv.getContext("2d").drawImage(im, 0, 0, w, h);
+    const out = cv.toDataURL("image/jpeg", q);
+    cv.width = 0;
+    cv.height = 0;
+    return { out, w0, h0, w, h };
+  }
+  function MediasJeu({ scenes, setScenes, items, audio, onClose }) {
+    const [dims, setDims] = (0, import_react.useState)({});
+    const [maxW, setMaxW] = (0, import_react.useState)(5760);
+    const [qualite, setQualite] = (0, import_react.useState)(0.85);
+    const [enCours, setEnCours] = (0, import_react.useState)("");
+    const [bilan, setBilan] = (0, import_react.useState)("");
+    (0, import_react.useEffect)(() => {
+      let fini = false;
+      scenes.forEach((s) => {
+        if (!s.image || s.imageFormat === "hdr" || dims[s.id]) return;
+        const im = new Image();
+        im.onload = () => {
+          if (!fini) setDims((d) => ({ ...d, [s.id]: { w: im.naturalWidth, h: im.naturalHeight } }));
+        };
+        im.src = s.image;
+      });
+      return () => {
+        fini = true;
+      };
+    }, [scenes]);
+    const poidsScene = (s) => poidsDataUrl(s.image) + (s.layers || []).reduce((n, l) => n + poidsDataUrl(l.image), 0);
+    const total = scenes.reduce((n, s) => n + poidsScene(s), 0) + items.reduce((n, it) => n + poidsDataUrl(it.image), 0) + (audio && audio.library || []).reduce((n, a) => n + poidsDataUrl(a.src || a.data || ""), 0);
+    const compressibles = scenes.filter((s) => s.image && s.imageFormat !== "hdr" && /^data:image\//.test(s.image));
+    const compresser = async (liste) => {
+      let gagne = 0, faites = 0;
+      for (const s of liste) {
+        setEnCours(s.id);
+        try {
+          const r = await compresserImage360(s.image, maxW, qualite);
+          if (r.out.length < s.image.length * 0.97) {
+            gagne += Math.round((s.image.length - r.out.length) * 0.75);
+            faites++;
+            setScenes((l) => l.map((x) => x.id === s.id ? { ...x, image: r.out } : x));
+            setDims((d) => ({ ...d, [s.id]: { w: r.w, h: r.h } }));
+          }
+        } catch (e) {
+        }
+      }
+      setEnCours("");
+      setBilan(faites ? faites + " image(s) all\xE9g\xE9e(s) : " + poidsTexte(gagne) + " de gagn\xE9s." : "Les images \xE9taient d\xE9j\xE0 l\xE9g\xE8res : rien \xE0 gagner.");
+    };
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "\u{1F5DC} M\xE9dias et poids du jeu", onClose, largeur: 560, data: "medias" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Un jeu l\xE9ger s'ouvre plus vite et reste fluide, surtout sur t\xE9l\xE9phone. Les images 360 en sont presque tout le poids. Au-del\xE0 de 5760 pixels de large, l'iPad les r\xE9duit de toute fa\xE7on \xE0 l'affichage."), /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 14, color: C.text, fontWeight: 600, margin: "10px 0" }, "data-medias-total": true }, "Poids du jeu : ", poidsTexte(total)), scenes.map((s) => {
+      const d = dims[s.id];
+      const lourd = d && d.w > maxW;
+      return /* @__PURE__ */ import_react.default.createElement("div", { key: s.id, style: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.line}`, fontFamily: sans, fontSize: 12, color: C.text }, "data-media-scene": s.id }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, s.name || s.id), /* @__PURE__ */ import_react.default.createElement("span", { style: { ...petitTexte, color: lourd ? C.amber : C.textDim } }, s.imageFormat === "hdr" ? "HDR" : d ? d.w + " \xD7 " + d.h : s.image ? "\u2026" : "sans image"), /* @__PURE__ */ import_react.default.createElement("span", { style: { width: 64, textAlign: "right" } }, poidsTexte(poidsScene(s))), /* @__PURE__ */ import_react.default.createElement(
+        "button",
+        {
+          style: { ...smallBtn, opacity: compressibles.indexOf(s) >= 0 && !enCours ? 1 : 0.4 },
+          disabled: compressibles.indexOf(s) < 0 || !!enCours,
+          onClick: () => compresser([s])
+        },
+        enCours === s.id ? "\u2026" : "All\xE9ger"
+      ));
+    }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 12 } }, /* @__PURE__ */ import_react.default.createElement("label", { style: { ...petitTexte, display: "flex", alignItems: "center", gap: 6 } }, "Largeur max.", /* @__PURE__ */ import_react.default.createElement("select", { value: maxW, onChange: (e) => setMaxW(parseInt(e.target.value, 10)), style: { ...select, marginTop: 0, width: "auto" }, "data-medias-largeur": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: 4096 }, "4096 px (l\xE9ger)"), /* @__PURE__ */ import_react.default.createElement("option", { value: 5760 }, "5760 px (conseill\xE9)"))), /* @__PURE__ */ import_react.default.createElement("label", { style: { ...petitTexte, display: "flex", alignItems: "center", gap: 6 } }, "Qualit\xE9", /* @__PURE__ */ import_react.default.createElement("select", { value: qualite, onChange: (e) => setQualite(parseFloat(e.target.value)), style: { ...select, marginTop: 0, width: "auto" } }, /* @__PURE__ */ import_react.default.createElement("option", { value: 0.8 }, "Bonne"), /* @__PURE__ */ import_react.default.createElement("option", { value: 0.85 }, "Tr\xE8s bonne"), /* @__PURE__ */ import_react.default.createElement("option", { value: 0.92 }, "Maximale"))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { style: primaryBtn, disabled: !!enCours || !compressibles.length, onClick: () => compresser(compressibles), "data-medias-tout": true }, enCours ? "All\xE8gement en cours\u2026" : "All\xE9ger toutes les images")), bilan && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.cyan, marginTop: 8 }, "data-medias-bilan": true }, bilan), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 8 } }, "L'historique (\u21B6) permet de revenir en arri\xE8re si le r\xE9sultat ne te pla\xEEt pas."));
+  }
+  function reduireTexture(tex) {
+    const im = tex.image;
+    const w = im ? im.naturalWidth || im.width : 0;
+    if (w > 4096) {
+      try {
+        const h = im.naturalHeight || im.height;
+        const cv = document.createElement("canvas");
+        cv.width = 4096;
+        cv.height = Math.round(h * 4096 / w);
+        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        tex.image = cv;
+      } catch (e) {
+      }
+    }
+    tex.generateMipmaps = false;
+    tex.minFilter = LinearFilter;
+    tex.needsUpdate = true;
+    return tex;
+  }
+  function poserTexture(mat, tex) {
+    const ancien = mat.map;
+    mat.map = tex;
+    mat.color.set(16777215);
+    mat.needsUpdate = true;
+    if (ancien && ancien !== tex) ancien.dispose();
+  }
   function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
     const [target, setTarget] = (0, import_react.useState)(hotspot.target || "");
@@ -38524,6 +39297,8 @@
     if (type === "ajouter") return { type, key: "", amount: 1 };
     if (type === "bulle") return { type, texte: "", sceneId: "", duree: 4 };
     if (type === "fragment") return { type, texte: "", id: "fr_" + Math.random().toString(36).slice(2, 7) };
+    if (type === "carnet") return { type, id: "doc_" + Math.random().toString(36).slice(2, 8), titre: "", texte: "", image: "" };
+    if (type === "cinematique") return { type, cineId: "", attendre: true };
     return { type: "show_text", text: "" };
   };
   function ActionListEditor({ actions, onChange, items, scenes, variables, dialogues = [], emptyText }) {
@@ -38571,7 +39346,7 @@
       },
       /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "\u2014 variable \u2014"),
       variables.map((v) => /* @__PURE__ */ import_react.default.createElement("option", { key: v.key, value: v.key }, v.label || v.key))
-    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(ActionLot2, { a, update: (p) => update(i, p) }), /* @__PURE__ */ import_react.default.createElement(ActionLot678, { a, update: (p) => update(i, p), scenes, variables }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
+    ), /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: varTypeOf(a.key, variables), value: a.value, onChange: (v) => update(i, { value: v }) })), /* @__PURE__ */ import_react.default.createElement(ActionLot1, { a, update: (p) => update(i, p), items, scenes, variables, dialogues }), /* @__PURE__ */ import_react.default.createElement(ActionLot2, { a, update: (p) => update(i, p) }), /* @__PURE__ */ import_react.default.createElement(ActionLot678, { a, update: (p) => update(i, p), scenes, variables }), /* @__PURE__ */ import_react.default.createElement(ActionLot12, { a, update: (p) => update(i, p) }))), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => onChange([...actions, blankAction("show_text")]), style: smallBtn }, /* @__PURE__ */ import_react.default.createElement(Plus, { size: 12 }), " Ajouter une action"), (items.length === 0 || variables.length === 0) && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 10.5, color: C.textDim, marginTop: 6 } }, items.length === 0 && "Aucun objet cr\xE9\xE9 pour l'instant. ", variables.length === 0 && "Les variables se cr\xE9ent dans l'onglet \xAB Variables \xBB."));
   }
   var SectionTitle = ({ children, hint }) => /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: 16, marginBottom: 6 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: 0.5 } }, children), hint && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, marginTop: 2, lineHeight: 1.4 } }, hint));
   function PuzzleEditor({ draft, setDraft, items, scenes, variables, puzzles, dialogues = [] }) {
@@ -39707,7 +40482,7 @@
         placeholder: "Ce qu'il dit. {variable} pour ins\xE9rer une valeur, [p] pour une pause.",
         style: { ...input, marginTop: 0, resize: "vertical", fontFamily: sans, lineHeight: 1.45 }
       }
-    ), /* @__PURE__ */ import_react.default.createElement(NodeVoice, { node: n, onChange }), (() => {
+    ), /* @__PURE__ */ import_react.default.createElement(NodeVoice, { node: n, onChange }), /* @__PURE__ */ import_react.default.createElement(RepliqueVariantes, { node: n, onChange }), (() => {
       const pb = checkDialogText(n.text || "");
       if (!pb || !pb.length) return null;
       return /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 4 } }, "\u26A0 ", pb.join(" \xB7 "));
@@ -40179,11 +40954,15 @@
       }
     ))));
   }
-  var HUD_DEVICES = [
-    { id: "phone", label: "T\xE9l\xE9phone", w: 390, h: 844, safe: { t: 47, b: 34, l: 0, r: 0 } },
-    { id: "tablet", label: "Tablette", w: 820, h: 1180, safe: { t: 24, b: 20, l: 0, r: 0 } },
-    { id: "desktop", label: "Ordinateur", w: 1280, h: 800, safe: { t: 0, b: 0, l: 0, r: 0 } }
+  var APPAREILS = [
+    { id: "iphone", label: "iPhone 15", court: "iPhone 15", type: "phone", w: 393, h: 852, r: 55, safe: { t: 59, b: 34 }, paysage: { l: 59, r: 59, b: 21 }, ile: true },
+    { id: "iphone-se", label: "iPhone SE", court: "iPhone SE", type: "phone", w: 375, h: 667, r: 0, safe: { t: 20, b: 0 }, paysage: {}, bouton: true },
+    { id: "iphone-max", label: "iPhone 15 Pro Max", court: "iPhone Pro Max", type: "phone", w: 430, h: 932, r: 55, safe: { t: 59, b: 34 }, paysage: { l: 59, r: 59, b: 21 }, ile: true },
+    { id: "android", label: "Android (Pixel 8)", court: "Android", type: "phone", w: 412, h: 915, r: 36, safe: { t: 28, b: 16 }, paysage: { l: 28, b: 16 }, trou: true },
+    { id: "ipad", label: "iPad Air", court: "iPad", type: "tablet", w: 820, h: 1180, r: 18, safe: { t: 24, b: 20 }, paysage: { t: 24, b: 20 } },
+    { id: "ordi", label: "Ordinateur", court: "Ordinateur", type: "desktop", w: 1280, h: 800, r: 0, safe: { t: 0, b: 0 }, paysage: {} }
   ];
+  var HUD_DEVICES = APPAREILS.map((a) => ({ id: a.id, label: a.court, w: a.w, h: a.h, safe: { t: a.safe.t, b: a.safe.b, l: 0, r: 0 }, paysage: a.paysage }));
   var HUD_ANCHOR_GRID = [
     ["top-left", "\u2196"],
     ["top-center", "\u2191"],
@@ -40239,7 +41018,6 @@
     return {};
   }
   var HUD_GRID_STEP = 8;
-  var HUD_SNAP_PX = 6;
   var HUD_MIN_TOUCH = 44;
   function hudTouchable(el) {
     if (el.type === "button") return true;
@@ -40278,19 +41056,39 @@
   function HudPreview({ game, start, width, height, onReady }) {
     const [html, setHtml] = (0, import_react.useState)("");
     const timer = (0, import_react.useRef)(null);
-    const sig = (0, import_react.useMemo)(() => JSON.stringify([game && game.settings && game.settings.ui, start]), [game, start]);
+    const frameRef = (0, import_react.useRef)(null);
+    const pret = (0, import_react.useRef)(false);
+    const ui = game && game.settings ? game.settings.ui : null;
+    const uiRef = (0, import_react.useRef)(ui);
+    uiRef.current = ui;
+    const sig = (0, import_react.useMemo)(() => JSON.stringify([
+      start,
+      game && game.settings ? [game.settings.hud, game.settings.map] : null,
+      (game && game.scenes ? game.scenes : []).map((s) => s.id + ":" + (s.image ? s.image.length : 0))
+    ]), [game, start]);
+    const envoyer = () => {
+      if (!pret.current || !frameRef.current) return;
+      try {
+        frameRef.current.contentWindow.postMessage({ type: "e360-ui", ui: uiRef.current }, "*");
+      } catch (e) {
+      }
+    };
     (0, import_react.useEffect)(() => {
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => {
         try {
+          pret.current = false;
           setHtml(buildStandaloneHTML(game, optsTest({ fullscreen: true, testStart: start })));
           if (onReady) onReady();
         } catch (e) {
           setHtml("");
         }
-      }, 220);
+      }, html ? 220 : 0);
       return () => timer.current && clearTimeout(timer.current);
     }, [sig]);
+    (0, import_react.useEffect)(() => {
+      envoyer();
+    }, [ui]);
     if (!html) return /* @__PURE__ */ import_react.default.createElement("div", { style: { width, height, background: "#05070b", display: "flex", alignItems: "center", justifyContent: "center", color: C.textDim, fontFamily: sans, fontSize: 12 } }, "Aper\xE7u en pr\xE9paration\u2026");
     return /* @__PURE__ */ import_react.default.createElement(
       "iframe",
@@ -40299,6 +41097,11 @@
         "data-hud-preview": true,
         srcDoc: html,
         sandbox: "allow-scripts allow-same-origin",
+        ref: frameRef,
+        onLoad: () => {
+          pret.current = true;
+          envoyer();
+        },
         style: { width, height, border: "none", display: "block", background: "#05070b" }
       }
     );
@@ -40332,7 +41135,7 @@
     canRedo
   }) {
     const [sel, setSel] = (0, import_react.useState)(() => /* @__PURE__ */ new Set());
-    const [device, setDevice] = (0, import_react.useState)("phone");
+    const [device, setDevice] = (0, import_react.useState)("iphone");
     const [portrait, setPortrait] = (0, import_react.useState)(true);
     const [grid, setGrid] = (0, import_react.useState)(false);
     const [snap, setSnap] = (0, import_react.useState)(true);
@@ -40346,9 +41149,14 @@
     const [drag, setDrag] = (0, import_react.useState)(null);
     const hostRef = (0, import_react.useRef)(null);
     const dragRef = (0, import_react.useRef)(null);
+    const canvasRef = (0, import_react.useRef)(null);
+    const [zoom, setZoom] = (0, import_react.useState)(1);
+    const [lasso, setLasso] = (0, import_react.useState)(null);
+    const [propo, setPropo] = (0, import_react.useState)(false);
+    const gesteRef = (0, import_react.useRef)({ pts: /* @__PURE__ */ new Map(), pinch: null, pan: null, lasso: null, ancre: null, raf: 0 });
     const dev = HUD_DEVICES.filter((d) => d.id === device)[0] || HUD_DEVICES[0];
     const frame = portrait ? { w: dev.w, h: dev.h } : { w: dev.h, h: dev.w };
-    const safeIns = portrait ? { t: dev.safe.t, b: dev.safe.b, l: 0, r: 0 } : { t: 0, b: dev.safe.b ? 21 : 0, l: dev.safe.t, r: dev.safe.t };
+    const safeIns = portrait ? { t: dev.safe.t, b: dev.safe.b, l: 0, r: 0 } : { t: 0, b: 0, l: 0, r: 0, ...dev.paysage || {} };
     const fmt = uiFormatOf(frame.w, frame.h);
     const scene = scenes.filter((s) => s.id === sceneId)[0] || scenes[0] || null;
     const [box, setBox] = (0, import_react.useState)({ w: 900, h: 620 });
@@ -40362,7 +41170,8 @@
       ro.observe(el);
       return () => ro.disconnect();
     }, []);
-    const k = Math.min((box.w - 48) / frame.w, (box.h - 48) / frame.h, 1);
+    const kAjuste = Math.min((box.w - 48) / frame.w, (box.h - 48) / frame.h, 1);
+    const k = kAjuste * zoom;
     const game = (0, import_react.useMemo)(
       () => buildHudPreviewGame({ meta, scene, scenes, items, variables, hudSettings, mapEnabled, ui }),
       [meta, scene, scenes, items, variables, hudSettings, mapEnabled, ui]
@@ -40426,7 +41235,7 @@
       if (ovKey) {
         writeOverride(Array.from(ids), (el) => {
           const geo = resolveUiElement(el, fmt, ovPatchOf(el.id));
-          const after = normalizeUiElement(fn({ ...el, anchor: geo.anchor, offset: geo.offset, size: geo.size, hidden: geo.hidden, z: geo.z }), 0);
+          const after = normalizeUiElement(fn({ ...el, formats: {}, anchor: geo.anchor, offset: geo.offset, size: geo.size, hidden: geo.hidden, z: geo.z }), 0);
           return { anchor: after.anchor, offset: after.offset, size: after.size, hidden: after.hidden, z: after.z };
         });
         return;
@@ -40478,58 +41287,347 @@
       onChange({ ...ui, elements: ui.elements.concat(copies) });
       setSel(new Set(copies.map((c) => c.id)));
     };
+    const groupeDe = (x) => x && x.group ? ui.elements.filter((y) => y.group === x.group).map((y) => y.id) : x ? [x.id] : [];
+    const avecGroupes = (ids) => {
+      const s = /* @__PURE__ */ new Set();
+      ids.forEach((id) => groupeDe(ui.elements.filter((y) => y.id === id)[0]).forEach((g) => s.add(g)));
+      return Array.from(s);
+    };
     const startDrag = (e, id, handle) => {
-      const el = ui.elements.filter((x) => x.id === id)[0];
-      if (!el || el.locked) return;
+      const el0 = ui.elements.filter((x) => x.id === id)[0];
+      if (!el0) return;
+      if (e.button != null && e.button > 0) return;
       e.stopPropagation();
+      if (gesteRef.current.pts.size || dragRef.current) return;
+      if (!handle && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const n = new Set(sel);
+        const g = groupeDe(el0);
+        if (n.has(id)) g.forEach((x) => n.delete(x));
+        else g.forEach((x) => n.add(x));
+        setSel(n);
+        return;
+      }
+      if (el0.locked) {
+        setSel(/* @__PURE__ */ new Set([id]));
+        return;
+      }
       e.preventDefault();
-      const ids = sel.has(id) && !handle ? new Set(sel) : /* @__PURE__ */ new Set([id]);
-      if (!sel.has(id)) setSel(ids);
+      const ids = handle ? /* @__PURE__ */ new Set([id]) : sel.has(id) ? new Set(sel) : new Set(groupeDe(el0));
+      if (!handle && !sel.has(id)) setSel(ids);
       const base = {};
       ui.elements.forEach((x) => {
-        if (ids.has(x.id)) base[x.id] = { offset: { ...geoOf(x).offset }, size: { ...geoOf(x).size } };
+        if (!ids.has(x.id) || x.locked) return;
+        const g = geoOf(x);
+        base[x.id] = { anchor: g.anchor, offset: { ...g.offset }, size: { ...g.size }, rect: rectOf(x) };
       });
-      dragRef.current = { ids, handle, x: e.clientX, y: e.clientY, base, moved: false };
-      setDrag({ dx: 0, dy: 0 });
-      const move = (ev) => {
-        const d = dragRef.current;
-        if (!d) return;
-        let dx = (ev.clientX - d.x) / k, dy = (ev.clientY - d.y) / k;
-        if (!d.moved && Math.abs(dx) + Math.abs(dy) > 2) d.moved = true;
-        if (snap) {
-          dx = Math.round(dx / HUD_GRID_STEP) * HUD_GRID_STEP;
-          dy = Math.round(dy / HUD_GRID_STEP) * HUD_GRID_STEP;
-        }
-        setDrag({ dx, dy });
-        const first = Array.from(d.ids)[0];
-        const me = ui.elements.filter((x) => x.id === first)[0];
-        if (me && !d.handle) {
-          const r = rectOf(me);
-          const moved = { x: r.left + dx, y: r.top + dy, w: r.width, h: r.height };
-          setGuides(hudGuides(moved, ui.elements.filter((x) => !d.ids.has(x.id)).map(rectOf), frame));
-        }
+      const d = { ids: new Set(Object.keys(base)), handle, x: e.clientX, y: e.clientY, base, moved: false, dx: 0, dy: 0, pid: e.pointerId, raf: 0, guides: "[]" };
+      if (!d.ids.size) return;
+      dragRef.current = d;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch (er) {
+      }
+      const host = hostRef.current;
+      const boxes = {};
+      d.ids.forEach((xid) => {
+        boxes[xid] = host ? host.querySelector('[data-hud-el="' + xid + '"]') : null;
+      });
+      const autres = ui.elements.filter((x) => !d.ids.has(x.id) && !x.hiddenInEditor).map(rectOf);
+      const premier = d.base[Array.from(d.ids)[0]].rect;
+      const bloc = Object.keys(base).reduce((b, xid) => {
+        const r = base[xid].rect;
+        return { l: Math.min(b.l, r.left), t: Math.min(b.t, r.top), r: Math.max(b.r, r.left + r.width), b: Math.max(b.b, r.top + r.height) };
+      }, { l: 1e9, t: 1e9, r: -1e9, b: -1e9 });
+      const peindre = () => {
+        d.raf = 0;
+        d.ids.forEach((xid) => {
+          const b = boxes[xid];
+          if (!b) return;
+          if (!d.handle) {
+            b.style.transform = "translate(" + d.dx * k + "px," + d.dy * k + "px)";
+            return;
+          }
+          const nr = hudResizeRect(d.base[xid].rect, d.handle, d.dx, d.dy);
+          b.style.left = nr.left * k + "px";
+          b.style.top = nr.top * k + "px";
+          b.style.width = nr.width * k + "px";
+          b.style.height = nr.height * k + "px";
+        });
+        if (!d.handle) hudApercuMessage(host, { type: "e360-ui-nudge", ids: Array.from(d.ids), dx: d.dx, dy: d.dy });
       };
-      const up = () => {
+      const move = (ev) => {
+        if (ev.pointerId !== d.pid || dragRef.current !== d) return;
+        let dx = (ev.clientX - d.x) / k, dy = (ev.clientY - d.y) / k;
+        if (!d.moved && Math.abs(dx * k) + Math.abs(dy * k) > 3) d.moved = true;
+        if (!d.moved) return;
+        let g = [];
+        if (d.handle) {
+          if (propo || ev.shiftKey) {
+            const p = hudPropDelta(premier, d.handle, dx, dy);
+            dx = p.dx;
+            dy = p.dy;
+          }
+          if (snap && grid) {
+            dx = Math.round(dx / HUD_GRID_STEP) * HUD_GRID_STEP;
+            dy = Math.round(dy / HUD_GRID_STEP) * HUD_GRID_STEP;
+          }
+        } else if (snap) {
+          if (grid) {
+            dx = Math.round((bloc.l + dx) / HUD_GRID_STEP) * HUD_GRID_STEP - bloc.l;
+            dy = Math.round((bloc.t + dy) / HUD_GRID_STEP) * HUD_GRID_STEP - bloc.t;
+          } else {
+            const a = hudAimante({ x: bloc.l + dx, y: bloc.t + dy, w: bloc.r - bloc.l, h: bloc.b - bloc.t }, autres, frame, Math.max(4, 8 / k));
+            dx += a.dx;
+            dy += a.dy;
+            g = a.guides;
+          }
+        }
+        d.dx = dx;
+        d.dy = dy;
+        const sg = JSON.stringify(g);
+        if (sg !== d.guides) {
+          d.guides = sg;
+          setGuides(g);
+        }
+        if (!d.raf) d.raf = requestAnimationFrame(peindre);
+      };
+      const fin = (ev) => {
+        if (ev.pointerId !== d.pid) return;
         window.removeEventListener("pointermove", move);
-        window.removeEventListener("pointerup", up);
-        const d = dragRef.current;
-        const v = dragVecRef.current;
+        window.removeEventListener("pointerup", fin);
+        window.removeEventListener("pointercancel", fin);
+        if (dragRef.current !== d) return;
         dragRef.current = null;
-        setDrag(null);
-        setGuides([]);
-        if (!d || !d.moved || !v) return;
+        if (d.raf) cancelAnimationFrame(d.raf);
+        d.ids.forEach((xid) => {
+          const b = boxes[xid], r = d.base[xid].rect;
+          if (!b) return;
+          b.style.transform = "";
+          b.style.left = r.left * k + "px";
+          b.style.top = r.top * k + "px";
+          b.style.width = r.width * k + "px";
+          b.style.height = r.height * k + "px";
+        });
+        if (d.guides !== "[]") setGuides([]);
+        if (!d.moved) {
+          hudApercuMessage(host, { type: "e360-ui-nudge", ids: Array.from(d.ids), dx: 0, dy: 0 });
+          return;
+        }
         patchMany(d.ids, (x) => {
           const b = d.base[x.id];
           if (!b) return x;
-          if (d.handle) return hudResize(x, b, d.handle, v.dx, v.dy, frame);
-          return { ...x, offset: hudMoveOffset(x, { anchor: x.anchor, offset: b.offset }, v.dx, v.dy, frame) };
+          if (d.handle) {
+            const r = hudResize({ ...x, anchor: b.anchor }, b, d.handle, d.dx, d.dy, frame);
+            return hudPoserGeo(x, fmt, { offset: r.offset, size: r.size });
+          }
+          return hudPoserGeo(x, fmt, { offset: hudMoveOffset(x, { anchor: b.anchor, offset: b.offset }, d.dx, d.dy, frame) });
         });
       };
       window.addEventListener("pointermove", move);
-      window.addEventListener("pointerup", up);
+      window.addEventListener("pointerup", fin);
+      window.addEventListener("pointercancel", fin);
     };
-    const dragVecRef = (0, import_react.useRef)(drag);
-    dragVecRef.current = drag;
+    const zoomer = (nz, cx, cy) => {
+      nz = Math.max(0.25, Math.min(8, nz));
+      const cv = canvasRef.current, host = hostRef.current;
+      if (cv && host) {
+        const r = cv.getBoundingClientRect(), hr = host.getBoundingClientRect();
+        if (cx == null) {
+          cx = hr.left + hr.width / 2;
+          cy = hr.top + hr.height / 2;
+        }
+        gesteRef.current.ancre = { fx: (cx - r.left) / k, fy: (cy - r.top) / k, cx, cy };
+      }
+      setZoom(nz);
+    };
+    const zoomerRef = (0, import_react.useRef)(zoomer);
+    zoomerRef.current = zoomer;
+    const zoomRef = (0, import_react.useRef)(zoom);
+    zoomRef.current = zoom;
+    import_react.default.useLayoutEffect(() => {
+      const a = gesteRef.current.ancre, cv = canvasRef.current, host = hostRef.current;
+      if (!a || !cv || !host) return;
+      gesteRef.current.ancre = null;
+      const r = cv.getBoundingClientRect();
+      host.scrollLeft += r.left - (a.cx - a.fx * k);
+      host.scrollTop += r.top - (a.cy - a.fy * k);
+    }, [zoom]);
+    (0, import_react.useEffect)(() => {
+      const host = hostRef.current;
+      if (!host) return;
+      const roue = (e) => {
+        if (!e.ctrlKey && !e.metaKey) return;
+        e.preventDefault();
+        zoomerRef.current(zoomRef.current * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      };
+      host.addEventListener("wheel", roue, { passive: false });
+      return () => host.removeEventListener("wheel", roue);
+    }, []);
+    const gesteDown = (e) => {
+      if (e.target.closest && e.target.closest("[data-hud-el]")) return;
+      if (dragRef.current) return;
+      const g = gesteRef.current, host = hostRef.current;
+      g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      try {
+        host.setPointerCapture(e.pointerId);
+      } catch (er) {
+      }
+      if (g.pts.size === 2) {
+        const [a, b] = Array.from(g.pts.values());
+        g.lasso = null;
+        setLasso(null);
+        g.pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+        return;
+      }
+      if (g.pts.size > 2) return;
+      if (e.button === 1 || e.altKey) {
+        g.pan = { x: e.clientX, y: e.clientY, sl: host.scrollLeft, st: host.scrollTop };
+        return;
+      }
+      const cv = canvasRef.current;
+      if (!cv) return;
+      const r = cv.getBoundingClientRect();
+      const px2 = (e.clientX - r.left) / k, py2 = (e.clientY - r.top) / k;
+      g.lasso = { x0: px2, y0: py2, x1: px2, y1: py2, add: e.shiftKey || e.metaKey, moved: false, cx: e.clientX, cy: e.clientY };
+    };
+    const gesteMove = (e) => {
+      const g = gesteRef.current, host = hostRef.current;
+      if (!g.pts.has(e.pointerId)) return;
+      g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (g.pinch) {
+        if (g.pts.size < 2) return;
+        const [a, b] = Array.from(g.pts.values());
+        const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        host.scrollLeft -= mx - g.pinch.mx;
+        host.scrollTop -= my - g.pinch.my;
+        g.pinch.mx = mx;
+        g.pinch.my = my;
+        g.voulu = { z: g.pinch.z0 * dist / g.pinch.d0, x: mx, y: my };
+        if (!g.raf) g.raf = requestAnimationFrame(() => {
+          g.raf = 0;
+          const v = g.voulu;
+          if (v && Math.abs(v.z - zoomRef.current) > 5e-3) zoomerRef.current(v.z, v.x, v.y);
+        });
+        return;
+      }
+      if (g.pan) {
+        host.scrollLeft = g.pan.sl - (e.clientX - g.pan.x);
+        host.scrollTop = g.pan.st - (e.clientY - g.pan.y);
+        return;
+      }
+      const l = g.lasso;
+      if (!l || !canvasRef.current) return;
+      if (Math.abs(e.clientX - l.cx) + Math.abs(e.clientY - l.cy) > 6) l.moved = true;
+      const r = canvasRef.current.getBoundingClientRect();
+      l.x1 = (e.clientX - r.left) / k;
+      l.y1 = (e.clientY - r.top) / k;
+      if (l.moved) setLasso({ ...l });
+    };
+    const gesteUp = (e) => {
+      const g = gesteRef.current;
+      if (!g.pts.has(e.pointerId)) return;
+      g.pts.delete(e.pointerId);
+      if (g.pinch) {
+        if (g.pts.size < 2) {
+          g.pinch = null;
+          g.apresPinch = true;
+          if (g.raf) {
+            cancelAnimationFrame(g.raf);
+            g.raf = 0;
+            const v = g.voulu;
+            if (v && Math.abs(v.z - zoomRef.current) > 5e-3) zoomerRef.current(v.z, v.x, v.y);
+          }
+          g.voulu = null;
+        }
+        return;
+      }
+      if (g.apresPinch) {
+        if (!g.pts.size) g.apresPinch = false;
+        return;
+      }
+      if (g.pan) {
+        g.pan = null;
+        return;
+      }
+      const l = g.lasso;
+      g.lasso = null;
+      setLasso(null);
+      if (!l) return;
+      if (!l.moved) {
+        if (!l.add) setSel(/* @__PURE__ */ new Set());
+        return;
+      }
+      const x0 = Math.min(l.x0, l.x1), x1 = Math.max(l.x0, l.x1), y0 = Math.min(l.y0, l.y1), y1 = Math.max(l.y0, l.y1);
+      const pris = visible.filter((el) => {
+        const r = rectOf(el);
+        return r.left < x1 && r.left + r.width > x0 && r.top < y1 && r.top + r.height > y0;
+      }).map((el) => el.id);
+      setSel(new Set((l.add ? Array.from(sel) : []).concat(avecGroupes(pris))));
+    };
+    const aligner = (mode) => {
+      const els = ui.elements.filter((x) => sel.has(x.id) && !x.locked);
+      if (!els.length) return;
+      const rs = els.map((x) => ({ id: x.id, r: rectOf(x) }));
+      const B = els.length === 1 ? { l: 0, t: 0, r: frame.w, b: frame.h } : {
+        l: Math.min(...rs.map((o) => o.r.left)),
+        t: Math.min(...rs.map((o) => o.r.top)),
+        r: Math.max(...rs.map((o) => o.r.left + o.r.width)),
+        b: Math.max(...rs.map((o) => o.r.top + o.r.height))
+      };
+      const dep = {};
+      if (mode === "repH" || mode === "repV") {
+        const hz = mode === "repH";
+        const tri = rs.slice().sort((a, b) => hz ? a.r.left - b.r.left : a.r.top - b.r.top);
+        const tot = tri.reduce((n, o) => n + (hz ? o.r.width : o.r.height), 0);
+        const gap = ((hz ? B.r - B.l : B.b - B.t) - tot) / Math.max(1, tri.length - 1);
+        let cur = hz ? B.l : B.t;
+        tri.forEach((o) => {
+          dep[o.id] = hz ? { dx: cur - o.r.left, dy: 0 } : { dx: 0, dy: cur - o.r.top };
+          cur += (hz ? o.r.width : o.r.height) + gap;
+        });
+      } else {
+        rs.forEach((o) => {
+          const r = o.r;
+          let dx = 0, dy = 0;
+          if (mode === "g") dx = B.l - r.left;
+          if (mode === "cx") dx = (B.l + B.r) / 2 - (r.left + r.width / 2);
+          if (mode === "d") dx = B.r - (r.left + r.width);
+          if (mode === "h") dy = B.t - r.top;
+          if (mode === "cy") dy = (B.t + B.b) / 2 - (r.top + r.height / 2);
+          if (mode === "b") dy = B.b - (r.top + r.height);
+          dep[o.id] = { dx, dy };
+        });
+      }
+      patchMany(new Set(Object.keys(dep)), (x) => {
+        const dd = dep[x.id];
+        if (!dd || Math.abs(dd.dx) < 0.01 && Math.abs(dd.dy) < 0.01) return x;
+        return hudPoserGeo(x, fmt, { offset: hudMoveOffset(x, resolveUiElement(x, fmt, null), dd.dx, dd.dy, frame) });
+      });
+    };
+    const grouper = () => {
+      if (sel.size < 2) return;
+      const gid = "grp_" + Date.now().toString(36);
+      onChange({ ...ui, elements: ui.elements.map((e) => sel.has(e.id) ? normalizeUiElement({ ...e, group: gid }, 0) : e) });
+    };
+    const degrouper = () => onChange({ ...ui, elements: ui.elements.map((e) => sel.has(e.id) && e.group ? normalizeUiElement({ ...e, group: "" }, 0) : e) });
+    const selGroupee = ui.elements.some((e) => sel.has(e.id) && e.group);
+    const ajouterModele = (m) => {
+      const t = Date.now().toString(36);
+      const defs = m.elements();
+      const gid = defs.length > 1 ? "grp_" + t : "";
+      const els = defs.map((d, i) => normalizeUiElement({
+        id: "el_" + t + i + Math.random().toString(36).slice(2, 4),
+        visible: { screens: ["playing"] },
+        z: 10 + ui.elements.length + i,
+        group: gid,
+        ...d,
+        props: { ...hudNewProps(d.type, variables, items), ...d.props || {} }
+      }, ui.elements.length + i));
+      onChange({ ...ui, elements: ui.elements.concat(els) });
+      setSel(new Set(els.map((x) => x.id)));
+    };
     (0, import_react.useEffect)(() => {
       const isField = (t) => t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
       const onKey = (e) => {
@@ -40565,7 +41663,7 @@
         const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
         if (d && sel.size) {
           e.preventDefault();
-          patchMany(sel, (x) => ({ ...x, offset: hudMoveOffset(x, geoOf(x), d[0], d[1], frame) }));
+          patchMany(sel, (x) => hudPoserGeo(x, fmt, { offset: hudMoveOffset(x, resolveUiElement(x, fmt, null), d[0], d[1], frame) }));
         }
       };
       window.addEventListener("keydown", onKey);
@@ -40587,6 +41685,17 @@
       },
       /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 14 } }, p.icon),
       p.label
+    ))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Mod\xE8les tout pr\xEAts"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }, "data-hud-modeles": true }, HUD_MODELES.map((m) => /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        key: m.id,
+        "data-modele": m.id,
+        onClick: () => ajouterModele(m),
+        title: m.label,
+        style: { ...smallBtn, flexDirection: "column", gap: 2, padding: "7px 4px", fontSize: 10.5, justifyContent: "center" }
+      },
+      /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 14 } }, m.icon),
+      m.label
     ))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Calques"), !ui.elements.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim } }, "Aucun \xE9l\xE9ment."), ui.elements.length > 1 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "0 0 4px", lineHeight: 1.35 } }, "En haut de la liste : au-dessus des autres. Fais glisser \u283F ou utilise les fl\xE8ches."), (() => {
       const ordre = ui.elements.slice().sort((a, b) => b.z - a.z);
       return ordre.map((e, i) => /* @__PURE__ */ import_react.default.createElement(
@@ -40710,7 +41819,7 @@
           "\u25BC"
         )
       ));
-    })()), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "8px 12px", borderBottom: `1px solid ${C.line}`, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } }, HUD_DEVICES.map((d) => /* @__PURE__ */ import_react.default.createElement("button", { key: d.id, "data-device": d.id, onClick: () => setDevice(d.id), style: pillBtn(device === d.id) }, d.label)), /* @__PURE__ */ import_react.default.createElement("button", { "data-rotate": true, onClick: () => setPortrait(!portrait), style: smallBtn, title: "Pivoter" }, portrait ? "\u25AF Portrait" : "\u25AD Paysage"), /* @__PURE__ */ import_react.default.createElement("select", { value: sceneId, onChange: (e) => setSceneId(e.target.value), style: { ...select, marginTop: 0, width: 160 }, "data-preview-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name))), /* @__PURE__ */ import_react.default.createElement(
+    })()), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "8px 12px", borderBottom: `1px solid ${C.line}`, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("select", { value: device, onChange: (e) => setDevice(e.target.value), "data-device-pick": true, style: { ...select, marginTop: 0, width: 170 } }, HUD_DEVICES.map((d) => /* @__PURE__ */ import_react.default.createElement("option", { key: d.id, value: d.id }, d.label, " \xB7 ", d.w, " \xD7 ", d.h))), /* @__PURE__ */ import_react.default.createElement("button", { "data-rotate": true, onClick: () => setPortrait(!portrait), style: smallBtn, title: "Pivoter" }, portrait ? "\u25AF Portrait" : "\u25AD Paysage"), /* @__PURE__ */ import_react.default.createElement("select", { value: sceneId, onChange: (e) => setSceneId(e.target.value), style: { ...select, marginTop: 0, width: 160 }, "data-preview-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name))), /* @__PURE__ */ import_react.default.createElement(
       "select",
       {
         value: ovKey,
@@ -40721,15 +41830,18 @@
       /* @__PURE__ */ import_react.default.createElement("option", { value: "" }, "R\xE9glage commun"),
       scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: "s:" + s.id }, "Seulement dans \xAB ", s.name, " \xBB")),
       hudAllTags(scenes).map((t) => /* @__PURE__ */ import_react.default.createElement("option", { key: t, value: "t:" + t }, "Sc\xE8nes \xE9tiquet\xE9es \xAB ", t, " \xBB"))
-    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onUndo, disabled: !canUndo, style: { ...smallBtn, opacity: canUndo ? 1 : 0.4 }, title: "Annuler (Ctrl+Z)" }, "\u21B6"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onRedo, disabled: !canRedo, style: { ...smallBtn, opacity: canRedo ? 1 : 0.4 }, title: "R\xE9tablir" }, "\u21B7"), /* @__PURE__ */ import_react.default.createElement("button", { "data-grid": true, onClick: () => setGrid(!grid), style: pillBtn(grid) }, "# Grille"), /* @__PURE__ */ import_react.default.createElement("button", { "data-snap": true, onClick: () => setSnap(!snap), style: pillBtn(snap) }, "\u2301 Magn\xE9tisme"), /* @__PURE__ */ import_react.default.createElement("button", { "data-safe": true, onClick: () => setSafe(!safe), style: pillBtn(safe) }, "\u25A3 Zones s\xFBres"), /* @__PURE__ */ import_react.default.createElement("button", { "data-test-open": true, onClick: () => setTestOpen(!testOpen), style: pillBtn(testOpen) }, "\u{1F9EA} Valeurs d'essai")), /* @__PURE__ */ import_react.default.createElement("div", { ref: hostRef, style: { flex: 1, position: "relative", overflow: "auto", background: C.ink, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 } }, /* @__PURE__ */ import_react.default.createElement(
+    ), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onUndo, disabled: !canUndo, style: { ...smallBtn, opacity: canUndo ? 1 : 0.4 }, title: "Annuler (Ctrl+Z)" }, "\u21B6"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: onRedo, disabled: !canRedo, style: { ...smallBtn, opacity: canRedo ? 1 : 0.4 }, title: "R\xE9tablir" }, "\u21B7"), /* @__PURE__ */ import_react.default.createElement("button", { "data-grid": true, onClick: () => setGrid(!grid), style: pillBtn(grid) }, "# Grille"), /* @__PURE__ */ import_react.default.createElement("button", { "data-snap": true, onClick: () => setSnap(!snap), style: pillBtn(snap) }, "\u2301 Magn\xE9tisme"), /* @__PURE__ */ import_react.default.createElement("button", { "data-safe": true, onClick: () => setSafe(!safe), style: pillBtn(safe) }, "\u25A3 Zones s\xFBres"), /* @__PURE__ */ import_react.default.createElement("button", { "data-test-open": true, onClick: () => setTestOpen(!testOpen), style: pillBtn(testOpen) }, "\u{1F9EA} Valeurs d'essai")), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, position: "relative", minHeight: 0 } }, /* @__PURE__ */ import_react.default.createElement(
       "div",
       {
-        "data-hud-canvas": true,
-        style: { position: "relative", width: frame.w * k, height: frame.h * k, flexShrink: 0, boxShadow: "0 20px 60px rgba(0,0,0,.6)" },
-        onPointerDown: () => setSel(/* @__PURE__ */ new Set())
+        ref: hostRef,
+        "data-hud-hote": true,
+        onPointerDown: gesteDown,
+        onPointerMove: gesteMove,
+        onPointerUp: gesteUp,
+        onPointerCancel: gesteUp,
+        style: { position: "absolute", inset: 0, overflow: "auto", background: C.ink, touchAction: "none" }
       },
-      /* @__PURE__ */ import_react.default.createElement("div", { style: { width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0", position: "absolute", left: 0, top: 0 } }, /* @__PURE__ */ import_react.default.createElement(HudPreview, { game, start, width: frame.w, height: frame.h })),
-      /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", inset: 0 } }, grid && /* @__PURE__ */ import_react.default.createElement("div", { style: {
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { minWidth: "100%", minHeight: "100%", width: "max-content", boxSizing: "border-box", padding: 24, display: "flex", alignItems: "center", justifyContent: "center" } }, /* @__PURE__ */ import_react.default.createElement("div", { ref: canvasRef, "data-hud-canvas": true, style: { position: "relative", width: frame.w * k, height: frame.h * k, flexShrink: 0, boxShadow: "0 20px 60px rgba(0,0,0,.6)" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { width: frame.w, height: frame.h, transform: `scale(${k})`, transformOrigin: "0 0", position: "absolute", left: 0, top: 0 } }, /* @__PURE__ */ import_react.default.createElement(HudPreview, { game, start, width: frame.w, height: frame.h })), /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "absolute", inset: 0 } }, grid && /* @__PURE__ */ import_react.default.createElement("div", { style: {
         position: "absolute",
         inset: 0,
         pointerEvents: "none",
@@ -40755,31 +41867,35 @@
       } })), visible.map((el) => {
         const r = rectOf(el);
         const on = sel.has(el.id);
-        const moving = drag && dragRef.current && dragRef.current.ids.has(el.id);
-        const dx = moving && !dragRef.current.handle ? drag.dx : 0;
-        const dy = moving && !dragRef.current.handle ? drag.dy : 0;
         const small = Math.min(r.width, r.height) < HUD_MIN_TOUCH && hudTouchable(el);
+        const seul = on && sel.size === 1 && !el.locked;
+        const cote = Math.min(r.width, r.height) * k;
+        const mini = cote < 44;
+        const poignees = !seul ? [] : mini ? ["se"] : cote < 90 ? ["nw", "ne", "se", "sw"] : ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
         return /* @__PURE__ */ import_react.default.createElement(
           "div",
           {
             key: el.id,
             "data-hud-el": el.id,
             "data-small": small ? "1" : void 0,
+            "data-group": el.group || void 0,
             onPointerDown: (e) => startDrag(e, el.id, null),
             style: {
               position: "absolute",
-              left: (r.left + dx) * k,
-              top: (r.top + dy) * k,
+              left: r.left * k,
+              top: r.top * k,
               width: r.width * k,
               height: r.height * k,
               boxSizing: "border-box",
-              border: on ? `2px solid ${C.amber}` : `1px dashed ${small ? C.danger : "rgba(255,255,255,.35)"}`,
+              touchAction: "none",
+              zIndex: on ? 3 : 1,
+              border: on ? `2px solid ${C.amber}` : `1px dashed ${small ? C.danger : el.group ? C.cyan : "rgba(255,255,255,.35)"}`,
               cursor: el.locked ? "not-allowed" : "move",
               background: on ? `${C.amber}14` : "transparent"
             },
             title: el.name + (small ? " \u2014 zone tactile sous 44 px" : "")
           },
-          on && !el.locked && ["nw", "n", "ne", "e", "se", "s", "sw", "w"].map((h) => /* @__PURE__ */ import_react.default.createElement(
+          poignees.map((h) => /* @__PURE__ */ import_react.default.createElement(
             "div",
             {
               key: h,
@@ -40787,19 +41903,64 @@
               onPointerDown: (e) => startDrag(e, el.id, h),
               style: {
                 position: "absolute",
-                width: 9,
-                height: 9,
-                background: C.amber,
-                borderRadius: 2,
-                cursor: h.length === 2 ? h + "-resize" : h + "-resize",
-                left: h.indexOf("w") >= 0 ? -5 : h.indexOf("e") >= 0 ? "calc(100% - 4px)" : "calc(50% - 4px)",
-                top: h.indexOf("n") >= 0 ? -5 : h.indexOf("s") >= 0 ? "calc(100% - 4px)" : "calc(50% - 4px)"
+                width: 36,
+                height: 36,
+                zIndex: 4,
+                touchAction: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: h + "-resize",
+                left: mini ? "calc(100% - 4px)" : h.indexOf("w") >= 0 ? -18 : h.indexOf("e") >= 0 ? "calc(100% - 18px)" : "calc(50% - 18px)",
+                top: mini ? "calc(100% - 4px)" : h.indexOf("n") >= 0 ? -18 : h.indexOf("s") >= 0 ? "calc(100% - 18px)" : "calc(50% - 18px)"
               }
-            }
+            },
+            /* @__PURE__ */ import_react.default.createElement("div", { style: {
+              width: 14,
+              height: 14,
+              background: C.amber,
+              border: "2px solid #10131b",
+              borderRadius: h.length === 2 ? 4 : 8,
+              boxShadow: "0 1px 4px rgba(0,0,0,.5)",
+              pointerEvents: "none"
+            } })
           ))
         );
-      }))
-    )), testOpen && /* @__PURE__ */ import_react.default.createElement("div", { "data-test-panel": true, style: { padding: "10px 12px", borderTop: `1px solid ${C.line}`, background: C.ink2, maxHeight: 190, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.5, marginBottom: 7 } }, "De quoi voir l'interface comme en pleine partie. Rien de tout cela n'est enregistr\xE9 dans le jeu."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11.5, color: C.text } }, "\xC9cran :"), [["playing", "En jeu"], ["inventory", "Sac \xE0 dos"], ["map", "Carte"], ["pause", "Pause"]].map(([v, l]) => /* @__PURE__ */ import_react.default.createElement(
+      }), lasso && lasso.moved && /* @__PURE__ */ import_react.default.createElement("div", { "data-hud-lasso": true, style: {
+        position: "absolute",
+        pointerEvents: "none",
+        zIndex: 6,
+        border: `1px dashed ${C.cyan}`,
+        background: `${C.cyan}18`,
+        left: Math.min(lasso.x0, lasso.x1) * k,
+        top: Math.min(lasso.y0, lasso.y1) * k,
+        width: Math.abs(lasso.x1 - lasso.x0) * k,
+        height: Math.abs(lasso.y1 - lasso.y0) * k
+      } }))))
+    ), /* @__PURE__ */ import_react.default.createElement("div", { "data-hud-zoom": true, style: {
+      position: "absolute",
+      right: 12,
+      bottom: 12,
+      display: "flex",
+      gap: 4,
+      alignItems: "center",
+      zIndex: 5,
+      background: "rgba(16,19,27,.9)",
+      border: `1px solid ${C.line}`,
+      borderRadius: 10,
+      padding: 4
+    } }, /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, padding: "6px 12px", fontSize: 15 }, onClick: () => zoomer(zoom / 1.25), "data-zoom-moins": true, title: "D\xE9zoomer" }, "\u2212"), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, minWidth: 62, justifyContent: "center" }, onClick: () => zoomer(1 / kAjuste), "data-zoom-100": true, title: "Taille r\xE9elle (100 %)" }, Math.round(k * 100), " %"), /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, padding: "6px 12px", fontSize: 15 }, onClick: () => zoomer(zoom * 1.25), "data-zoom-plus": true, title: "Zoomer" }, "+"), /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, onClick: () => {
+      const h = hostRef.current, g = gesteRef.current;
+      if (g.raf) {
+        cancelAnimationFrame(g.raf);
+        g.raf = 0;
+      }
+      setZoom(1);
+      if (h) {
+        h.scrollLeft = 0;
+        h.scrollTop = 0;
+      }
+    }, "data-zoom-ajuster": true, title: "Tout voir" }, "\u2922 Ajuster"))), testOpen && /* @__PURE__ */ import_react.default.createElement("div", { "data-test-panel": true, style: { padding: "10px 12px", borderTop: `1px solid ${C.line}`, background: C.ink2, maxHeight: 190, overflowY: "auto" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim, lineHeight: 1.5, marginBottom: 7 } }, "De quoi voir l'interface comme en pleine partie. Rien de tout cela n'est enregistr\xE9 dans le jeu."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: sans, fontSize: 11.5, color: C.text } }, "\xC9cran :"), [["playing", "En jeu"], ["inventory", "Sac \xE0 dos"], ["map", "Carte"], ["pause", "Pause"]].map(([v, l]) => /* @__PURE__ */ import_react.default.createElement(
       "button",
       {
         key: v,
@@ -40881,7 +42042,16 @@
         onClick: () => onChange({ ...ui, overrides: ui.overrides.filter((o) => o.id !== ov.id) })
       },
       "Tout remettre au r\xE9glage commun"
-    )), /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "6px 12px", borderTop: `1px solid ${C.line}`, fontFamily: sans, fontSize: 11, color: C.textDim, display: "flex", gap: 12 } }, /* @__PURE__ */ import_react.default.createElement("span", null, frame.w, " \xD7 ", frame.h, " \xB7 ", Math.round(k * 100), " %"), /* @__PURE__ */ import_react.default.createElement("span", null, fmt), /* @__PURE__ */ import_react.default.createElement("span", null, sel.size ? sel.size + " s\xE9lectionn\xE9(s)" : ui.elements.length + " \xE9l\xE9ment(s)"), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), current && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-copy-style": true, onClick: () => setClip(current.style || {}) }, "Copier le style"), clip && sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-paste-style": true, onClick: () => patchMany(sel, (x) => ({ ...x, style: clip })) }, "Coller le style"), sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-duplicate": true, onClick: duplicateSel }, "\u29C9 Dupliquer"), sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, color: C.danger }, "data-delete": true, onClick: removeSel }, "\u{1F5D1} Supprimer"))), /* @__PURE__ */ import_react.default.createElement(
+    )), /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "6px 12px", borderTop: `1px solid ${C.line}`, fontFamily: sans, fontSize: 11, color: C.textDim, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, /* @__PURE__ */ import_react.default.createElement("span", null, frame.w, " \xD7 ", frame.h, " \xB7 ", Math.round(k * 100), " %"), /* @__PURE__ */ import_react.default.createElement("span", null, fmt), /* @__PURE__ */ import_react.default.createElement("span", null, sel.size ? sel.size + " s\xE9lectionn\xE9(s)" : ui.elements.length + " \xE9l\xE9ment(s)"), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }), current && !current.locked && /* @__PURE__ */ import_react.default.createElement(
+      "button",
+      {
+        style: { ...pillBtn(propo), flex: "none", fontSize: 11, padding: "4px 8px" },
+        "data-propo": true,
+        onClick: () => setPropo(!propo),
+        title: "Garder les proportions en tirant un coin"
+      },
+      "\u26D3 Proportions"
+    ), sel.size >= 1 && /* @__PURE__ */ import_react.default.createElement("span", { style: { display: "flex", gap: 2 }, "data-aligner": true }, [["g", "\u21E4", "Aligner \xE0 gauche"], ["cx", "\u2194", "Centrer"], ["d", "\u21E5", "Aligner \xE0 droite"], ["h", "\u2912", "Aligner en haut"], ["cy", "\u2195", "Centrer en hauteur"], ["b", "\u2913", "Aligner en bas"]].map(([m, ic, t]) => /* @__PURE__ */ import_react.default.createElement("button", { key: m, style: { ...smallBtn, padding: "4px 8px" }, title: t + (sel.size === 1 ? " de l'\xE9cran" : ""), "data-aligner-mode": m, onClick: () => aligner(m) }, ic))), sel.size >= 3 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-repartir": "h", onClick: () => aligner("repH"), title: "M\xEAme \xE9cart, de gauche \xE0 droite" }, "\u21F9 R\xE9partir"), sel.size >= 3 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-repartir": "v", onClick: () => aligner("repV"), title: "M\xEAme \xE9cart, de haut en bas" }, "\u21F3 R\xE9partir"), sel.size >= 2 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-grouper": true, onClick: grouper }, "Grouper"), selGroupee && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-degrouper": true, onClick: degrouper }, "D\xE9grouper"), current && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-copy-style": true, onClick: () => setClip(current.style || {}) }, "Copier le style"), clip && sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-paste-style": true, onClick: () => patchMany(sel, (x) => ({ ...x, style: clip })) }, "Coller le style"), sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: smallBtn, "data-duplicate": true, onClick: duplicateSel }, "\u29C9 Dupliquer"), sel.size > 0 && /* @__PURE__ */ import_react.default.createElement("button", { style: { ...smallBtn, color: C.danger }, "data-delete": true, onClick: removeSel }, "\u{1F5D1} Supprimer"))), /* @__PURE__ */ import_react.default.createElement(
       HudInspector,
       {
         ui,
@@ -40914,23 +42084,6 @@
     const h = at.x < frame.w / 3 ? "left" : at.x > frame.w * 2 / 3 ? "right" : "center";
     const v = at.y < frame.h / 3 ? "top" : at.y > frame.h * 2 / 3 ? "bottom" : "middle";
     return v + "-" + h;
-  }
-  function hudGuides(moved, others, frame) {
-    const out = [];
-    const xs = [0, frame.w / 2, frame.w];
-    const ys = [0, frame.h / 2, frame.h];
-    others.forEach((r) => {
-      xs.push(r.left, r.left + r.width / 2, r.left + r.width);
-      ys.push(r.top, r.top + r.height / 2, r.top + r.height);
-    });
-    const mine = { x: [moved.x, moved.x + moved.w / 2, moved.x + moved.w], y: [moved.y, moved.y + moved.h / 2, moved.y + moved.h] };
-    xs.forEach((v) => {
-      if (mine.x.some((m) => Math.abs(m - v) <= HUD_SNAP_PX) && !out.some((g) => g.x === v)) out.push({ x: v, y: null });
-    });
-    ys.forEach((v) => {
-      if (mine.y.some((m) => Math.abs(m - v) <= HUD_SNAP_PX) && !out.some((g) => g.y === v)) out.push({ x: null, y: v });
-    });
-    return out.slice(0, 6);
   }
   function hudResize(el, base, handle, dx, dy, frame) {
     const parts = String(el.anchor).split("-");
@@ -41156,13 +42309,14 @@
     };
     const iconProps = { icons: libIcons, onAddIcon: addLibIcon };
     const set = (p) => onPatch(el.id, (x) => ({ ...x, ...p }));
+    const setGeo = (g) => onPatch(el.id, (x) => hudPoserGeo(x, format, g));
     const setProps = (p) => onPatch(el.id, (x) => ({ ...x, props: { ...x.props, ...p } }));
     const setVis = (p) => onPatch(el.id, (x) => ({ ...x, visible: { ...x.visible, ...p } }));
     const setStyle = (p) => onPatch(el.id, (x) => ({ ...x, style: { ...x.style || {}, ...p } }));
     const override = el.formats[format];
     const num = (label, v, onV, step) => /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, label), /* @__PURE__ */ import_react.default.createElement("input", { type: "number", step: step || 1, value: v, onChange: (e) => onV(parseFloat(e.target.value) || 0), style: { ...input, marginTop: 0 } }));
     const TABS = [["place", "Place"], ["look", "Allure"], ["when", "Quand"], ["what", "R\xF4le"]];
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 300, flexShrink: 0, borderLeft: `1px solid ${C.line}`, padding: 14, overflowY: "auto" }, "data-hud-inspector": el.id }, /* @__PURE__ */ import_react.default.createElement("input", { value: el.name, onChange: (e) => set({ name: e.target.value }), style: { ...input, marginTop: 0, fontWeight: 600 }, "data-el-name": true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, margin: "8px 0", flexWrap: "wrap" } }, TABS.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, "data-tab": v, onClick: () => setTab(v), style: { ...pillBtn(tab === v), fontSize: 11.5, padding: "5px 9px" } }, l))), tab === "place" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Ancrage"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 } }, HUD_ANCHOR_GRID.map(([v, g]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, "data-anchor": v, onClick: () => set({ anchor: v }), style: { ...pillBtn(geo.anchor === v), padding: "8px 0", fontSize: 14 } }, g))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } }, num("D\xE9calage X", geo.offset.x, (v) => set({ offset: { ...geo.offset, x: v } })), num("D\xE9calage Y", geo.offset.y, (v) => set({ offset: { ...geo.offset, y: v } })), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 58 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Unit\xE9"), /* @__PURE__ */ import_react.default.createElement("select", { value: geo.offset.unit, onChange: (e) => set({ offset: { ...geo.offset, unit: e.target.value } }), style: { ...select, marginTop: 0 }, "data-offset-unit": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "px" }, "px"), /* @__PURE__ */ import_react.default.createElement("option", { value: "%" }, "%")))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } }, num("Largeur", geo.size.w, (v) => set({ size: { ...geo.size, w: v } })), num("Hauteur", geo.size.h, (v) => set({ size: { ...geo.size, h: v } })), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 58 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Unit\xE9"), /* @__PURE__ */ import_react.default.createElement("select", { value: geo.size.unit, onChange: (e) => set({ size: { ...geo.size, unit: e.target.value } }), style: { ...select, marginTop: 0 }, "data-size-unit": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "px" }, "px"), /* @__PURE__ */ import_react.default.createElement("option", { value: "%" }, "%")))), hudTouchable(el) && Math.min(geo.size.w, geo.size.h) < HUD_MIN_TOUCH && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 6 }, "data-touch-warning": true }, "\u26A0 Moins de 44 px : difficile \xE0 toucher au doigt."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, alignItems: "flex-end" } }, num("Plan (z)", geo.z, (v) => set({ z: v })), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 12, color: C.textDim, paddingBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!el.locked, onChange: (e) => set({ locked: e.target.checked }), "data-el-lock": true }), " Verrouill\xE9")), overrideKey ? /* @__PURE__ */ import_react.default.createElement("div", { style: { border: `1px solid ${C.amber}55`, borderRadius: 7, padding: 9, marginTop: 12 }, "data-override-box": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.amber, marginBottom: 6, lineHeight: 1.5 } }, overridePatch ? "Cet \xE9l\xE9ment a une place \xE0 lui ici." : "D\xE9placez-le pour lui donner une place \xE0 lui ici."), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 7, fontFamily: sans, fontSize: 12, color: C.text, padding: "3px 0" } }, /* @__PURE__ */ import_react.default.createElement(
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 300, flexShrink: 0, borderLeft: `1px solid ${C.line}`, padding: 14, overflowY: "auto" }, "data-hud-inspector": el.id }, /* @__PURE__ */ import_react.default.createElement("input", { value: el.name, onChange: (e) => set({ name: e.target.value }), style: { ...input, marginTop: 0, fontWeight: 600 }, "data-el-name": true }), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 4, margin: "8px 0", flexWrap: "wrap" } }, TABS.map(([v, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, "data-tab": v, onClick: () => setTab(v), style: { ...pillBtn(tab === v), fontSize: 11.5, padding: "5px 9px" } }, l))), tab === "place" && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Ancrage"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4 } }, HUD_ANCHOR_GRID.map(([v, g]) => /* @__PURE__ */ import_react.default.createElement("button", { key: v, "data-anchor": v, onClick: () => setGeo({ anchor: v }), style: { ...pillBtn(geo.anchor === v), padding: "8px 0", fontSize: 14 } }, g))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } }, num("D\xE9calage X", geo.offset.x, (v) => setGeo({ offset: { ...geo.offset, x: v } })), num("D\xE9calage Y", geo.offset.y, (v) => setGeo({ offset: { ...geo.offset, y: v } })), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 58 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Unit\xE9"), /* @__PURE__ */ import_react.default.createElement("select", { value: geo.offset.unit, onChange: (e) => setGeo({ offset: { ...geo.offset, unit: e.target.value } }), style: { ...select, marginTop: 0 }, "data-offset-unit": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "px" }, "px"), /* @__PURE__ */ import_react.default.createElement("option", { value: "%" }, "%")))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8 } }, num("Largeur", geo.size.w, (v) => setGeo({ size: { ...geo.size, w: v } })), num("Hauteur", geo.size.h, (v) => setGeo({ size: { ...geo.size, h: v } })), /* @__PURE__ */ import_react.default.createElement("div", { style: { width: 58 } }, /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Unit\xE9"), /* @__PURE__ */ import_react.default.createElement("select", { value: geo.size.unit, onChange: (e) => setGeo({ size: { ...geo.size, unit: e.target.value } }), style: { ...select, marginTop: 0 }, "data-size-unit": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "px" }, "px"), /* @__PURE__ */ import_react.default.createElement("option", { value: "%" }, "%")))), hudTouchable(el) && Math.min(geo.size.w, geo.size.h) < HUD_MIN_TOUCH && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.danger, marginTop: 6 }, "data-touch-warning": true }, "\u26A0 Moins de 44 px : difficile \xE0 toucher au doigt."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 8, alignItems: "flex-end" } }, num("Plan (z)", geo.z, (v) => set({ z: v })), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, fontFamily: sans, fontSize: 12, color: C.textDim, paddingBottom: 8 } }, /* @__PURE__ */ import_react.default.createElement("input", { type: "checkbox", checked: !!el.locked, onChange: (e) => set({ locked: e.target.checked }), "data-el-lock": true }), " Verrouill\xE9")), overrideKey ? /* @__PURE__ */ import_react.default.createElement("div", { style: { border: `1px solid ${C.amber}55`, borderRadius: 7, padding: 9, marginTop: 12 }, "data-override-box": true }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11.5, color: C.amber, marginBottom: 6, lineHeight: 1.5 } }, overridePatch ? "Cet \xE9l\xE9ment a une place \xE0 lui ici." : "D\xE9placez-le pour lui donner une place \xE0 lui ici."), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: 7, fontFamily: sans, fontSize: 12, color: C.text, padding: "3px 0" } }, /* @__PURE__ */ import_react.default.createElement(
       "input",
       {
         type: "checkbox",
@@ -52517,6 +53671,10 @@
         return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 300), sceneId: a.sceneId ? String(a.sceneId) : "", yaw: isFinite(parseFloat(a.yaw)) ? parseFloat(a.yaw) : 0, pitch: isFinite(parseFloat(a.pitch)) ? parseFloat(a.pitch) : 0, duree: Math.max(1, Math.min(30, parseFloat(a.duree) || 4)) } : null;
       case "fragment":
         return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 160), id: a.id ? String(a.id) : "" } : null;
+      case "carnet":
+        return a.id ? { type: a.type, id: String(a.id), titre: String(a.titre || "").slice(0, 80), texte: a.texte ? String(a.texte).slice(0, 4e3) : "", image: a.image ? String(a.image) : "" } : null;
+      case "cinematique":
+        return a.cineId ? { type: a.type, cineId: String(a.cineId), attendre: a.attendre !== false } : null;
       case "show_text":
         return a.text ? { type: a.type, text: String(a.text) } : null;
       case "set_variable":
@@ -52902,6 +54060,11 @@
       out.text = dlgStr(n.text).slice(0, DIALOG_MAX_TEXT);
       out.fx = dlgOneOf(n.fx, DIALOG_FX, "none");
       out.voiceClip = dlgStr(n.voiceClip);
+      out.variantes = (Array.isArray(n.variantes) ? n.variantes : []).map(function(t) {
+        return String(t == null ? "" : t).slice(0, DIALOG_MAX_TEXT);
+      }).slice(0, 8);
+      out.varier = n.varier === "hasard" ? "hasard" : "ordre";
+      out.dejaDit = dlgStr(n.dejaDit).slice(0, DIALOG_MAX_TEXT);
       out.stage = partialDialogStage(n.stage);
       out.bubble = partialDialogBubble(n.bubble);
       out.text_style = partialDialogText(n.text_style);
@@ -53433,6 +54596,7 @@
       z: Math.round(uiNum(e.z, 10, -999, 999)),
       locked: !!e.locked,
       hiddenInEditor: !!e.hiddenInEditor,
+      group: uiStr(e.group).slice(0, 40),
       anchor: uiOneOf(e.anchor, UI_ANCHORS, "top-left"),
       offset: normalizeUiOffset(e.offset, 16, 16),
       size: normalizeUiSize(e.size, 44, 44),
@@ -72172,6 +73336,11 @@ function applyActions(state, actions, game) {
     } else if (a.type === "fragment" && a.texte) {
       const cle = "__fragment:" + (a.id || a.texte);
       if (!vars[cle]) { vars[cle] = a.texte; effects.push({ kind: "fragment", action: a }); }
+    } else if (a.type === "carnet" && a.id) {
+      const cle = "__carnet:" + a.id;
+      if (!vars[cle]) { vars[cle] = 1; effects.push({ kind: "carnet", action: a }); }
+    } else if (a.type === "cinematique" && a.cineId) {
+      effects.push({ kind: "cinematique", action: a });
     } else if (a.type === "regarder" || a.type === "secouer" || a.type === "vibrer" || a.type === "image" || a.type === "bulle") {
       // Des effets de mise en sc\xE8ne : le jeu les joue, la fonction reste pure.
       effects.push({ kind: a.type, action: a });
@@ -72848,6 +74017,8 @@ function effetsScene(effects){
     else if(e.kind === 'vibrer'){ try{ if(navigator.vibrate) navigator.vibrate(e.action.ms || 200); }catch(err){} }
     else if(e.kind === 'image') montrerImage(e.action.image, e.action.texte);
     else if(e.kind === 'bulle') montrerBulle(e.action);
+    else if(e.kind === 'carnet'){ try{ hudPlaySound('notify'); }catch(x){} annonce('Ajout\xE9 au carnet', trJeu(e.action.titre || 'Document'), '', '\u{1F4C4}'); }
+    else if(e.kind === 'cinematique') jouerCine(e.action.cineId);
     else if(e.kind === 'fragment'){ try{ hudPlaySound('notify'); }catch(x){} annonce('Fragment trouv\xE9', trJeu(e.action.texte), '', '\u{1F9E9}'); vibre(40); }
   });
 }
@@ -73869,6 +75040,222 @@ function baPreparer(){
 }
 setTimeout(baPreparer, 600);
 
+/* ---- Lots 12 \xE0 16 : aper\xE7u en direct, cin\xE9matiques, carnet -------- */
+const CINE_TEST = ${JSON.stringify(opts.cineTest || "")};
+
+/*  Le studio de l'interface envoie l'interface modifi\xE9e au jeu d'essai
+    d\xE9j\xE0 ouvert : on la redessine sur place au lieu de tout recharger.  */
+window.addEventListener('message', function(ev){
+  if(!EN_TEST || window.parent === window || ev.source !== window.parent) return;
+  const m = ev.data;
+  if(!m || typeof m !== 'object') return;
+  if(m.type === 'e360-ui' && m.ui){
+    GAME.ui = m.ui; uiCache = null;
+    try{ hudReset(); }catch(e){}
+    return;
+  }
+  if(m.type === 'e360-ui-nudge'){
+    (m.ids || []).forEach(function(id){
+      const b = hudBuilt[id];
+      if(b) b.root.style.translate = (m.dx || m.dy) ? Math.round(m.dx) + 'px ' + Math.round(m.dy) + 'px' : '';
+    });
+  }
+});
+// Une rotation ou un autre format d'\xE9cran : les zones s\xFBres et l'interface sont \xE0 revoir.
+let lot12Redim = 0;
+window.addEventListener('resize', function(){
+  clearTimeout(lot12Redim);
+  lot12Redim = setTimeout(function(){
+    try{ dlgInsets = null; }catch(e){}
+    try{ hudReset(); }catch(e){}
+  }, 120);
+});
+
+(function(){
+  const st = document.createElement('style');
+  st.textContent = [
+    '.cine{position:absolute;inset:0;z-index:88;pointer-events:auto;cursor:default}',
+    '.cine-bande{position:absolute;left:0;right:0;height:0;background:#000;transition:height .6s ease;z-index:1}',
+    '.cine-haut{top:0}.cine-bas{bottom:0}',
+    '.cine-bandes.cine-on .cine-bande{height:11%}',
+    '.cine-voile{position:absolute;inset:0;opacity:0;pointer-events:none;background:#000;z-index:2}',
+    '.cine-textes{position:absolute;inset:0;pointer-events:none;z-index:3}',
+    '.cine-texte{position:absolute;left:50%;transform:translateX(-50%);width:max-content;max-width:86%;text-align:center;color:#fff;font:600 18px/1.45 Georgia,serif;text-shadow:0 2px 12px rgba(0,0,0,.85);opacity:0;transition:opacity .45s;white-space:pre-wrap}',
+    '.cine-texte.on{opacity:1}',
+    '.ct-haut{top:calc(14% + env(safe-area-inset-top,0px))}',
+    '.ct-bas{bottom:calc(14% + env(safe-area-inset-bottom,0px))}',
+    '.ct-centre{top:50%;transform:translate(-50%,-50%)}',
+    '.cine-passer{position:absolute;right:14px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:4;background:rgba(16,19,27,.72);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:18px;padding:8px 14px;font:600 13px system-ui,sans-serif;cursor:pointer}',
+    '#phone-frame.cine-en-cours #hud{opacity:0;pointer-events:none;transition:opacity .3s}',
+    '.carnet-page{position:absolute;inset:0;z-index:95;background:rgba(5,7,11,.82);display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}',
+    '.carnet-feuille{background:#f3ead7;color:#2b2418;max-width:420px;width:100%;max-height:86%;overflow:auto;border-radius:6px;padding:18px 20px;box-sizing:border-box;box-shadow:0 20px 60px rgba(0,0,0,.6);font:15px/1.55 Georgia,serif}',
+    '.carnet-feuille h4{margin:0 0 10px;font-size:19px}',
+    '.carnet-feuille img{width:100%;border-radius:4px;margin-bottom:10px;display:block}',
+    '.carnet-feuille p{white-space:pre-wrap;margin:0}',
+    '.carnet-fermer{display:block;margin-top:14px;font:12px system-ui,sans-serif;color:#7a6d55;text-align:center}'
+  ].join(String.fromCharCode(10));
+  document.head.appendChild(st);
+})();
+
+/* --- les cin\xE9matiques --- */
+function cineDuJeu(id){
+  return (OPTS.cinematiques || []).filter(function(c){ return c && c.id === id; })[0] || null;
+}
+function dureeCine(id){ const c = cineDuJeu(id); return c ? c.duree : 0; }
+let cineCours = null;
+function jouerCine(id){
+  const c = cineDuJeu(id);
+  if(!c || cineCours) return;
+  if(c.sceneId && GAME.scenes.some(function(s){ return s.id === c.sceneId; }) && (!current || current.id !== c.sceneId)){
+    try{ loadScene(c.sceneId); }catch(e){}
+    setTimeout(function(){ lancerCine(c); }, 450);
+    return;
+  }
+  lancerCine(c);
+}
+function lancerCine(c){
+  if(cineCours) return;
+  const fond = mk('div', 'cine' + (c.bandes ? ' cine-bandes' : ''));
+  fond.appendChild(mk('div', 'cine-bande cine-haut'));
+  fond.appendChild(mk('div', 'cine-bande cine-bas'));
+  const voile = mk('div', 'cine-voile');
+  fond.appendChild(voile);
+  const zone = mk('div', 'cine-textes');
+  fond.appendChild(zone);
+  let passer = null;
+  if(c.passer){ passer = mk('button', 'cine-passer', 'Passer \u203A'); fond.appendChild(passer); }
+  // un toucher pendant la cin\xE9matique ne traverse pas jusqu'\xE0 la sc\xE8ne
+  fond.addEventListener('click', function(e){ e.stopPropagation(); });
+  fond.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  document.getElementById('phone-frame').appendChild(fond);
+  if(!c.interface) frameEl.classList.add('cine-en-cours');
+  requestAnimationFrame(function(){ fond.classList.add('cine-on'); });
+  const fov0 = camera.fov;
+  const t0 = performance.now();
+  const joues = {};
+  const textes = (c.textes || []).map(function(x){ return { def: x, el: null }; });
+  const cles = (c.cles || []).slice().sort(function(a, b){ return a.t - b.t; });
+  const fondus = (c.fondus || []).slice().sort(function(a, b){ return a.t - b.t; });
+  const depart = { t: 0, yaw: yaw, pitch: pitch, fov: fov0 };
+  let fini = false;
+  const finir = function(){
+    if(fini) return;
+    fini = true; cineCours = null;
+    if(Math.abs(camera.fov - fov0) > 0.01){ camera.fov = fov0; camera.updateProjectionMatrix(); }
+    fond.classList.remove('cine-on');
+    frameEl.classList.remove('cine-en-cours');
+    textes.forEach(function(x){ if(x.el) x.el.classList.remove('on'); });
+    setTimeout(function(){ if(fond.parentNode) fond.parentNode.removeChild(fond); }, 450);
+    needsRedraw();
+  };
+  if(passer) passer.addEventListener('click', function(e){ e.stopPropagation(); finir(); });
+  cineCours = { c: c, finir: finir };
+  animsCamera.push(function(t){
+    if(fini) return true;
+    const s = (t - t0) / 1000;
+    if(cles.length){
+      let a = depart, b = null;
+      for(let i = 0; i < cles.length; i++){
+        if(cles[i].t <= s) a = cles[i];
+        else { b = cles[i]; break; }
+      }
+      let f;
+      if(b){
+        const k = b.t > a.t ? Math.max(0, Math.min(1, (s - a.t) / (b.t - a.t))) : 1;
+        const e = adoucir(k);
+        let dy = b.yaw - a.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+        yaw = a.yaw + dy * e; pitch = a.pitch + (b.pitch - a.pitch) * e;
+        f = a.fov + (b.fov - a.fov) * e;
+      } else { yaw = a.yaw; pitch = a.pitch; f = a.fov; }
+      if(Math.abs(camera.fov - f) > 0.01){ camera.fov = f; camera.updateProjectionMatrix(); }
+      needsRedraw();
+    }
+    textes.forEach(function(x){
+      const d = x.def, dedans = s >= d.t && s < d.t + d.d;
+      if(dedans && !x.el){
+        const el = mk('div', 'cine-texte ct-' + d.place, trJeu(d.texte));
+        x.el = el; zone.appendChild(el);
+        requestAnimationFrame(function(){ el.classList.add('on'); });
+      } else if(!dedans && x.el){
+        const el = x.el; x.el = null;
+        el.classList.remove('on');
+        setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 450);
+      }
+    });
+    (c.sons || []).forEach(function(x, i){
+      if(joues[i] || s < x.t || !x.soundId) return;
+      joues[i] = 1;
+      try{ playSoundEffects([{ kind: 'sound', soundId: x.soundId, volume: x.volume }]); }catch(e){}
+    });
+    let op = 0, coul = 'noir';
+    fondus.forEach(function(f){
+      if(s >= f.t + f.d){ op = f.sens === 'ferme' ? 1 : 0; coul = f.couleur; }
+      else if(s >= f.t){ const p = (s - f.t) / f.d; op = f.sens === 'ferme' ? p : 1 - p; coul = f.couleur; }
+    });
+    voile.style.opacity = String(op);
+    voile.style.background = coul === 'blanc' ? '#fff' : '#000';
+    if(s >= c.duree){ finir(); return true; }
+    return false;
+  });
+  needsRedraw();
+}
+// La cin\xE9matique d'ouverture : d\xE8s que la nouvelle partie est \xE0 l'\xE9cran.
+function introCine(){
+  if(!OPTS.introCine || !cineDuJeu(OPTS.introCine)) return;
+  let n = 0;
+  const essai = function(){
+    n++;
+    if(playerScreen === 'playing'){ jouerCine(OPTS.introCine); return; }
+    if(n < 40) setTimeout(essai, 150);
+  };
+  setTimeout(essai, 300);
+}
+if(CINE_TEST) setTimeout(function(){ jouerCine(CINE_TEST); }, 700);
+
+/* --- le carnet : des documents gard\xE9s dans le journal --- */
+let carnetIndex = null;
+function carnetDefs(){
+  if(carnetIndex) return carnetIndex;
+  const vus = {}, out = [];
+  const fouille = function(o, prof){
+    if(!o || typeof o !== 'object' || prof > 40) return;
+    if(Array.isArray(o)){ for(let i = 0; i < o.length; i++) fouille(o[i], prof + 1); return; }
+    if(o.type === 'carnet' && o.id && !vus[o.id]){ vus[o.id] = 1; out.push(o); }
+    for(const k in o){ if(o[k] && typeof o[k] === 'object') fouille(o[k], prof + 1); }
+  };
+  fouille(GAME.scenes, 0); fouille(GAME.puzzles, 0); fouille(GAME.dialogues, 0); fouille(GAME.ui, 0);
+  carnetIndex = out;
+  return out;
+}
+function carnetSection(box){
+  const tous = carnetDefs();
+  if(!tous.length) return;
+  const pages = tous.filter(function(p){ return vars['__carnet:' + p.id]; });
+  box.appendChild(mk('div', 'jr-head', 'Documents \xB7 ' + pages.length + ' / ' + tous.length));
+  if(!pages.length){ box.appendChild(mk('div', 'pnl-empty', '\u2014')); return; }
+  const l = mk('div', 'pnl-list');
+  pages.forEach(function(p){
+    const r = mk('div', 'pnl-row', '\u{1F4C4} ' + trJeu(p.titre || 'Document'));
+    r.style.cursor = 'pointer';
+    r.setAttribute('role', 'button');
+    r.addEventListener('click', function(){ montrerPageCarnet(p); });
+    l.appendChild(r);
+  });
+  box.appendChild(l);
+}
+function montrerPageCarnet(p){
+  const fond = mk('div', 'carnet-page');
+  const feuille = mk('div', 'carnet-feuille');
+  feuille.appendChild(mk('h4', '', trJeu(p.titre || 'Document')));
+  if(p.image){ const im = document.createElement('img'); im.src = p.image; im.alt = ''; feuille.appendChild(im); }
+  if(p.texte) feuille.appendChild(mk('p', '', trJeu(p.texte)));
+  feuille.appendChild(mk('span', 'carnet-fermer', 'Touche pour fermer'));
+  fond.appendChild(feuille);
+  fond.addEventListener('click', function(){ fond.remove(); });
+  document.getElementById('phone-frame').appendChild(fond);
+}
+
+
 /* ---- Lot 5 : ambiance et son ------------------------------------- */
 /*  R\xE9verb\xE9ration : un envoi des bus bruitage, voix et ambiance vers
     une r\xE9ponse impulsionnelle fabriqu\xE9e (bruit qui d\xE9cro\xEEt).          */
@@ -74480,6 +75867,8 @@ function normalizeAction(a) {
     case "ajouter": return a.key ? { type: a.type, key: slugKey(a.key), amount: isFinite(parseFloat(a.amount)) ? parseFloat(a.amount) : 1 } : null;
     case "bulle": return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 300), sceneId: a.sceneId ? String(a.sceneId) : "", yaw: isFinite(parseFloat(a.yaw)) ? parseFloat(a.yaw) : 0, pitch: isFinite(parseFloat(a.pitch)) ? parseFloat(a.pitch) : 0, duree: Math.max(1, Math.min(30, parseFloat(a.duree) || 4)) } : null;
     case "fragment": return a.texte ? { type: a.type, texte: String(a.texte).slice(0, 160), id: a.id ? String(a.id) : "" } : null;
+    case "carnet": return a.id ? { type: a.type, id: String(a.id), titre: String(a.titre || "").slice(0, 80), texte: a.texte ? String(a.texte).slice(0, 4000) : "", image: a.image ? String(a.image) : "" } : null;
+    case "cinematique": return a.cineId ? { type: a.type, cineId: String(a.cineId), attendre: a.attendre !== false } : null;
     case "show_text": return a.text ? { type: a.type, text: String(a.text) } : null;
     case "set_variable": return a.key ? { type: a.type, key: slugKey(a.key), value: cleanValue(a.value) } : null;
     case "start_dialogue": return a.dialogId ? { type: a.type, dialogId: String(a.dialogId) } : null;
@@ -74867,7 +76256,7 @@ function normalizeDialogNode(n, i) {
     out.pose = dlgStr(n.pose);
     out.text = dlgStr(n.text).slice(0, DIALOG_MAX_TEXT);
     out.fx = dlgOneOf(n.fx, DIALOG_FX, "none");
-    out.voiceClip = dlgStr(n.voiceClip);
+    out.voiceClip = dlgStr(n.voiceClip); out.variantes = (Array.isArray(n.variantes) ? n.variantes : []).map(function (t) { return String(t == null ? "" : t).slice(0, DIALOG_MAX_TEXT); }).slice(0, 8); out.varier = n.varier === "hasard" ? "hasard" : "ordre"; out.dejaDit = dlgStr(n.dejaDit).slice(0, DIALOG_MAX_TEXT);
     out.stage = partialDialogStage(n.stage);
     out.bubble = partialDialogBubble(n.bubble);
     out.text_style = partialDialogText(n.text_style);
@@ -75292,7 +76681,8 @@ function dialogView(game, state, ctx) {
       history: state.history || [],
     };
   }
-  const parsed = parseDialogText((typeof trJeu === "function" ? trJeu(n.text) : n.text), c.vars);
+  const texteVu = texteReplique(n, d, c);
+  const parsed = parseDialogText((typeof trJeu === "function" ? trJeu(texteVu) : texteVu), c.vars);
   const timed = dialogLetters(parsed, style.typing);
   return {
     type: "line", dialogId: d.id, nodeId: n.id, style: style, cast: cast,
@@ -75304,6 +76694,21 @@ function dialogView(game, state, ctx) {
 }
 
 // Verifie un dialogue repris depuis une sauvegarde : il doit exister encore.
+/*  Une r\xE9plique qui varie : une autre version \xE0 chaque passage, ou une
+    phrase \xE0 part quand on revient alors qu'elle a d\xE9j\xE0 \xE9t\xE9 dite.       */
+function texteReplique(n, d, c) {
+  const vu = (c && c.vars && parseFloat(c.vars["__dit:" + (d ? d.id : "") + ":" + n.id])) || 0;
+  if (vu > 0 && n.dejaDit) return n.dejaDit;
+  const l = [n.text].concat(n.variantes || []).filter(function (t) { return t; });
+  if (l.length < 2) return n.text;
+  if (n.varier === "hasard") {
+    let h = 7;
+    const s = n.id + ":" + vu;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973;
+    return l[h % l.length];
+  }
+  return l[vu % l.length];
+}
 function dialogRestore(game, saved) {
   if (!saved || typeof saved !== "object") return null;
   const d = dialogById(game, saved.dialogId);
@@ -75561,7 +76966,7 @@ type: type,
 name: uiStr(e.name, defaultUiElementName(type)).slice(0, 60),
 z: Math.round(uiNum(e.z, 10, -999, 999)),
 locked: !!e.locked,
-hiddenInEditor: !!e.hiddenInEditor,
+hiddenInEditor: !!e.hiddenInEditor, group: uiStr(e.group).slice(0, 40),
 anchor: uiOneOf(e.anchor, UI_ANCHORS, "top-left"),
 offset: normalizeUiOffset(e.offset, 16, 16),
 size: normalizeUiSize(e.size, 44, 44),
@@ -89261,6 +90666,7 @@ function openJournal(){
   const su = succesDuJeu();
   if(su.length) section('Succ\xE8s \xB7 ' + su.filter(function(s){ return vars['__succes:' + s.id]; }).length + ' / ' + su.length,
     su.map(function(s){ return vars['__succes:' + s.id] ? '\u{1F3C6} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '') : (s.secret ? '\u{1F512} Succ\xE8s secret' : '\u{1F512} ' + s.nom + (s.description ? ' \xB7 ' + s.description : '')); }));
+  try{ carnetSection(box); }catch(e){}
   box.appendChild(mk('div','jr-head','Mes notes'));
   const notes = document.createElement('textarea');
   notes.className = 'jr-notes'; notes.placeholder = 'Un code, un nom, une id\xE9e\u2026';
@@ -89392,7 +90798,7 @@ function montrerPrecedemment(){
 }
 const homeHost = {
   hasSave: function(){ const s = readSave(); return !!(s && GAME.scenes.some(function(x){ return x.id===s.scene; })); },
-  newGame: function(){ saveEnabled = true; resetProgress(startSceneId()); markSaved(); entreeAuDepart = true; },
+  newGame: function(){ saveEnabled = true; resetProgress(startSceneId()); markSaved(); entreeAuDepart = true; try{ introCine(); }catch(e){} },
   continueGame: function(){ const s = readSave(); saveEnabled = true; if(s) applySave(s); markSaved(); repriseEnAttente = !!s; },
   startChapter: function(sceneId){ saveEnabled = true; resetProgress(GAME.scenes.some(function(x){ return x.id===sceneId; }) ? sceneId : startSceneId()); markSaved(); entreeAuDepart = true; },
   canQuit: function(){ try{ return !(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()==='ios'); }catch(e){ return true; } },
@@ -89449,10 +90855,11 @@ function openPuzzleEffects(effects){
 function runActions(actions){
   const liste = actions || [];
   let k = -1;
-  for(let i = 0; i < liste.length; i++){ if(liste[i] && liste[i].type === 'attendre'){ k = i; break; } }
+  for(let i = 0; i < liste.length; i++){ if(liste[i] && (liste[i].type === 'attendre' || (liste[i].type === 'cinematique' && liste[i].attendre !== false && i < liste.length - 1))){ k = i; break; } }
   if(k < 0) return runActionsNow(liste);
-  const eff = runActionsNow(liste.slice(0, k));
-  const reste = liste.slice(k + 1), ms = Math.round((liste[k].secondes || 1) * 1000);
+  const enCine = liste[k].type === 'cinematique';
+  const eff = runActionsNow(liste.slice(0, enCine ? k + 1 : k));
+  const reste = liste.slice(k + 1), ms = Math.round((enCine ? dureeCine(liste[k].cineId) + 0.6 : (liste[k].secondes || 1)) * 1000);
   setTimeout(function(){
     const e2 = runActions(reste);
     const d = pickDialogue(e2);
@@ -90563,6 +91970,7 @@ function dlgNext(){
   if(!dlgState || dlgHist) return;
   if(dlgEls && dlgShown < dlgEls.spans.length){ dlgRevealAll(); return; }
   if(dlgV && dlgV.type === 'choice') return;
+  if(dlgV && dlgV.type === 'line' && dlgV.dialogId){ const kd = '__dit:' + dlgV.dialogId + ':' + dlgV.nodeId; vars[kd] = (vars[kd] || 0) + 1; }
   const g = dialogGame();
   const next = dialogAdvance(g, dlgState, dialogCtxOf(), dialogApply);
   dlgState = next;
@@ -93124,6 +94532,7 @@ loop();
     });
     COMBO_EDITEUR = { recipes: combinations.recipes, items };
     SUCCES_EDITEUR = gameMeta.succes || [];
+    CINES_EDITEUR = gameMeta.options && gameMeta.options.cinematiques || [];
     PROJET_EDITEUR = { scenes, variables, dialogues, items };
     SCENES_EDITEUR = scenes;
     SONS_EDITEUR = audio && audio.library || [];
@@ -94109,7 +95518,9 @@ loop();
       ["theme", "\u{1F3AD} Th\xE8me, polices, fin et joueur"],
       ["presse", "\u{1F4CB} Copier, coller, biblioth\xE8que"],
       ["import", "\u{1F5BC} Importer des sc\xE8nes en lot"],
-      ["secours", "\u{1F6DF} Versions de secours"]
+      ["secours", "\u{1F6DF} Versions de secours"],
+      ["cines", "\u{1F3AC} Cin\xE9matiques"],
+      ["medias", "\u{1F5DC} M\xE9dias et poids du jeu"]
     ].map(([k, l]) => /* @__PURE__ */ import_react.default.createElement("button", { key: k, onClick: () => setFenetre678(k), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-678": k }, l)), /* @__PURE__ */ import_react.default.createElement(Label, null, "Intervenants"), characters.slice(0, 4).map((c) => {
       const pose = c.poses.find((p) => p.id === c.defaultPose) || c.poses[0] || {};
       return /* @__PURE__ */ import_react.default.createElement(
@@ -94565,32 +95976,7 @@ loop();
           style: { ...input, width: 64, marginTop: 0, textAlign: "center" }
         }
       ))), /* @__PURE__ */ import_react.default.createElement(Label, null, "Variables"), varOpts.length === 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.textDim } }, "Ce jeu n'a aucune variable."), varOpts.map((v) => /* @__PURE__ */ import_react.default.createElement("div", { key: v.key, style: { display: "flex", alignItems: "center", gap: 8, padding: "3px 0" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, fontFamily: sans, fontSize: 12.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, title: v.key }, v.label), /* @__PURE__ */ import_react.default.createElement("span", { "data-test-var": v.key }, /* @__PURE__ */ import_react.default.createElement(ValueEditor, { type: v.type, value: hasOwn(testFrom.vars, v.key) ? testFrom.vars[v.key] : defaultForType(v.type), onChange: (x) => setVar(v.key, x) })))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, marginTop: 16 } }, /* @__PURE__ */ import_react.default.createElement("button", { "data-test-run": "1", onClick: runTestFrom, style: { ...primaryBtn, flex: 1 } }, "\u25B6 Lancer le test"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setTestFrom(null), style: smallBtn }, "Annuler"))));
-    })(), testHtml && /* @__PURE__ */ import_react.default.createElement("div", { style: { ...panelOverlay, zIndex: 90, flexDirection: "column", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 12, color: C.text } }, "Test du jeu \u2014 c'est le m\xEAme Player que le jeu export\xE9, il d\xE9marre sur l'accueil."), /* @__PURE__ */ import_react.default.createElement(
-      "iframe",
-      {
-        title: "Test du jeu",
-        srcDoc: testHtml,
-        allow: "fullscreen",
-        sandbox: "allow-scripts allow-same-origin allow-popups allow-forms",
-        ref: testFrameRef,
-        onLoad: () => pleinEcranTest(testFrameRef.current, testPlein),
-        style: testPlein ? { position: "fixed", left: 0, top: 0, width: "100vw", height: "100vh", border: "none", background: "#000", zIndex: 96 } : { width: "min(94vw, 900px)", height: "80vh", border: `1px solid ${C.line}`, background: "#000" }
-      }
-    ), testPlein && /* @__PURE__ */ import_react.default.createElement(
-      "button",
-      {
-        onClick: () => {
-          setTestPlein(false);
-          pleinEcranTest(testFrameRef.current, false);
-        },
-        "data-test-plein-sortie": true,
-        style: { ...smallBtn, position: "fixed", top: "calc(10px + env(safe-area-inset-top, 0px))", left: 10, zIndex: 97, background: "rgba(16,19,27,.85)" }
-      },
-      "\u2715 Quitter le plein \xE9cran"
-    ), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => {
-      setTestPlein(true);
-      pleinEcranTest(testFrameRef.current, true);
-    }, style: smallBtn, "data-test-plein": true }, "\u26F6 Plein \xE9cran, comme le jeu export\xE9"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8 } }, /* @__PURE__ */ import_react.default.createElement("button", { onClick: clearTestSave, style: smallBtn, title: "Supprime la sauvegarde de test de ce jeu et relance le test" }, "\u21BA Effacer la sauvegarde de test"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setTestHtml(null), style: primaryBtn }, "Fermer le test"))), showAppExport && /* @__PURE__ */ import_react.default.createElement(
+    })(), testHtml && /* @__PURE__ */ import_react.default.createElement(TestJeu, { html: testHtml, onClose: () => setTestHtml(null), onEffacer: clearTestSave, scenes, items, variables }), showAppExport && /* @__PURE__ */ import_react.default.createElement(
       AppExportPanel,
       {
         dialogues,
@@ -94670,7 +96056,19 @@ loop();
           setTestHtml(buildStandaloneHTML(gameFileFromProject(projetJeu()), optsTest({ bandeAnnonce: o, testStart: { sceneId: o.scenes[0], inventory: {}, vars: {} } })));
         }
       }
-    ), showObjectifs && /* @__PURE__ */ import_react.default.createElement(ObjectifsManager, { meta: gameMeta, setMeta: setGameMeta, items, variables, puzzles, scenes, onClose: () => setShowObjectifs(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
+    ), fenetre678 === "cines" && /* @__PURE__ */ import_react.default.createElement(
+      CinematiquesJeu,
+      {
+        meta: gameMeta,
+        setMeta: setGameMeta,
+        scenes,
+        onClose: () => setFenetre678(""),
+        onTester: (c) => {
+          setFenetre678("");
+          setTestHtml(buildStandaloneHTML(gameFileFromProject(projetJeu()), optsTest({ cineTest: c.id, testStart: { sceneId: c.sceneId || startSceneId || (scenes[0] || {}).id, inventory: {}, vars: {} } })));
+        }
+      }
+    ), fenetre678 === "medias" && /* @__PURE__ */ import_react.default.createElement(MediasJeu, { scenes, setScenes, items, audio, onClose: () => setFenetre678("") }), showObjectifs && /* @__PURE__ */ import_react.default.createElement(ObjectifsManager, { meta: gameMeta, setMeta: setGameMeta, items, variables, puzzles, scenes, onClose: () => setShowObjectifs(false) }), puzzleManager && /* @__PURE__ */ import_react.default.createElement(
       PuzzleManager,
       {
         dialogues,

@@ -59,6 +59,12 @@
       }
     }
   }
+  // Déjà vu avec ce même texte : rien à refaire (la passe touche des centaines de boutons).
+  function epurerBoutonVu(b) {
+    if (b.__e360t === b.textContent) return;
+    epurerBouton(b);
+    b.__e360t = b.textContent;
+  }
 
   function barreDuHaut() {
     var app = document.querySelector("#root > div");
@@ -236,7 +242,7 @@
     // Petit texte gris, ou tout petit texte (il hérite alors du gris de son parent).
     var candidats = GRIS + ', [style*="font-size: 9"], [style*="font-size: 10px"], [style*="font-size: 10.5px"]';
     root.querySelectorAll(candidats).forEach(function (el) {
-      if (el.hasAttribute("data-e360-aide") || !estAide(el)) return;
+      if (el.hasAttribute("data-e360-aide") || el.closest(ZONES_CALMES_ONGLETS) || !estAide(el)) return;
       el.setAttribute("data-e360-aide", "");
       var ancre = null, p = el.previousElementSibling;
       for (var i = 0; i < 3 && p; i++, p = p.previousElementSibling) {
@@ -714,10 +720,20 @@
     montrerOnglet(p, d, noms.indexOf(choixOnglet[d.cle]) >= 0 ? choixOnglet[d.cle] : noms[0], null);
   }
 
+  // Ce qui ne contient jamais de panneau à onglets : on ne le parcourt pas.
+  var ZONES_CALMES_ONGLETS = "[data-e360='colonne'], [data-e360='accueil'], .e360-menu, [data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-canvas], [data-test-jeu], [data-cine-frise], svg, canvas, iframe, video";
   function ongletsPanneaux(root) {
     var vus = [];
-    root.querySelectorAll("div").forEach(function (p) {
-      if (p.classList.contains("e360-onglets") || p.closest("[data-e360='colonne'], [data-e360='accueil'], .e360-menu")) return;
+    var parcours = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
+      acceptNode: function (n) {
+        if (n.matches(ZONES_CALMES_ONGLETS)) return NodeFilter.FILTER_REJECT;
+        return n.tagName === "DIV" ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    });
+    var divs = [], nd;
+    while ((nd = parcours.nextNode())) divs.push(nd);
+    divs.forEach(function (p) {
+      if (p.classList.contains("e360-onglets")) return;
       var grands = 0, petits = 0, premierEnfant = p.firstElementChild;
       for (var k = premierEnfant; k; k = k.nextElementSibling) {
         if (rubriqueDe(k) !== null) grands++;
@@ -977,11 +993,19 @@
   }, { passive: false, capture: true });
 
   var prevu = false;
+  var mesure = window.__e360Passes = { n: 0, ms: 0, max: 0 };
   function passe() {
     prevu = false;
     var root = document.getElementById("root");
     if (!root) return;
-    root.querySelectorAll("button").forEach(epurerBouton);
+    var t0 = performance.now();
+    try { passeCorps(root); } finally {
+      var d = performance.now() - t0;
+      mesure.n++; mesure.ms = Math.round(d * 10) / 10; if (d > mesure.max) mesure.max = Math.round(d * 10) / 10;
+    }
+  }
+  function passeCorps(root) {
+    root.querySelectorAll("button").forEach(epurerBoutonVu);
     var h = barreDuHaut();
     if (h) reperer(h);
     gererAccueil(h);
@@ -1006,10 +1030,24 @@
   }
 
   // Ce qui bouge sans cesse (éditeur de nœuds, plateau, vue 360, aperçus) ne relance pas l'habillage.
-  var ZONES_CALMES = "[data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-el], canvas, svg, iframe";
+  var ZONES_CALMES = "[data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-el], [data-hud-canvas], [data-cine-frise], [data-debug-test], canvas, svg, iframe";
+  // Un nœud qui compte : un élément (un texte qui change ne crée ni bouton ni panneau).
+  function compte(liste) {
+    for (var j = 0; j < liste.length; j++) if (liste[j].nodeType === 1 && !(liste[j].classList && liste[j].classList.contains("e360-q"))) return true;
+    return false;
+  }
   function observer(recs) {
     for (var i = 0; i < recs.length; i++) {
-      var t = recs[i].target, el = t && t.nodeType === 1 ? t : t && t.parentElement;
+      var r = recs[i];
+      if (r.type === "characterData") {
+        // Le libellé d'un bouton a changé (« Lecture » / « Pause »…) : ses emoji sont à revoir.
+        var pb = r.target.parentElement && r.target.parentElement.closest && r.target.parentElement.closest("button");
+        if (!pb || pb.__e360t === pb.textContent) continue;
+      } else if (!compte(r.addedNodes) && !compte(r.removedNodes)) {
+        var tb = r.target.closest && r.target.closest("button");
+        if (!tb || tb.__e360t === tb.textContent) continue;
+      }
+      var t = r.target, el = t && t.nodeType === 1 ? t : t && t.parentElement;
       if (!el || !el.closest || !el.closest(ZONES_CALMES)) { planifier(); return; }
     }
   }
