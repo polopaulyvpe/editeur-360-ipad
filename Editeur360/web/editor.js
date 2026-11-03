@@ -40410,6 +40410,14 @@
       });
       onChange({ ...ui, overrides: normalizeUiOverrides(ui.overrides.map((o) => o.id === found.id ? next : o)) });
     };
+    const [glisseCalque, setGlisseCalque] = (0, import_react.useState)(null);
+    const rangerCalques = (liste) => {
+      const n = liste.length, zs = {};
+      liste.forEach((x, i) => {
+        zs[x.id] = (n - i) * 10;
+      });
+      onChange({ ...ui, elements: ui.elements.map((x) => zs[x.id] != null && x.z !== zs[x.id] ? normalizeUiElement({ ...x, z: zs[x.id] }, 0) : x) });
+    };
     const patch = (id, fn) => {
       if (ovKey) return patchMany(/* @__PURE__ */ new Set([id]), fn);
       onChange({ ...ui, elements: ui.elements.map((e) => e.id === id ? normalizeUiElement(fn(e), 0) : e) });
@@ -40579,52 +40587,130 @@
       },
       /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 14 } }, p.icon),
       p.label
-    ))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Calques"), !ui.elements.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim } }, "Aucun \xE9l\xE9ment."), ui.elements.slice().sort((a, b) => b.z - a.z).map((e) => /* @__PURE__ */ import_react.default.createElement(
-      "div",
-      {
-        key: e.id,
-        "data-layer": e.id,
-        onClick: () => setSel(/* @__PURE__ */ new Set([e.id])),
-        style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          padding: "4px 5px",
-          borderRadius: 5,
-          cursor: "pointer",
-          background: sel.has(e.id) ? C.ink2 : "transparent",
-          opacity: e.hiddenInEditor ? 0.45 : 1
-        }
-      },
-      /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 11, width: 14, textAlign: "center" } }, (HUD_PALETTE.filter((p) => p.type === e.type)[0] || {}).icon),
-      /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: sans, fontSize: 11.5, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, e.name),
-      /* @__PURE__ */ import_react.default.createElement(
-        "button",
+    ))), /* @__PURE__ */ import_react.default.createElement(Label, { small: true }, "Calques"), !ui.elements.length && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 11, color: C.textDim } }, "Aucun \xE9l\xE9ment."), ui.elements.length > 1 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontFamily: sans, fontSize: 10.5, color: C.textDim, margin: "0 0 4px", lineHeight: 1.35 } }, "En haut de la liste : au-dessus des autres. Fais glisser \u283F ou utilise les fl\xE8ches."), (() => {
+      const ordre = ui.elements.slice().sort((a, b) => b.z - a.z);
+      return ordre.map((e, i) => /* @__PURE__ */ import_react.default.createElement(
+        "div",
         {
-          "data-layer-eye": e.id,
-          title: "Masquer dans l'\xE9diteur",
-          style: iconBtn,
-          onClick: (ev) => {
-            ev.stopPropagation();
-            patch(e.id, (x) => ({ ...x, hiddenInEditor: !x.hiddenInEditor }));
+          key: e.id,
+          "data-layer": e.id,
+          "data-layer-rang": i,
+          onClick: () => setSel(/* @__PURE__ */ new Set([e.id])),
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "4px 5px",
+            borderRadius: 5,
+            cursor: "pointer",
+            background: glisseCalque && glisseCalque.id === e.id ? C.line : sel.has(e.id) ? C.ink2 : "transparent",
+            opacity: e.hiddenInEditor ? 0.45 : 1,
+            boxShadow: glisseCalque && glisseCalque.cible === i && glisseCalque.de !== i ? (glisseCalque.de > i ? "inset 0 2px 0 " : "inset 0 -2px 0 ") + C.amber : "none"
           }
         },
-        e.hiddenInEditor ? "\u{1F6AB}" : "\u{1F441}"
-      ),
-      /* @__PURE__ */ import_react.default.createElement(
-        "button",
-        {
-          "data-layer-lock": e.id,
-          title: "Verrouiller",
-          style: iconBtn,
-          onClick: (ev) => {
-            ev.stopPropagation();
-            patch(e.id, (x) => ({ ...x, locked: !x.locked }));
-          }
-        },
-        e.locked ? "\u{1F512}" : "\u{1F513}"
-      )
-    ))), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "8px 12px", borderBottom: `1px solid ${C.line}`, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } }, HUD_DEVICES.map((d) => /* @__PURE__ */ import_react.default.createElement("button", { key: d.id, "data-device": d.id, onClick: () => setDevice(d.id), style: pillBtn(device === d.id) }, d.label)), /* @__PURE__ */ import_react.default.createElement("button", { "data-rotate": true, onClick: () => setPortrait(!portrait), style: smallBtn, title: "Pivoter" }, portrait ? "\u25AF Portrait" : "\u25AD Paysage"), /* @__PURE__ */ import_react.default.createElement("select", { value: sceneId, onChange: (e) => setSceneId(e.target.value), style: { ...select, marginTop: 0, width: 160 }, "data-preview-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name))), /* @__PURE__ */ import_react.default.createElement(
+        /* @__PURE__ */ import_react.default.createElement(
+          "span",
+          {
+            "data-layer-poignee": e.id,
+            title: "Faire glisser pour changer l'ordre",
+            style: { cursor: "grab", touchAction: "none", padding: "4px 4px", margin: "-4px 0", color: C.textDim, fontSize: 13, userSelect: "none" },
+            onClick: (ev) => ev.stopPropagation(),
+            onPointerDown: (ev) => {
+              ev.stopPropagation();
+              ev.preventDefault();
+              try {
+                ev.currentTarget.setPointerCapture(ev.pointerId);
+              } catch (x) {
+              }
+              setGlisseCalque({ id: e.id, de: i, cible: i });
+            },
+            onPointerMove: (ev) => {
+              if (!glisseCalque) return;
+              const sous = document.elementFromPoint(ev.clientX, ev.clientY);
+              const ligne = sous && sous.closest && sous.closest("[data-layer-rang]");
+              if (!ligne) return;
+              const c = parseInt(ligne.getAttribute("data-layer-rang"), 10);
+              if (c !== glisseCalque.cible) setGlisseCalque({ ...glisseCalque, cible: c });
+            },
+            onPointerUp: () => {
+              if (glisseCalque && glisseCalque.cible !== glisseCalque.de) {
+                const l = ordre.slice();
+                const m = l.splice(glisseCalque.de, 1)[0];
+                l.splice(glisseCalque.cible, 0, m);
+                rangerCalques(l);
+              }
+              setGlisseCalque(null);
+            },
+            onPointerCancel: () => setGlisseCalque(null)
+          },
+          "\u283F"
+        ),
+        /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: 11, width: 14, textAlign: "center" } }, (HUD_PALETTE.filter((p) => p.type === e.type)[0] || {}).icon),
+        /* @__PURE__ */ import_react.default.createElement("span", { style: { flex: 1, minWidth: 0, fontFamily: sans, fontSize: 11.5, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, e.name),
+        /* @__PURE__ */ import_react.default.createElement(
+          "button",
+          {
+            "data-layer-eye": e.id,
+            title: "Masquer dans l'\xE9diteur",
+            style: iconBtn,
+            onClick: (ev) => {
+              ev.stopPropagation();
+              patch(e.id, (x) => ({ ...x, hiddenInEditor: !x.hiddenInEditor }));
+            }
+          },
+          e.hiddenInEditor ? "\u{1F6AB}" : "\u{1F441}"
+        ),
+        /* @__PURE__ */ import_react.default.createElement(
+          "button",
+          {
+            "data-layer-lock": e.id,
+            title: "Verrouiller",
+            style: iconBtn,
+            onClick: (ev) => {
+              ev.stopPropagation();
+              patch(e.id, (x) => ({ ...x, locked: !x.locked }));
+            }
+          },
+          e.locked ? "\u{1F512}" : "\u{1F513}"
+        ),
+        /* @__PURE__ */ import_react.default.createElement(
+          "button",
+          {
+            "data-layer-monter": e.id,
+            title: "Passer au-dessus",
+            style: { ...iconBtn, opacity: i === 0 ? 0.3 : 1 },
+            disabled: i === 0,
+            onClick: (ev) => {
+              ev.stopPropagation();
+              const l = ordre.slice();
+              const t = l[i];
+              l[i] = l[i - 1];
+              l[i - 1] = t;
+              rangerCalques(l);
+            }
+          },
+          "\u25B2"
+        ),
+        /* @__PURE__ */ import_react.default.createElement(
+          "button",
+          {
+            "data-layer-descendre": e.id,
+            title: "Passer en dessous",
+            style: { ...iconBtn, opacity: i === ordre.length - 1 ? 0.3 : 1 },
+            disabled: i === ordre.length - 1,
+            onClick: (ev) => {
+              ev.stopPropagation();
+              const l = ordre.slice();
+              const t = l[i];
+              l[i] = l[i + 1];
+              l[i + 1] = t;
+              rangerCalques(l);
+            }
+          },
+          "\u25BC"
+        )
+      ));
+    })()), /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", minWidth: 0 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "8px 12px", borderBottom: `1px solid ${C.line}`, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" } }, HUD_DEVICES.map((d) => /* @__PURE__ */ import_react.default.createElement("button", { key: d.id, "data-device": d.id, onClick: () => setDevice(d.id), style: pillBtn(device === d.id) }, d.label)), /* @__PURE__ */ import_react.default.createElement("button", { "data-rotate": true, onClick: () => setPortrait(!portrait), style: smallBtn, title: "Pivoter" }, portrait ? "\u25AF Portrait" : "\u25AD Paysage"), /* @__PURE__ */ import_react.default.createElement("select", { value: sceneId, onChange: (e) => setSceneId(e.target.value), style: { ...select, marginTop: 0, width: 160 }, "data-preview-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, s.name))), /* @__PURE__ */ import_react.default.createElement(
       "select",
       {
         value: ovKey,
