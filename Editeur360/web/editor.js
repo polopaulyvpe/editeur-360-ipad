@@ -37091,7 +37091,13 @@
         image: String(carte.image || ""),
         positions: carte.positions && typeof carte.positions === "object" ? carte.positions : {},
         brouillard: carte.brouillard !== false,
-        voyage: carte.voyage !== false
+        voyage: carte.voyage !== false,
+        active: !!carte.active,
+        liens: carte.liens !== false,
+        vignettes: carte.vignettes !== false,
+        inconnues: ["grisees", "cachees", "visibles"].indexOf(carte.inconnues) >= 0 ? carte.inconnues : "grisees",
+        acquise: normalizeRequirements(carte.acquise),
+        miniatures: carte.miniatures && typeof carte.miniatures === "object" ? carte.miniatures : {}
       },
       relations: (Array.isArray(s.relations) ? s.relations : []).filter((r) => r && r.variable).map((r) => ({
         characterId: String(r.characterId || ""),
@@ -37146,43 +37152,6 @@
         "data-partage-resume": true
       }
     ), /* @__PURE__ */ import_react.default.createElement("input", { value: o.partage.imageUrl, onChange: (e) => ecrire({ partage: { ...o.partage, imageUrl: e.target.value } }), placeholder: "Adresse de l'image (si le jeu est en ligne) : https://\u2026", style: { ...input, marginTop: 6 } }), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: o.partage.icone, onChange: (icone) => ecrire({ partage: { ...o.partage, icone } }), libelle: "Ic\xF4ne du jeu (onglet, \xE9cran d'accueil)" }));
-  }
-  function CarteIllustree({ meta, setMeta, scenes, onClose }) {
-    const o = normalizeOptionsJeu(meta.options);
-    const c = o.carte;
-    const [choisie, setChoisie] = (0, import_react.useState)(scenes[0] ? scenes[0].id : "");
-    const ecrire = (patch) => setMeta((m) => {
-      const n = normalizeOptionsJeu(m.options);
-      return { ...m, options: { ...n, carte: { ...n.carte, ...patch } } };
-    });
-    const poser = (e) => {
-      if (!choisie) return;
-      const r = e.currentTarget.getBoundingClientRect();
-      const x = Math.round((e.clientX - r.left) / r.width * 1e3) / 10, y = Math.round((e.clientY - r.top) / r.height * 1e3) / 10;
-      ecrire({ positions: { ...c.positions, [choisie]: { x, y } } });
-      const i = scenes.findIndex((s) => s.id === choisie);
-      const suivante = scenes.slice(i + 1).concat(scenes.slice(0, i)).find((s) => !c.positions[s.id]);
-      if (suivante) setChoisie(suivante.id);
-    };
-    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Carte illustr\xE9e", onClose, largeur: 720, data: "carte-illustree" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Ton propre plan dessin\xE9 devient la carte du joueur : les lieux sont pos\xE9s dessus, ceux qu'il n'a pas encore vus restent dans le brouillard, et un \u{1F9E9} signale les \xE9nigmes non r\xE9solues."), /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: c.image, onChange: (image) => ecrire({ image }), libelle: "Image de la carte" }), c.image && /* @__PURE__ */ import_react.default.createElement(import_react.default.Fragment, null, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: petitTexte }, "Lieu \xE0 placer :"), /* @__PURE__ */ import_react.default.createElement("select", { value: choisie, onChange: (e) => setChoisie(e.target.value), style: { ...select, marginTop: 0, flex: 1, minWidth: 140 }, "data-carte-scene": true }, scenes.map((s) => /* @__PURE__ */ import_react.default.createElement("option", { key: s.id, value: s.id }, (c.positions[s.id] ? "\u2713 " : "") + (s.name || s.id)))), c.positions[choisie] && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => {
-      const p = { ...c.positions };
-      delete p[choisie];
-      ecrire({ positions: p });
-    } }, "Retirer de la carte")), /* @__PURE__ */ import_react.default.createElement("div", { style: { ...petitTexte, marginTop: 4 } }, "Touche la carte \xE0 l'endroit du lieu."), /* @__PURE__ */ import_react.default.createElement("div", { style: { position: "relative", marginTop: 6, borderRadius: 8, overflow: "hidden", cursor: "crosshair" }, onClick: poser, "data-carte-image": true }, /* @__PURE__ */ import_react.default.createElement("img", { src: c.image, alt: "", style: { width: "100%", display: "block", pointerEvents: "none" } }), scenes.filter((s) => c.positions[s.id]).map((s) => /* @__PURE__ */ import_react.default.createElement("div", { key: s.id, style: {
-      position: "absolute",
-      left: c.positions[s.id].x + "%",
-      top: c.positions[s.id].y + "%",
-      transform: "translate(-50%,-50%)",
-      pointerEvents: "none",
-      background: s.id === choisie ? C.amber : "rgba(16,19,27,.85)",
-      color: s.id === choisie ? C.ink : "#fff",
-      borderRadius: 99,
-      padding: "2px 8px",
-      fontFamily: sans,
-      fontSize: 11,
-      whiteSpace: "nowrap",
-      border: "1px solid rgba(255,255,255,.6)"
-    } }, s.name || s.id))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.brouillard, onChange: (v) => ecrire({ brouillard: v }) }, "Brouillard sur les lieux encore inconnus"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.voyage, onChange: (v) => ecrire({ voyage: v }) }, "Voyage rapide : toucher un lieu d\xE9j\xE0 visit\xE9 pour s'y rendre"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 8 }, onClick: () => ecrire({ image: "" }) }, "Revenir \xE0 la carte automatique")));
   }
   function VideoScene({ scene, onChange }) {
     const v = scene.video || null;
@@ -38223,6 +38192,159 @@
       }, 60);
     } catch (e) {
     }
+  }
+  function liensCarte(scenes) {
+    const out = [], vus = {};
+    scenes.forEach((s) => parcourirJeu(s.hotspots || [], (o) => {
+      const t = o.type === "navigate" ? o.target : null;
+      if (!t || t === s.id || !scenes.some((x) => x.id === t)) return;
+      const k = s.id < t ? s.id + "|" + t : t + "|" + s.id;
+      if (vus[k]) return;
+      vus[k] = 1;
+      out.push([s.id, t]);
+    }));
+    return out;
+  }
+  function positionsDepuisCarteScenes(scenes) {
+    const pts = scenes.map((s) => ({ id: s.id, x: s.editor ? s.editor.x || 0 : 0, y: s.editor ? s.editor.y || 0 : 0 }));
+    if (!pts.length) return {};
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const out = {};
+    pts.forEach((p, i) => {
+      out[p.id] = {
+        x: Math.round((x1 > x0 ? 10 + (p.x - x0) / (x1 - x0) * 80 : 15 + i % 5 * 17) * 10) / 10,
+        y: Math.round((y1 > y0 ? 12 + (p.y - y0) / (y1 - y0) * 76 : 20 + Math.floor(i / 5) * 25) * 10) / 10
+      };
+    });
+    return out;
+  }
+  function vignetteScene(src) {
+    return new Promise((ok) => {
+      if (!src || /^data:image\/(x-)?hdr|\.hdr$/i.test(src)) {
+        ok("");
+        return;
+      }
+      const im = new Image();
+      im.onload = () => {
+        try {
+          const c = document.createElement("canvas");
+          c.width = 192;
+          c.height = 96;
+          c.getContext("2d").drawImage(im, im.naturalWidth * 0.25, im.naturalHeight * 0.25, im.naturalWidth * 0.5, im.naturalHeight * 0.5, 0, 0, 192, 96);
+          ok(c.toDataURL("image/jpeg", 0.72));
+        } catch (e) {
+          ok("");
+        }
+      };
+      im.onerror = () => ok("");
+      im.src = src;
+    });
+  }
+  function CarteJoueur({ meta, setMeta, scenes, items, variables, puzzles, onClose }) {
+    const o = normalizeOptionsJeu(meta.options);
+    const c = o.carte;
+    const ecrire = (patch) => setMeta((m) => {
+      const n = normalizeOptionsJeu(m.options);
+      return { ...m, options: { ...n, carte: { ...n.carte, active: true, ...patch } } };
+    });
+    const positions = { ...positionsDepuisCarteScenes(scenes), ...c.positions || {} };
+    const [ratio, setRatio] = (0, import_react.useState)(1.6);
+    const [glisse, setGlisse] = (0, import_react.useState)(null);
+    const [vignettesEnCours, setVignettesEnCours] = (0, import_react.useState)(false);
+    const plateau = (0, import_react.useRef)(null);
+    const liens = (0, import_react.useMemo)(() => liensCarte(scenes), [scenes]);
+    (0, import_react.useEffect)(() => {
+      if (!c.image) {
+        setRatio(1.6);
+        return;
+      }
+      const im = new Image();
+      im.onload = () => setRatio(im.naturalWidth / Math.max(1, im.naturalHeight));
+      im.src = c.image;
+    }, [c.image]);
+    const faireVignettes = async (toutes) => {
+      setVignettesEnCours(true);
+      const v = { ...c.miniatures || {} };
+      for (const s of scenes) {
+        if (!toutes && v[s.id]) continue;
+        v[s.id] = await vignetteScene(s.image);
+      }
+      ecrire({ miniatures: v });
+      setVignettesEnCours(false);
+    };
+    (0, import_react.useEffect)(() => {
+      if (scenes.some((s) => s.image && !(c.miniatures || {})[s.id])) faireVignettes(false);
+    }, []);
+    const pos = glisse ? { ...positions, [glisse.id]: { x: glisse.x, y: glisse.y } } : positions;
+    const pct = (e) => {
+      const r = plateau.current.getBoundingClientRect();
+      return { x: Math.max(3, Math.min(97, (e.clientX - r.left) / r.width * 100)), y: Math.max(4, Math.min(96, (e.clientY - r.top) / r.height * 100)) };
+    };
+    const mini = c.miniatures || {};
+    return /* @__PURE__ */ import_react.default.createElement(Fenetre, { titre: "Carte du joueur", onClose, largeur: 820, data: "carte-joueur" }, /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "La carte que le joueur ouvre en jeu : les lieux en cases, comme la carte des sc\xE8nes, reli\xE9s par leurs passages. Fais glisser les cases o\xF9 tu veux ; le fond peut \xEAtre ton propre dessin (PNG)."), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1, minWidth: 200 } }, /* @__PURE__ */ import_react.default.createElement(ImageChoix, { value: c.image, onChange: (image) => ecrire({ image }), libelle: c.image ? "Changer le fond" : "Choisir un fond (PNG)" })), c.image && /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => ecrire({ image: "" }) }, "Fond uni"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: smallBtn, onClick: () => ecrire({ positions: positionsDepuisCarteScenes(scenes) }), "data-carte-comme-scenes": true }, "Placer comme la carte des sc\xE8nes")), /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        ref: plateau,
+        "data-carte-plateau": true,
+        style: {
+          position: "relative",
+          marginTop: 10,
+          width: "100%",
+          aspectRatio: String(ratio),
+          borderRadius: 10,
+          overflow: "hidden",
+          touchAction: "none",
+          userSelect: "none",
+          background: c.image ? 'center / 100% 100% no-repeat url("' + c.image + '")' : "radial-gradient(circle at 30% 20%, #1d2333, #0f1219)",
+          border: "1px solid " + C.line
+        },
+        onPointerMove: (e) => {
+          if (!glisse) return;
+          const p = pct(e);
+          setGlisse((g) => g ? { ...g, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 } : g);
+        },
+        onPointerUp: () => {
+          if (glisse) {
+            ecrire({ positions: { ...positions, [glisse.id]: { x: glisse.x, y: glisse.y } } });
+            setGlisse(null);
+          }
+        },
+        onPointerCancel: () => setGlisse(null)
+      },
+      /* @__PURE__ */ import_react.default.createElement("svg", { viewBox: "0 0 100 100", preserveAspectRatio: "none", style: { position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" } }, c.liens !== false && liens.map(([a, b]) => pos[a] && pos[b] && /* @__PURE__ */ import_react.default.createElement("line", { key: a + b, x1: pos[a].x, y1: pos[a].y, x2: pos[b].x, y2: pos[b].y, stroke: "rgba(232,163,61,.75)", strokeWidth: "0.45", vectorEffect: "non-scaling-stroke", style: { strokeWidth: 2.5 } }))),
+      scenes.map((s) => pos[s.id] && /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          key: s.id,
+          "data-carte-case": s.id,
+          onPointerDown: (e) => {
+            e.preventDefault();
+            try {
+              plateau.current.setPointerCapture(e.pointerId);
+            } catch (x) {
+            }
+            setGlisse({ id: s.id, x: pos[s.id].x, y: pos[s.id].y });
+          },
+          style: {
+            position: "absolute",
+            left: pos[s.id].x + "%",
+            top: pos[s.id].y + "%",
+            transform: "translate(-50%,-50%)",
+            width: 96,
+            borderRadius: 8,
+            overflow: "hidden",
+            background: "#161A25",
+            border: "2px solid " + (glisse && glisse.id === s.id ? C.amber : "rgba(255,255,255,.55)"),
+            boxShadow: "0 4px 14px rgba(0,0,0,.5)",
+            cursor: "grab",
+            touchAction: "none"
+          }
+        },
+        c.vignettes !== false && /* @__PURE__ */ import_react.default.createElement("div", { style: { height: 40, background: mini[s.id] ? 'center / cover url("' + mini[s.id] + '")' : "#242938" } }),
+        /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "3px 6px", fontFamily: sans, fontSize: 11, fontWeight: 600, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, s.name || s.id)
+      ))
+    ), /* @__PURE__ */ import_react.default.createElement(Label, null, "Ce que montre la carte"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.liens !== false, onChange: (v) => ecrire({ liens: v }) }, "Les passages entre les lieux"), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.vignettes !== false, onChange: (v) => ecrire({ vignettes: v }) }, "Une vignette de chaque lieu"), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center", marginTop: 8, ...petitTexte } }, "Lieux pas encore visit\xE9s", /* @__PURE__ */ import_react.default.createElement("select", { value: c.inconnues || "grisees", onChange: (e) => ecrire({ inconnues: e.target.value }), style: { ...select, marginTop: 0, width: "auto" }, "data-carte-inconnues": true }, /* @__PURE__ */ import_react.default.createElement("option", { value: "grisees" }, "Gris\xE9s, avec un \xAB ? \xBB"), /* @__PURE__ */ import_react.default.createElement("option", { value: "cachees" }, "Cach\xE9s"), /* @__PURE__ */ import_react.default.createElement("option", { value: "visibles" }, "Visibles avec leur nom"))), /* @__PURE__ */ import_react.default.createElement(Coche, { checked: c.voyage !== false, onChange: (v) => ecrire({ voyage: v }) }, "Voyage rapide : toucher un lieu d\xE9j\xE0 visit\xE9 pour s'y rendre"), /* @__PURE__ */ import_react.default.createElement("button", { type: "button", style: { ...smallBtn, marginTop: 8 }, disabled: vignettesEnCours, onClick: () => faireVignettes(true) }, vignettesEnCours ? "Vignettes en cours\u2026" : "Refaire les vignettes"), /* @__PURE__ */ import_react.default.createElement(Label, null, "Quand le joueur a-t-il la carte ?"), /* @__PURE__ */ import_react.default.createElement("div", { style: petitTexte }, "Vide : d\xE8s le d\xE9but. Sinon, la carte (et son bouton) n'appara\xEEt qu'une fois les conditions remplies, par exemple quand il a ramass\xE9 l'objet \xAB Carte \xBB. Le jeu l'annonce au moment o\xF9 il l'obtient."), /* @__PURE__ */ import_react.default.createElement(RequirementsEditor, { requirements: c.acquise || [], onChange: (acquise) => ecrire({ acquise }), items, variables, puzzles, scenes }));
   }
   function HotspotEditor({ hotspot, scenes, items, audio, setAudio, puzzles = [], variables = [], dialogues = [], onSave, onDelete, onClose, onCreateItem, onCreatePuzzle, onManagePuzzle, onReposition }) {
     const [type, setType] = (0, import_react.useState)(hotspot.type);
@@ -70688,6 +70810,23 @@ ${partageMeta(game)}
   .annonce.part{animation:annonce-out .6s ease-in forwards}
   @keyframes annonce-in{from{opacity:0;transform:translate(-50%,-30px) scale(.8)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
   @keyframes annonce-out{to{opacity:0;transform:translate(-50%,-12px) scale(.9)}}
+  .cj{padding:10px;width:calc(100% - 20px);max-height:calc(100% - 70px);display:flex;flex-direction:column;gap:8px;box-sizing:border-box}
+  .cj-vue{flex:1;min-height:0;overflow:auto;border-radius:10px;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y}
+  .cj-plateau{position:relative;min-width:100%;background:radial-gradient(circle at 30% 20%,#1d2333,#0f1219);border-radius:10px}
+  .cj-plateau.cj-fond{background-size:100% 100%;background-position:center;background-repeat:no-repeat}
+  .cj-liens{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+  .cj-lien{stroke:var(--accent,#E8A33D);stroke-width:2.5;stroke-linecap:round;opacity:.85}
+  .cj-lien-flou{stroke-dasharray:5 5;opacity:.45}
+  .cj-case{position:absolute;transform:translate(-50%,-50%);width:92px;padding:0;border-radius:9px;overflow:visible;border:2px solid rgba(255,255,255,.6);background:#161A25;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.5);cursor:pointer;display:flex;flex-direction:column;text-align:left}
+  .cj-case.ici{border-color:var(--accent,#E8A33D);box-shadow:0 0 0 3px rgba(232,163,61,.35),0 4px 14px rgba(0,0,0,.5)}
+  .cj-case.inconnu{opacity:.6;border-style:dashed;cursor:default}
+  .cj-vignette{display:flex;align-items:center;justify-content:center;height:40px;border-radius:7px 7px 0 0;background:#242938 center/cover no-repeat;font:700 18px system-ui,sans-serif;color:#555B6E}
+  .cj-nom{padding:3px 6px;font:600 11px/1.3 system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cj-badge{position:absolute;top:2px;right:3px;font-style:normal;font-size:12px;text-shadow:0 1px 3px #000}
+  .cj-ici{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font:700 9px system-ui,sans-serif;letter-spacing:.5px;text-transform:uppercase;color:#0B0E14;background:var(--accent,#E8A33D);border-radius:99px;padding:2px 7px;white-space:nowrap;font-style:normal}
+  .cj-outils{display:flex;align-items:center;gap:8px}
+  .cj-zoom{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font:600 20px system-ui;cursor:pointer;flex:none}
+  .cj-legende{flex:1;text-align:center;font:11px/1.4 system-ui,sans-serif;color:#8B8FA3}
   .carte-ill{padding:10px;max-width:calc(100% - 24px);max-height:calc(100% - 80px);overflow:auto;box-sizing:border-box}
   .carte-zone{position:relative}
   .carte-zone img{display:block;width:100%;height:auto;border-radius:8px}
@@ -71881,6 +72020,135 @@ function montrerImage(image, texte){
         bande-annonce ------------------------------------------------- */
 const OPTS = (GAME.game && GAME.game.options) || {};
 function optJeu(k){ return OPTS[k] || {}; }
+/* ---- Lot 10 : la carte du joueur, en cases reli\xE9es, obtenue en jeu -- */
+function carteAcquise(){
+  const c = optJeu('carte');
+  try{ return !(c.acquise && c.acquise.length && reqMissing(c.acquise, inventory, vars).length); }catch(e){ return true; }
+}
+let carteDejaAcquise = null;
+function carteAcquisitionTick(){
+  const ok = carteAcquise();
+  if(carteDejaAcquise === null){ carteDejaAcquise = ok; return; }
+  if(ok === carteDejaAcquise) return;
+  carteDejaAcquise = ok;
+  try{ hudSync(); }catch(e){}
+  if(ok && playerScreen !== 'home'){
+    try{ hudPlaySound('notify'); }catch(e){}
+    /*  Apr\xE8s l'annonce de l'objet ramass\xE9, pas par-dessus.            */
+    setTimeout(function(){ annonce('Carte obtenue', 'Touche \u{1F5FA} pour l\u2019ouvrir', '', '\u{1F5FA}'); vibre([30, 40, 30]); }, 2800);
+  }
+}
+function hudOuvreCarte(e){ return !!(e && (e.id === 'el_map' || (e.props && e.props.action && e.props.action.type === 'open_map'))); }
+function liensCarteJeu(){
+  const out = [], vus = {};
+  (GAME.scenes || []).forEach(function(s){
+    (s.hotspots || []).forEach(function(h){
+      const t = h.type === 'navigate' ? h.target : null;
+      if(!t || t === s.id) return;
+      const k = s.id < t ? s.id + '|' + t : t + '|' + s.id;
+      if(vus[k]) return;
+      vus[k] = 1;
+      out.push([s.id, t]);
+    });
+  });
+  return out;
+}
+let carteZoom = 1;
+function carteCartes(){
+  const c = optJeu('carte');
+  if(!c.active) return false;
+  const pos = c.positions || {};
+  const mini = c.miniatures || {};
+  const inconnues = c.inconnues || 'grisees';
+  const visible = function(s){ return pos[s.id] && (discovered.has(s.id) || inconnues !== 'cachees'); };
+  const m = document.getElementById('map-modal');
+  m.textContent = '';
+  const box = mk('div', 'pnl pnl-map cj');
+  const vue = mk('div', 'cj-vue');
+  const plateau = mk('div', 'cj-plateau');
+  plateau.style.width = Math.round(carteZoom * 100) + '%';
+  if(c.image){ plateau.style.backgroundImage = 'url("' + c.image + '")'; plateau.classList.add('cj-fond'); }
+  const pose = function(r){ plateau.style.aspectRatio = String(r); };
+  pose(1.6);
+  if(c.image){ const im = new Image(); im.onload = function(){ pose(im.naturalWidth / Math.max(1, im.naturalHeight)); }; im.src = c.image; }
+  if(c.liens !== false){
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('class', 'cj-liens');
+    liensCarteJeu().forEach(function(l){
+      const a = GAME.scenes.filter(function(s){ return s.id === l[0]; })[0], b = GAME.scenes.filter(function(s){ return s.id === l[1]; })[0];
+      if(!a || !b || !visible(a) || !visible(b)) return;
+      if(!discovered.has(a.id) && !discovered.has(b.id)) return;
+      const ln = document.createElementNS(NS, 'line');
+      ln.setAttribute('x1', pos[a.id].x); ln.setAttribute('y1', pos[a.id].y); ln.setAttribute('x2', pos[b.id].x); ln.setAttribute('y2', pos[b.id].y);
+      ln.setAttribute('vector-effect', 'non-scaling-stroke');
+      ln.setAttribute('class', discovered.has(a.id) && discovered.has(b.id) ? 'cj-lien' : 'cj-lien cj-lien-flou');
+      svg.appendChild(ln);
+    });
+    plateau.appendChild(svg);
+  }
+  GAME.scenes.forEach(function(s){
+    if(!visible(s)) return;
+    const connu = discovered.has(s.id), ici = current && s.id === current.id;
+    const cas = mk('button', 'cj-case' + (ici ? ' ici' : '') + (connu ? '' : ' inconnu'));
+    cas.type = 'button';
+    cas.setAttribute('data-scene', s.id);
+    cas.style.left = pos[s.id].x + '%'; cas.style.top = pos[s.id].y + '%';
+    if(c.vignettes !== false){
+      const v = mk('span', 'cj-vignette');
+      if(connu && mini[s.id]) v.style.backgroundImage = 'url("' + mini[s.id] + '")';
+      else if(!connu) v.textContent = '?';
+      cas.appendChild(v);
+    }
+    cas.appendChild(mk('span', 'cj-nom', connu || inconnues === 'visibles' ? trJeu(s.name || s.id) : '???'));
+    if(connu){ const n = enigmesOuvertes(s); if(n) cas.appendChild(mk('i', 'cj-badge', '\u{1F9E9}' + (n > 1 ? n : ''))); }
+    if(ici) cas.appendChild(mk('i', 'cj-ici', 'Tu es ici'));
+    cas.onclick = function(e){
+      e.stopPropagation();
+      if(!connu){ PlayerUI.toast(frameEl, 'Lieu encore inconnu'); return; }
+      if(c.voyage !== false && !ici) hudGoScene(s.id);
+    };
+    plateau.appendChild(cas);
+  });
+  vue.appendChild(plateau);
+  box.appendChild(vue);
+  const outils = mk('div', 'cj-outils');
+  const zoom = function(f){ carteZoom = Math.max(1, Math.min(3, carteZoom * f)); plateau.style.width = Math.round(carteZoom * 100) + '%'; };
+  const moins = mk('button', 'cj-zoom', '\u2212'), plus = mk('button', 'cj-zoom', '+');
+  moins.type = 'button'; plus.type = 'button';
+  moins.setAttribute('aria-label', 'D\xE9zoomer'); plus.setAttribute('aria-label', 'Zoomer');
+  moins.onclick = function(e){ e.stopPropagation(); zoom(1 / 1.4); };
+  plus.onclick = function(e){ e.stopPropagation(); zoom(1.4); };
+  outils.appendChild(moins);
+  outils.appendChild(mk('span', 'cj-legende', (c.voyage !== false ? 'Touche un lieu visit\xE9 pour t\u2019y rendre \xB7 ' : '') + '\u{1F9E9} \xE9nigme \xE0 r\xE9soudre'));
+  outils.appendChild(plus);
+  box.appendChild(outils);
+  /*  Pincer pour zoomer.                                             */
+  let pince = null;
+  vue.addEventListener('touchstart', function(e){ if(e.touches.length === 2){ pince = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); } }, { passive: true });
+  vue.addEventListener('touchmove', function(e){
+    if(!pince || e.touches.length !== 2) return;
+    e.preventDefault();
+    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+    zoom(d / pince); pince = d;
+  }, { passive: false });
+  vue.addEventListener('touchend', function(e){ if(e.touches.length < 2) pince = null; });
+  m.appendChild(box);
+  const x = mk('button', 'pnl-close', '\u2715');
+  x.type = 'button'; x.id = 'map-close'; x.setAttribute('aria-label', 'Fermer');
+  x.onclick = closeMap;
+  m.appendChild(x);
+  m.style.display = 'flex';
+  m.onclick = function(e){ if(e.target === m) closeMap(); };
+  setScreen('map');
+  /*  La case o\xF9 l'on est, au centre de la vue.                        */
+  setTimeout(function(){
+    const ic = plateau.querySelector('.cj-case.ici');
+    if(ic){ vue.scrollLeft = ic.offsetLeft - vue.clientWidth / 2; vue.scrollTop = ic.offsetTop - vue.clientHeight / 2; }
+  }, 30);
+  return true;
+}
+
 /* ---- Lot 9 : polices, g\xE9n\xE9rique, profil et difficult\xE9, jour et nuit,
         emplacements de sauvegarde ------------------------------------- */
 function difficulte(){ try{ return vars.__difficulte || 'normal'; }catch(e){ return 'normal'; } }
@@ -72646,7 +72914,7 @@ function lot678Tick(y, p){
   statsTick(y, p);
   if(BANDE_ANNONCE) baImage();
   const now = performance.now();
-  if(now - lot678Sec > 1000){ lot678Sec = now; montrerPointsMaj(); videoSon(); }
+  if(now - lot678Sec > 1000){ lot678Sec = now; montrerPointsMaj(); videoSon(); try{ carteAcquisitionTick(); }catch(e){} }
 }
 
 /*  Bande-annonce : le jeu se filme lui-m\xEAme, sc\xE8ne apr\xE8s sc\xE8ne.     */
@@ -89823,7 +90091,8 @@ function hudSync(){
     hudBuilt = {};
     hudSig = base;
   }
-  const shown = ui.elements.filter(function(e){ return uiElementShown(e, ui, ctx); });
+  const sansCarte = !carteAcquise();
+  const shown = ui.elements.filter(function(e){ return uiElementShown(e, ui, ctx) && !(sansCarte && hudOuvreCarte(e)); });
   const want = {};
   shown.forEach(function(e){ want[e.id] = 1; });
   let changed = false;
@@ -90594,6 +90863,8 @@ function computeTreeLayout(scenes){
 
 function openMap(){
   if(playerScreen!=='playing') return;
+  if(!carteAcquise()){ try{ PlayerUI.toast(frameEl, 'Tu n\u2019as pas encore de carte.'); }catch(e){} return; }
+  if(carteCartes()) return;
   if(carteIllustree()) return;
   const cfg = uiGame().panels.map;
   const theme = uiGame().theme;
@@ -92573,7 +92844,7 @@ loop();
       );
     }), puzzles.length > 4 && /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: 11, color: C.textDim, padding: "2px 2px" } }, "+ ", puzzles.length - 4, " autre(s)"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setPuzzleManager({ editId: null }), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 } }, /* @__PURE__ */ import_react.default.createElement(Puzzle, { size: 13 }), " \xC9nigmes externes et variables"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowSucces(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-succes": true }, "\u{1F3C6} Succ\xE8s et fins"), /* @__PURE__ */ import_react.default.createElement("button", { onClick: () => setShowObjectifs(true), style: { ...smallBtn, width: "100%", justifyContent: "center", marginTop: 6 }, "data-side-objectifs": true }, "\u{1F9ED} Objectifs et aide"), [
       ["options", "\u2728 Options du jeu"],
-      ["carte", "\u{1F5FA} Carte illustr\xE9e"],
+      ["carte", "\u{1F5FA} Carte du joueur"],
       ["outils", "\u{1F6E0} V\xE9rifier, rechercher, mod\xE8les"],
       ["langues", "\u{1F30D} Langues"],
       ["bande", "\u{1F3AC} Bande-annonce"],
@@ -93098,7 +93369,7 @@ loop();
         onChange: setCharacters,
         onClose: () => setShowCharManager(false)
       }
-    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), fenetre678 === "options" && /* @__PURE__ */ import_react.default.createElement(OptionsJeu, { meta: gameMeta, setMeta: setGameMeta, characters, variables, onClose: () => setFenetre678("") }), fenetre678 === "carte" && /* @__PURE__ */ import_react.default.createElement(CarteIllustree, { meta: gameMeta, setMeta: setGameMeta, scenes, onClose: () => setFenetre678("") }), fenetre678 === "outils" && /* @__PURE__ */ import_react.default.createElement(
+    ), showSucces && /* @__PURE__ */ import_react.default.createElement(SuccesManager, { meta: gameMeta, setMeta: setGameMeta, onClose: () => setShowSucces(false) }), fenetre678 === "options" && /* @__PURE__ */ import_react.default.createElement(OptionsJeu, { meta: gameMeta, setMeta: setGameMeta, characters, variables, onClose: () => setFenetre678("") }), fenetre678 === "carte" && /* @__PURE__ */ import_react.default.createElement(CarteJoueur, { meta: gameMeta, setMeta: setGameMeta, scenes, items, variables, puzzles, onClose: () => setFenetre678("") }), fenetre678 === "outils" && /* @__PURE__ */ import_react.default.createElement(
       OutilsJeu,
       {
         scenes,
