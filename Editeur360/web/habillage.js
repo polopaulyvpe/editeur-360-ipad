@@ -11,25 +11,12 @@
 
   var EMOJI = /[\p{Extended_Pictographic}☰▶⬆⬇️‍]+\s*/gu;
 
-  // Actions de la barre du haut : clé, début du libellé, groupe du menu (null = reste visible).
+  // Boutons de la barre du haut repérés pour ipad.css : clé, début du libellé.
+  // Le reste (Projet, Publier) est rangé par l'éditeur lui-même dans deux menus.
   var BARRE = [
-    ["tester-scene", "Tester la scène", null],
-    ["tester-jeu", "Tester le jeu", null],
-    ["enregistrer", "Enregistrer", null],
-    ["mes-jeux", "Mes jeux", null],
-    ["charger", "Charger", "Projet"],
-    ["json", "JSON", "Projet"],
-    ["accueil", "Page d'accueil", "Apparence"],
-    ["hud", "HUD", "Apparence"],
-    ["da", "DA", "Apparence"],
-    ["exporter", "Exporter le jeu", "Publier"],
-    ["application", "Application", "Publier"]
+    ["tester-scene", "Tester la scène"],
+    ["tester-jeu", "Tester le jeu"]
   ];
-  var LIBELLES_MENU = {
-    charger: "Charger un projet…", json: "Exporter en JSON",
-    accueil: "Page d'accueil", hud: "Interface du jeu (HUD)", da: "Direction artistique",
-    exporter: "Exporter le jeu", application: "Application mobile"
-  };
 
   function libelle(el) {
     var t = el.textContent || "";
@@ -78,100 +65,39 @@
 
   function reperer(h) {
     h.setAttribute("data-e360", "barre");
-    var spans = h.querySelectorAll(":scope > span");
-    if (spans[0]) spans[0].setAttribute("data-e360", "logo");
-    if (spans[1]) spans[1].setAttribute("data-e360", "marque");
-    if (spans[2]) spans[2].setAttribute("data-e360", "nom-jeu");
-    var prefs = lireReglage("e360-barre", {});
-    Array.prototype.forEach.call(h.children, function (c) {
-      if (c.tagName === "DIV" && c.querySelector("button")) {
-        c.setAttribute("data-e360", "vues");
-        if (!c.hasAttribute("data-e360-vues-ok")) {
-          c.setAttribute("data-e360-vues-ok", "");
-          // La vue choisie (Liste, Carte, Dialogues…) est retenue pour la prochaine ouverture.
-          c.addEventListener("click", function (e) {
-            var b = e.target.closest && e.target.closest("button");
-            if (b) ecrireReglage("e360-vue", libelle(b));
-          }, true);
-        }
+    var nom = h.querySelector(":scope > [data-nom-jeu]");
+    if (nom) nom.setAttribute("data-e360", "nom-jeu");
+    // Les onglets des vues (Scènes, Plan, Dialogues…), sur leur propre ligne.
+    var vues = document.querySelector("#root [data-onglets-vue]");
+    if (vues) {
+      vues.setAttribute("data-e360", "vues");
+      if (!vues.hasAttribute("data-e360-vues-ok")) {
+        vues.setAttribute("data-e360-vues-ok", "");
+        // La vue choisie est retenue pour la prochaine ouverture.
+        vues.addEventListener("click", function (e) {
+          var b = e.target.closest && e.target.closest("button");
+          if (b) ecrireReglage("e360-vue", libelle(b));
+        }, true);
       }
+    }
+    Array.prototype.forEach.call(h.children, function (c) {
       if (c.tagName !== "BUTTON") return;
+      if (c.hasAttribute("data-enregistrer")) { c.setAttribute("data-e360", "enregistrer"); return; }
       var t = libelle(c);
       for (var i = 0; i < BARRE.length; i++) {
-        if (t.indexOf(BARRE[i][1]) === 0) {
-          var cle = BARRE[i][0], p = prefs[cle] || {};
-          c.setAttribute("data-e360", cle);
-          var place = p.place || (BARRE[i][2] ? "menu" : "barre");
-          if (place === "menu") c.setAttribute("data-e360-menu", BARRE[i][2] || "Projet");
-          else c.removeAttribute("data-e360-menu");
-          c.style.order = p.ordre != null ? String(p.ordre) : "";
-          return;
-        }
+        if (t.indexOf(BARRE[i][1]) === 0) { c.setAttribute("data-e360", BARRE[i][0]); return; }
       }
     });
-    if (!h.querySelector(":scope > .e360-plus")) {
-      var p = document.createElement("button");
-      p.type = "button";
-      p.className = "e360-plus";
-      p.setAttribute("aria-label", "Plus d'actions");
-      p.textContent = "•••";
-      p.addEventListener("click", function (e) { e.stopPropagation(); basculerMenu(p); });
-      h.appendChild(p);
-    }
+    // L'ancien menu « ••• » n'existe plus : ses réglages de l'éditeur vont dans « Projet ».
+    var vieux = h.querySelector(":scope > .e360-plus");
+    if (vieux) vieux.remove();
   }
-
-  var menu = null;
-  function fermerMenu() {
-    if (menu) { menu.remove(); menu = null; }
-  }
-  function basculerMenu(ancre) {
-    if (menu) { fermerMenu(); return; }
-    var h = barreDuHaut();
-    if (!h) return;
-    menu = document.createElement("div");
-    menu.className = "e360-menu";
-    var groupes = {};
-    h.querySelectorAll("[data-e360-menu]").forEach(function (b) {
-      var g = b.getAttribute("data-e360-menu");
-      (groupes[g] = groupes[g] || []).push(b);
-    });
-    ["Projet", "Apparence", "Publier"].forEach(function (g) {
-      if (!groupes[g]) return;
-      var titre = document.createElement("div");
-      titre.className = "e360-menu-titre";
-      titre.textContent = g;
-      menu.appendChild(titre);
-      groupes[g].forEach(function (b) {
-        var item = document.createElement("button");
-        item.type = "button";
-        item.className = "e360-menu-item";
-        item.textContent = LIBELLES_MENU[b.getAttribute("data-e360")] || libelle(b);
-        item.disabled = b.disabled;
-        item.addEventListener("click", function () { fermerMenu(); b.click(); });
-        menu.appendChild(item);
-      });
-    });
-    var tEd = document.createElement("div");
-    tEd.className = "e360-menu-titre";
-    tEd.textContent = "Éditeur";
-    menu.appendChild(tEd);
-    [["Apparence de l'éditeur…", panneauApparence], ["Personnaliser la barre…", panneauBarre], ["Double toucher du crayon…", panneauCrayon]].forEach(function (x) {
-      var item = document.createElement("button");
-      item.type = "button";
-      item.className = "e360-menu-item";
-      item.textContent = x[0];
-      item.addEventListener("click", function () { fermerMenu(); x[1](); });
-      menu.appendChild(item);
-    });
-    document.body.appendChild(menu);
-    var r = ancre.getBoundingClientRect();
-    menu.style.top = Math.round(r.bottom + 6) + "px";
-    menu.style.right = Math.max(8, Math.round(window.innerWidth - r.right)) + "px";
-  }
-  document.addEventListener("pointerdown", function (e) {
-    if (menu && !menu.contains(e.target) && !e.target.closest(".e360-plus")) fermerMenu();
-  }, true);
-  window.addEventListener("resize", fermerMenu);
+  // Réglages propres à l'iPad, ajoutés en bas du menu « Projet » de l'éditeur.
+  window.E360_MENUS_EN_PLUS = {
+    projet: ["-",
+      { id: "ed-apparence", libelle: "Apparence de l'éditeur…", faire: function () { panneauApparence(); } },
+      { id: "ed-crayon", libelle: "Double toucher du crayon…", faire: function () { panneauCrayon(); } }]
+  };
 
   // ---------- Aides derrière un « ? » ----------
   // Les paragraphes d'explication (petit texte gris) sont masqués et un « ? » est
@@ -323,7 +249,7 @@
         if (accueil.vu) finAccueil();          // fenêtre fermée : on est dans l'éditeur
         return;
       }
-      var b = h && h.querySelector("[data-e360='mes-jeux']");
+      var b = document.querySelector("#root [data-ouvrir-mes-jeux]");
       if (b) { accueil.demande = true; b.click(); }
       return;
     }
@@ -372,8 +298,7 @@
     // On rouvre la vue où l'on travaillait la dernière fois.
     var vue = lireReglage("e360-vue", "");
     if (vue) setTimeout(function () {
-      var h = barreDuHaut();
-      var v = h && h.querySelector("[data-e360='vues']");
+      var v = document.querySelector("#root [data-e360='vues']");
       var b = v && Array.prototype.filter.call(v.querySelectorAll("button"), function (x) { return libelle(x) === vue; })[0];
       if (b) b.click();
     }, 200);
@@ -406,7 +331,8 @@
 
   function colonneGauche() {
     var app = document.querySelector("#root > div");
-    var corps = app && app.children[1];
+    // le corps suit la barre du haut (la ligne des onglets de vues ne compte pas)
+    var corps = app && Array.prototype.filter.call(app.children, function (k) { return !k.hasAttribute("data-onglets-vue"); })[1];
     var c = corps && corps.firstElementChild;
     return c && /width:\s*220px/.test(c.getAttribute("style") || "") ? c : null;
   }
@@ -424,7 +350,7 @@
       p.setAttribute("aria-label", "Réduire ou ouvrir la barre latérale");
       p.innerHTML = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' +
         '<polyline points="12,5 7,10 12,15"/></svg><span class="e360-r-ouvert">Réduire</span>' +
-        '<span class="e360-r-ferme">Scènes · Objets · Énigmes · Intervenants · Sons</span>';
+        '<span class="e360-r-ferme">Scènes · Objets · Énigmes · Intervenants · Sons · Réglages</span>';
       p.addEventListener("click", function () {
         var masquee = document.documentElement.classList.toggle("e360-colonne-masquee");
         if (!etroit.matches) ecrireReglage("e360-colonne-masquee", masquee);
@@ -824,48 +750,8 @@
   }
   appliquerApparence();
 
-  // ---------- Personnaliser la barre du haut ----------
-  function panneauBarre() {
-    ouvrirPanneau("Personnaliser la barre", function (c, redessiner) {
-      var prefs = lireReglage("e360-barre", {});
-      var liste = BARRE.map(function (b, i) {
-        var p = prefs[b[0]] || {};
-        return { cle: b[0], nom: LIBELLES_MENU[b[0]] || b[1], place: p.place || (b[2] ? "menu" : "barre"), ordre: p.ordre != null ? p.ordre : i };
-      }).sort(function (x, y) { return x.ordre - y.ordre; });
-      var ecrire = function () {
-        var out = {};
-        liste.forEach(function (x, i) { out[x.cle] = { place: x.place, ordre: i }; });
-        ecrireReglage("e360-barre", out);
-        planifier();
-        redessiner();
-      };
-      var n = document.createElement("p"); n.className = "e360-p-note";
-      n.textContent = "Ce qui est « dans la barre » reste visible en haut ; le reste passe dans le menu •••. Les flèches changent l'ordre.";
-      c.appendChild(n);
-      liste.forEach(function (x, i) {
-        var l = document.createElement("div"); l.className = "e360-p-ligne";
-        var nom = document.createElement("span"); nom.textContent = x.nom; l.appendChild(nom);
-        var place = document.createElement("button"); place.type = "button";
-        place.className = "e360-p-bouton" + (x.place === "barre" ? " on" : "");
-        place.textContent = x.place === "barre" ? "Dans la barre" : "Dans •••";
-        place.addEventListener("click", function () { x.place = x.place === "barre" ? "menu" : "barre"; ecrire(); });
-        l.appendChild(place);
-        [["↑", -1], ["↓", 1]].forEach(function (f) {
-          var b = document.createElement("button"); b.type = "button"; b.className = "e360-p-bouton"; b.textContent = f[0];
-          b.disabled = (i === 0 && f[1] < 0) || (i === liste.length - 1 && f[1] > 0);
-          b.addEventListener("click", function () { var j = i + f[1]; var t = liste[i]; liste[i] = liste[j]; liste[j] = t; ecrire(); });
-          l.appendChild(b);
-        });
-        c.appendChild(l);
-      });
-      var raz = document.createElement("button"); raz.type = "button"; raz.className = "e360-p-bouton"; raz.textContent = "Revenir à la barre d'origine";
-      raz.addEventListener("click", function () { ecrireReglage("e360-barre", {}); planifier(); redessiner(); });
-      c.appendChild(raz);
-    });
-  }
-
   // ---------- Double toucher de l'Apple Pencil ----------
-  var ACTIONS_CRAYON = [["annuler", "Annuler"], ["vue", "Passer de la Liste à la Carte"], ["point", "Ajouter un point"], ["tester", "Tester la scène"], ["rien", "Rien"]];
+  var ACTIONS_CRAYON = [["annuler", "Annuler"], ["vue", "Passer des Scènes au Plan des scènes"], ["point", "Ajouter un point"], ["tester", "Tester la scène"], ["rien", "Rien"]];
   function panneauCrayon() {
     ouvrirPanneau("Double toucher du crayon", function (c, redessiner) {
       var a = lireReglage("e360-crayon", "annuler");
@@ -892,9 +778,8 @@
     else if (a === "point") b = boutonLibelle("Ajouter un point");
     else if (a === "tester") b = boutonLibelle("Tester la scène");
     else if (a === "vue") {
-      var h = barreDuHaut(), v = h && h.querySelector("[data-e360='vues']");
       var dansListe = !!document.querySelector("[data-e360-scene]");
-      b = v && Array.prototype.filter.call(v.querySelectorAll("button"), function (x) { return libelle(x) === (dansListe ? "Carte" : "Liste"); })[0];
+      b = document.querySelector(dansListe ? "#root [data-view-map]" : "#root [data-view-list]");
     }
     if (b && !b.disabled) b.click();
   });

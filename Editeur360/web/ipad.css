@@ -139,19 +139,17 @@ html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webk
 #root [data-e360="barre"] > * { flex-shrink: 0; white-space: nowrap; }
 #root [data-e360="logo"], #root [data-e360="marque"], #root [data-e360-menu] { display: none !important; }
 #root [data-e360="nom-jeu"] {
-  order: 1; margin: 0 6px 0 2px !important; font-size: 19px !important; font-weight: 600;
+  margin: 0 6px 0 2px !important; font-size: 19px !important; font-weight: 600;
   font-family: var(--police-titre) !important;
   color: var(--texte) !important; max-width: 240px !important;
 }
-#root [data-e360="vues"] { order: 2; }
-#root [data-e360="barre"] > div:not([data-e360]) { order: 3; }          /* espace extensible */
-#root [data-e360="mes-jeux"] { order: 4; }
-#root [data-e360="enregistrer"] { order: 5; }
-#root [data-e360="tester-scene"] { order: 6; margin-left: 6px; }
-#root [data-e360="tester-jeu"] { order: 7; }
-#root [data-e360="barre"] > .e360-plus { order: 8; }
+/* L'ordre est celui de l'éditeur : nom du jeu ; enregistrer, annuler, Projet, Publier ; les essais. */
+#root [data-e360="barre"] > svg { display: none; }
+/* Les onglets des vues, sur leur ligne sous la barre. */
+#root [data-e360="vues"] { background-color: var(--surface) !important; padding-left: max(10px, env(safe-area-inset-left)) !important; }
+#root [data-e360="vues"] > button { min-height: 38px; }
 
-#root [data-e360="mes-jeux"], #root [data-e360="enregistrer"][style*="background: rgb(36, 41, 56)"], #root [data-e360="tester-scene"] {
+#root [data-e360="enregistrer"][style*="background: rgb(36, 41, 56)"], #root [data-e360="tester-scene"] {
   background-color: transparent !important; border: 1px solid var(--trait) !important;
 }
 #root [data-e360="tester-jeu"] { padding: 6px 16px !important; font-weight: 600; }
@@ -162,10 +160,13 @@ html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webk
 }
 #root .e360-plus:active { background: var(--bouton-appui); }
 
-/* En portrait, les vues passent sur leur propre ligne, pleine largeur. */
+/* En portrait, les onglets des vues se partagent la largeur. */
 @media (max-width: 1000px) {
-  #root [data-e360="vues"] { order: 10; flex: 1 1 100%; }
   #root [data-e360="vues"] > button { flex: 1; justify-content: center; }
+  /* la barre tient sur une ligne : nom du jeu raccourci, sans les « ? » */
+  #root [data-e360="barre"] { flex-wrap: nowrap; gap: 6px !important; }
+  #root [data-e360="barre"] .e360-q { display: none !important; }
+  #root [data-e360="nom-jeu"] { flex-shrink: 1 !important; min-width: 40px; max-width: 150px !important; overflow: hidden; text-overflow: ellipsis; font-size: 17px !important; }
 }
 
 /* Menu « Plus » (hors de #root). */
@@ -362,6 +363,9 @@ html.e360-etroit #root div[style*="width: 300px"][style*="border-left"][style*="
 #root .e360-onglets > button.e360-onglet-actif { background: var(--bouton) !important; color: var(--texte) !important; box-shadow: inset 0 -2px 0 var(--accent); }
 /* La rubrique affichée porte déjà son nom sur l'onglet : son titre est discret. */
 #root .e360-onglets ~ div[style*="text-transform: uppercase"] { margin-top: 4px !important; }
+/* Colonne de gauche, étroite : tous ses onglets visibles, sur deux lignes au besoin. */
+#root [data-e360="colonne"] > .e360-onglets { flex-wrap: wrap; overflow-x: visible; -webkit-mask-image: none; mask-image: none; touch-action: auto; }
+#root [data-e360="colonne"] > .e360-onglets > button { padding: 0 10px !important; min-height: 32px; }
 /* Réglages de la scène : les onglets au-dessus, une seule colonne à la fois, sur toute la largeur. */
 #root [data-e360-scene] { flex-wrap: wrap !important; row-gap: 4px; }
 #root [data-e360-scene] > .e360-onglets { flex: 0 0 100%; margin: 0 0 4px; position: static; }
