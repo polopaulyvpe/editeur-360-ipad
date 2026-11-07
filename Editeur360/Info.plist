@@ -32,6 +32,8 @@
     <string>UIInterfaceOrientationPortraitUpsideDown</string>
   </array>
   <key>NSPhotoLibraryUsageDescription</key><string>Pour choisir des images à mettre dans vos jeux.</string>
+  <key>NSMicrophoneUsageDescription</key><string>Pour les jeux où l’on souffle dans le micro.</string>
+  <key>NSMotionUsageDescription</key><string>Pour regarder la 360 en bougeant l’appareil.</string>
   <key>NSCameraUsageDescription</key><string>Pour prendre une photo à mettre dans vos jeux.</string>
 </dict>
 </plist>
