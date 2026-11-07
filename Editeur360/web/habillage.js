@@ -184,7 +184,7 @@
       o.textes.push({ el: el });
     });
     root.querySelectorAll("button[title]:not([data-e360-q])").forEach(function (b) {
-      if (b.closest(".e360-menu") || !b.offsetParent) return;
+      if (b.closest(".e360-menu, [data-hud-studio]") || !b.offsetParent) return;   // l'atelier d'interface : barres déjà serrées
       var t = (b.getAttribute("title") || "").trim();
       if (t.length < 25 || libelle(b).length > 0 && t.indexOf(libelle(b)) === 0 && t.length < libelle(b).length + 15) {
         b.setAttribute("data-e360-q", "non");

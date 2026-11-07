@@ -55,7 +55,7 @@ html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webk
 /* 1. Titres des grands blocs : serif, grand, clair. */
 #root [style*="Fraunces"],
 #root [style*="justify-content: space-between"][style*="margin-bottom: 10px"] > span:first-child,
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
   font-family: var(--police-titre) !important; font-weight: 600 !important; letter-spacing: 0 !important;
   text-transform: none !important; color: var(--texte) !important;
 }
@@ -189,25 +189,25 @@ html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webk
 .e360-menu-item:disabled { color: var(--texte-2); }
 
 /* ---------- Colonne de gauche : une liste, pas des blocs ---------- */
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] {
   width: 248px !important; padding: 10px 10px 20px !important; background-color: var(--surface) !important;
 }
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"] {
   font-family: var(--police-titre) !important; font-size: 18px !important; letter-spacing: 0 !important;
   margin: 22px 6px 6px !important; padding-top: 16px; border-top: 1px solid var(--trait);
 }
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"]:first-child {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > div[style*="text-transform: uppercase"]:first-child {
   margin-top: 4px !important; padding-top: 0; border-top: none;
 }
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > button {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > button {
   width: 100%; justify-content: flex-start !important; background-color: transparent !important;
   min-height: 42px; padding: 0 10px !important; font-size: 14px !important; color: var(--texte) !important;
 }
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > button:active {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > button:active {
   background-color: var(--bouton) !important;
 }
 /* Scènes de la liste. */
-#root > div > div:nth-child(2) > div:first-child[style*="width: 220px"] > div[style*="padding: 8px 10px"] {
+#root > div > div[data-e360="corps"] > div:first-child[style*="width: 220px"] > div[style*="padding: 8px 10px"] {
   min-height: 44px; box-sizing: border-box; font-size: 14px;
 }
 
@@ -309,17 +309,17 @@ html, body, #root, #root * { -webkit-user-select: none; user-select: none; -webk
   min-height: 32px; margin: -2px 0 4px; padding: 0 4px; border: none; background: transparent;
   color: var(--texte-2); font: 500 13px var(--police) !important; cursor: pointer;
 }
-#root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child > button.e360-replier {
+#root > div > div[data-e360="corps"] > div[data-e360="colonne"]:first-child > button.e360-replier {
   color: var(--texte-2) !important; font-size: 13px !important; min-height: 34px; padding: 0 6px !important;
 }
 #root [data-e360="colonne"] > .e360-replier:active { color: var(--texte); background: transparent !important; }
 
 /* Réduite : une bande de 48 px, toute la bande rouvre la barre. */
-html.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+html.e360-colonne-masquee #root > div > div[data-e360="corps"] > div[data-e360="colonne"]:first-child {
   width: 48px !important; min-width: 48px; padding: 0 !important; overflow: hidden !important;
 }
 html.e360-colonne-masquee #root [data-e360="colonne"] > :not(.e360-replier) { display: none !important; }
-html.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child > button.e360-replier {
+html.e360-colonne-masquee #root > div > div[data-e360="corps"] > div[data-e360="colonne"]:first-child > button.e360-replier {
   flex-direction: column; justify-content: flex-start !important; align-items: center; gap: 14px; height: 100%; margin: 0;
   padding: 14px 0 !important; border-radius: 0 !important;
 }
@@ -333,11 +333,11 @@ html.e360-colonne-masquee #root .e360-replier .e360-r-ferme {
 /* Écran étroit (portrait) : la barre latérale est un tiroir posé par-dessus le contenu.
    Seule la bande de 48 px prend de la place ; ouverte, la barre recouvre la vue. */
 html.e360-etroit #root [data-e360="corps"] { position: relative; padding-left: 48px; }
-html.e360-etroit #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+html.e360-etroit #root > div > div[data-e360="corps"] > div[data-e360="colonne"]:first-child {
   position: absolute; top: 0; bottom: 0; left: 0; z-index: 40; width: 280px !important;
   box-shadow: 12px 0 32px rgba(0, 0, 0, .45);
 }
-html.e360-etroit.e360-colonne-masquee #root > div > div:nth-child(2) > div[data-e360="colonne"]:first-child {
+html.e360-etroit.e360-colonne-masquee #root > div > div[data-e360="corps"] > div[data-e360="colonne"]:first-child {
   width: 48px !important; box-shadow: none;
 }
 /* Colonnes de la vue Énigmes un peu plus étroites, pour laisser de la place à l'aperçu. */
