@@ -15,6 +15,10 @@
     },
     where: function () { return h.storage.postMessage({ op: "where" }); }
   };
+  window.e360Transfert = {
+    demarrer: function () { return h.storage.postMessage({ op: "transfert_start" }); },
+    arreter: function () { return h.storage.postMessage({ op: "transfert_stop" }); }
+  };
   // Un lien « télécharger » (exports .zip, .html, kit DA…) : sur iPad on passe le
   // fichier à l'appli, qui ouvre « Enregistrer dans Fichiers » / Partager.
   var clic = HTMLAnchorElement.prototype.click;

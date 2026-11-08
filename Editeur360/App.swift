@@ -1,6 +1,7 @@
 import UIKit
 import WebKit
 import UniformTypeIdentifiers
+import Network
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -58,6 +59,122 @@ final class Stockage: @unchecked Sendable {
     }
 }
 
+/// Transfert par Wi-Fi : un petit serveur, ouvert seulement pendant que le panneau
+/// est affiché. L'adresse contient un code aléatoire, renouvelé à chaque ouverture.
+final class ServeurTransfert: @unchecked Sendable {
+    let racine: URL
+    private let file = DispatchQueue(label: "editeur360.transfert")
+    private var ecoute: NWListener?
+    private var jeton = ""
+    var surRecu: (() -> Void)?
+    private final class Tampon { var d = Data() }
+
+    init(racine: URL) { self.racine = racine }
+
+    private static func adresseIP() -> String? {
+        var res: String?
+        var liste: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&liste) == 0, let premier = liste else { return nil }
+        defer { freeifaddrs(liste) }
+        for p in sequence(first: premier, next: { $0.pointee.ifa_next }) {
+            let i = p.pointee
+            guard let a = i.ifa_addr, a.pointee.sa_family == UInt8(AF_INET), String(cString: i.ifa_name) == "en0" else { continue }
+            var h = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+            if getnameinfo(a, socklen_t(a.pointee.sa_len), &h, socklen_t(h.count), nil, 0, NI_NUMERICHOST) == 0 { res = String(cString: h) }
+        }
+        return res
+    }
+
+    func demarrer() -> String? {
+        arreter()
+        guard let ip = ServeurTransfert.adresseIP(), let port = NWEndpoint.Port(rawValue: 8360),
+              let l = try? NWListener(using: .tcp, on: port) else { return nil }
+        jeton = String(UUID().uuidString.prefix(6)).lowercased()
+        l.newConnectionHandler = { [weak self] c in
+            guard let self = self else { c.cancel(); return }
+            c.start(queue: self.file)
+            self.lire(c, Tampon())
+        }
+        l.start(queue: file)
+        ecoute = l
+        return "http://\(ip):8360/\(jeton)/"
+    }
+
+    func arreter() { ecoute?.cancel(); ecoute = nil }
+
+    private func lire(_ c: NWConnection, _ t: Tampon) {
+        c.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { [weak self] d, _, fini, err in
+            guard let self = self else { c.cancel(); return }
+            if let d = d { t.d.append(d) }
+            if let r = t.d.range(of: Data("\r\n\r\n".utf8)) {
+                let lignes = String(decoding: t.d[t.d.startIndex..<r.lowerBound], as: UTF8.self).components(separatedBy: "\r\n")
+                var taille = 0
+                for l in lignes.dropFirst() where l.lowercased().hasPrefix("content-length:") {
+                    taille = Int(l.dropFirst(15).trimmingCharacters(in: .whitespaces)) ?? 0
+                }
+                let recu = t.d.distance(from: r.upperBound, to: t.d.endIndex)
+                if recu >= taille {
+                    self.repondre(c, lignes[0], t.d.subdata(in: r.upperBound..<t.d.index(r.upperBound, offsetBy: taille)))
+                    return
+                }
+            }
+            if fini || err != nil { c.cancel(); return }
+            self.lire(c, t)
+        }
+    }
+
+    private func envoyer(_ c: NWConnection, _ etat: String, _ type: String, _ corps: Data, _ plus: String = "") {
+        var tete = Data("HTTP/1.1 \(etat)\r\nContent-Type: \(type)\r\nContent-Length: \(corps.count)\r\n\(plus)Connection: close\r\n\r\n".utf8)
+        tete.append(corps)
+        c.send(content: tete, completion: .contentProcessed { _ in c.cancel() })
+    }
+
+    private func repondre(_ c: NWConnection, _ ligne: String, _ corps: Data) {
+        let m = ligne.components(separatedBy: " ")
+        guard m.count >= 2, m[1].hasPrefix("/\(jeton)/") else {
+            envoyer(c, "404 Not Found", "text/plain", Data("Adresse inconnue".utf8)); return
+        }
+        let chemin = String(m[1].dropFirst(jeton.count + 2))
+        if m[0] == "GET" && chemin.isEmpty {
+            envoyer(c, "200 OK", "text/html; charset=utf-8", Data(ServeurTransfert.page.utf8)); return
+        }
+        if m[0] == "GET" && chemin == "liste" {
+            let bib = (try? Data(contentsOf: racine.appendingPathComponent("library.json"))) ?? Data("[]".utf8)
+            envoyer(c, "200 OK", "application/json", bib); return
+        }
+        if m[0] == "GET" && chemin.hasPrefix("jeu/") {
+            let ok = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-")
+            let id = String(chemin.dropFirst(4))
+            let f = racine.appendingPathComponent("jeux", isDirectory: true).appendingPathComponent(id, isDirectory: true).appendingPathComponent("game.json")
+            guard id.allSatisfy({ ok.contains($0) }), let d = try? Data(contentsOf: f) else {
+                envoyer(c, "404 Not Found", "text/plain", Data("Jeu introuvable".utf8)); return
+            }
+            envoyer(c, "200 OK", "application/json", d, "Content-Disposition: attachment; filename=\"\(id).json\"\r\n"); return
+        }
+        if m[0] == "POST" && chemin == "envoi" {
+            do {
+                try corps.write(to: racine.appendingPathComponent("recu.json"), options: .atomic)
+                envoyer(c, "200 OK", "text/plain", Data("ok".utf8))
+                DispatchQueue.main.async { [weak self] in self?.surRecu?() }
+            } catch { envoyer(c, "500 Error", "text/plain", Data("Écriture impossible".utf8)) }
+            return
+        }
+        envoyer(c, "404 Not Found", "text/plain", Data("Adresse inconnue".utf8))
+    }
+
+    private static let page = #"""
+    <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Éditeur 360 : transfert</title>
+    <style>body{font:16px system-ui,sans-serif;background:#0d1117;color:#e9e6dd;max-width:640px;margin:30px auto;padding:0 16px}a,button{display:inline-block;background:#e8a33d;color:#111;border:none;border-radius:8px;padding:8px 14px;text-decoration:none;font:inherit;cursor:pointer}li{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #2a3040}ul{list-style:none;padding:0}</style>
+    <h1>Éditeur 360</h1><h2>Récupérer un jeu</h2><ul id="l"></ul>
+    <h2>Envoyer un projet vers l'iPad</h2><input type="file" id="f" accept=".json"> <button id="b">Envoyer</button><p id="m"></p>
+    <script>
+    fetch('liste').then(r=>r.json()).then(d=>{const a=Array.isArray(d)?d:(d.games||d.entries||[]);const u=document.getElementById('l');if(!a.length)u.textContent='Aucun jeu.';a.forEach(j=>{const i=document.createElement('li'),s=document.createElement('span'),l=document.createElement('a');s.textContent=j.title||j.id;l.textContent='Télécharger';l.href='jeu/'+encodeURIComponent(j.id);l.download=(j.title||j.id)+'.json';i.append(s,l);u.append(i)})});
+    document.getElementById('b').onclick=()=>{const f=document.getElementById('f').files[0],m=document.getElementById('m');if(!f){m.textContent='Choisis un fichier.';return}m.textContent='Envoi…';fetch('envoi',{method:'POST',body:f}).then(r=>{m.textContent=r.ok?'Reçu : regarde sur l’iPad.':'Échec.'}).catch(()=>{m.textContent='Échec.'})};
+    </script></html>
+    """#
+}
+
 /// Sert les fichiers de l'appli sous app://editeur/… : une vraie origine, pour
 /// que blob:, fetch et WebGL se comportent comme dans un navigateur.
 final class Fichiers: NSObject, WKURLSchemeHandler {
@@ -93,6 +210,7 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
     private let stockage = Stockage()
     private let fileStockage = DispatchQueue(label: "editeur360.stockage", qos: .userInitiated)
     private let fichiers = Fichiers()
+    private var serveur: ServeurTransfert?
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -146,6 +264,21 @@ final class EditeurViewController: UIViewController, WKScriptMessageHandlerWithR
         case "delete":
             fileStockage.async { s.supprimer(cle); DispatchQueue.main.async { replyHandler(true, nil) } }
         case "where": replyHandler("Fichiers › Sur mon iPad › Éditeur 360 › Editeur 360", nil)
+        case "transfert_start":
+            if serveur == nil {
+                let t = ServeurTransfert(racine: stockage.racine)
+                t.surRecu = { [weak self] in
+                    self?.web.evaluateJavaScript("window.dispatchEvent(new Event('e360-recu'))", completionHandler: nil)
+                }
+                serveur = t
+            }
+            let adresse = serveur?.demarrer()
+            UIApplication.shared.isIdleTimerDisabled = adresse != nil   // l'écran reste allumé pendant le transfert
+            replyHandler(adresse, nil)
+        case "transfert_stop":
+            serveur?.arreter()
+            UIApplication.shared.isIdleTimerDisabled = false
+            replyHandler(true, nil)
         default: replyHandler(nil, "inconnu")
         }
     }

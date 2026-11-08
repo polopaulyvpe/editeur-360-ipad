@@ -96,7 +96,8 @@
   window.E360_MENUS_EN_PLUS = {
     projet: ["-",
       { id: "ed-apparence", libelle: "Apparence de l'éditeur…", faire: function () { panneauApparence(); } },
-      { id: "ed-crayon", libelle: "Double toucher du crayon…", faire: function () { panneauCrayon(); } }]
+      { id: "ed-crayon", libelle: "Double toucher du crayon…", faire: function () { panneauCrayon(); } },
+      { id: "ed-transfert", libelle: "Transfert Wi-Fi avec l'ordinateur…", faire: function () { panneauTransfert(); } }]
   };
 
   // ---------- Aides derrière un « ? » ----------
@@ -749,6 +750,38 @@
     });
   }
   appliquerApparence();
+
+  // ---------- Transfert par Wi-Fi avec l'ordinateur ----------
+  function panneauTransfert() {
+    ouvrirPanneau("Transfert Wi-Fi", function (c) {
+      var note = document.createElement("p"); note.className = "e360-p-note";
+      c.appendChild(note);
+      if (!window.e360Transfert) { note.textContent = "Disponible seulement dans l'appli sur iPad."; return; }
+      note.textContent = "Ouverture…";
+      window.e360Transfert.demarrer().then(function (url) {
+        if (!url) { note.textContent = "Impossible d'ouvrir le transfert. Vérifie que le Wi-Fi est activé."; return; }
+        note.textContent = "Sur ton ordinateur, connecté au même Wi-Fi, ouvre cette adresse. Garde ce panneau ouvert pendant le transfert.";
+        var a = document.createElement("p");
+        a.style.cssText = "font-size:20px;font-weight:600;user-select:text;-webkit-user-select:text;word-break:break-all";
+        a.textContent = url;
+        c.appendChild(a);
+        var veille = setInterval(function () {
+          if (!c.isConnected) { clearInterval(veille); window.e360Transfert.arreter(); }
+        }, 700);
+      }).catch(function () { note.textContent = "Impossible d'ouvrir le transfert."; });
+    });
+  }
+  window.addEventListener("e360-recu", function () {
+    if (!window.confirm("Un projet vient d'arriver de l'ordinateur. Remplacer le jeu ouvert par ce projet ? (Pour le garder à part, crée d'abord un nouveau jeu.)")) return;
+    window.storage.get("recu").then(function (r) {
+      var champ = document.querySelector('#root [data-barre-haut] input[type="file"]');
+      if (!r || !champ) return;
+      var d = new DataTransfer();
+      d.items.add(new File([r.value], "recu.json", { type: "application/json" }));
+      champ.files = d.files;
+      champ.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
 
   // ---------- Double toucher de l'Apple Pencil ----------
   var ACTIONS_CRAYON = [["annuler", "Annuler"], ["vue", "Passer des Scènes au Plan des scènes"], ["point", "Ajouter un point"], ["tester", "Tester la scène"], ["rien", "Rien"]];
