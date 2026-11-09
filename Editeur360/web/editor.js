@@ -4896,7 +4896,7 @@ function animerRegard(cible, secondes){
 }
 /*  Transitions : on fige l'image d'avant dans un calque pose dessus,
     la nouvelle scene se charge dessous, puis le calque s'efface.     */
-function faireTransition(type, ox, oy){
+function faireTransition(type, ox, oy, part){
   if(!type || type === 'aucune') return;
   if(type === 'morph') type = 'fondu';
   try{ if(HomeSettings.get().reduceMotion) type = 'fondu'; }catch(e){}
@@ -4916,8 +4916,11 @@ function faireTransition(type, ox, oy){
   const debut = Date.now();
   const lance = function(){
     if(!texturePrete && Date.now() - debut < 1500){ setTimeout(lance, 40); return; }
+    const d = Math.max(120, passageMs() * (part || 1));
+    voile.querySelectorAll('*').forEach(function(el){ el.style.transitionDuration = d + 'ms'; el.style.animationDuration = d + 'ms'; });
+    voile.style.transitionDuration = d + 'ms'; voile.style.animationDuration = d + 'ms';
     voile.classList.add('tr-go');
-    setTimeout(function(){ try{ voile.remove(); }catch(e){} }, 1300);
+    setTimeout(function(){ try{ voile.remove(); }catch(e){} }, d + 300);
   };
   setTimeout(lance, 30);
 }
@@ -8671,19 +8674,20 @@ function navProjette(){
   navEl.style.top = (hb - (hb - 50) * k) + '%';
   navEl.style.transform = 'perspective(700px) rotateX(' + (inc * (1 - k)) + 'deg) rotateZ(' + yaw + 'rad)';
 }
-/*  On se tourne vers le passage et on avance : plus il est loin, plus
-    le trajet dure. La sc\xE8ne suivante arrive dans le m\xEAme sens.          */
+/*  On se tourne vers le passage et on avance pendant 60 % de la dur\xE9e
+    r\xE9gl\xE9e ; l'effet choisi occupe le reste. La sc\xE8ne suivante arrive dans le m\xEAme sens. */
+/*  La dur\xE9e r\xE9gl\xE9e (par sc\xE8ne de d\xE9part, sinon pour tout le jeu) vaut pour tous les passages, quel que soit l'effet. */
+function passageMs(){ return 1000 * Math.max(0.2, parseFloat(imSc().morphDuree) || parseFloat(plusCfg().morphDuree) || 0.8); }
 function morphCalme(){ try{ return !!HomeSettings.get().reduceMotion || puzReduceMotion(); }catch(e){ return false; } }
 function navAvance(hs, ox, oy){
   if(!hs.transition || hs.transition === 'morph') return false;
   if(!imOpt().avance || navEnCours || !hs.position) return false;
   const tgt = GAME.scenes.filter(function(s){ return s.id === hs.target; })[0];
   const ty = yaw + Math.atan2(Math.sin(hs.position.yaw - yaw), Math.cos(hs.position.yaw - yaw));
-  const passage = { regard: hs.regard || (tgt && tgt.regard) || { yaw: hs.position.yaw, pitch: 0 }, transition: hs.transition || 'morph', ox: ox, oy: oy };
+  const passage = { regard: hs.regard || (tgt && tgt.regard) || { yaw: hs.position.yaw, pitch: 0 }, transition: hs.transition || 'morph', ox: ox, oy: oy, avance: true };
   if(puzReduceMotion()){ loadScene(hs.target, passage); return true; }
   navEnCours = true;
-  const d = navDistance(hs.position.pitch, hs.distance);
-  const ms = Math.max(420, Math.min(1400, 320 + d * 70));
+  const ms = passageMs() * 0.6;
   const t0 = performance.now(), y0 = yaw, p0 = pitch, f0 = camera.fov, tp = Math.max(-0.2, Math.min(0.2, hs.position.pitch));
   animsCamera.push(function(t){
     const k = Math.min(1, (t - t0) / ms), e = adoucir(k), r = adoucir(Math.min(1, k * 1.8));
@@ -8826,7 +8830,7 @@ function morDemarre(cibleId, texA, texB, profA, profB, r){
     document.head.appendChild(st);
   }
   frameEl.classList.add('mor-on');
-  const ms = 1000 * Math.max(0.2, parseFloat(imSc().morphDuree) || parseFloat(plusCfg().morphDuree) || 0.8);
+  const ms = passageMs();
   const t0 = performance.now(), y0 = yaw, p0 = pitch, ty = y0 + Math.atan2(Math.sin(r.finA - y0), Math.cos(r.finA - y0)), tp = r.fin.pitch || 0;
   const pose = function(k){
     const s = k * k * (3 - 2 * k), tour = adoucir(Math.min(1, k * 1.5));
@@ -10537,7 +10541,7 @@ function loadScene(id, passage){
   passageDemande = null;
   const change = !!(current && current.id !== id);
   if(change && passage && !passage.morFait && (!passage.transition || passage.transition === 'morph') && morLance(id, passage)) return;
-  if(change && playerScreen === 'playing') faireTransition(passage && passage.transition ? passage.transition : 'morph', passage && passage.ox, passage && passage.oy);
+  if(change && playerScreen === 'playing') faireTransition(passage && passage.transition ? passage.transition : 'morph', passage && passage.ox, passage && passage.oy, passage && passage.avance ? 0.4 : 1);
   if(activeP && activeP.mode === 'scene' && activeP.p.params && activeP.p.params.sceneId !== id) closePuzzle();
   if(current && current.id !== id) sceneAbandons = {};
   current = GAME.scenes.find(s=>s.id===id) || current;
