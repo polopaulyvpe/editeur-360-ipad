@@ -7088,6 +7088,7 @@ function mFondActif(b, v){ return !!b.vitrine && b.vitrine.mode === 'fond' && v.
 function mFondDessine(b, v, el){
   const vi = mVitrineDe(b), I = vi.info || {}, L = mLookDe(b), fond = vi.decor || b.image || '';
   if(v.fondRO){ try{ v.fondRO.disconnect(); }catch(e){} v.fondRO = null; }
+  if(v.fmin){ clearTimeout(v.fmin); v.fmin = 0; }
   el.textContent = '';
   el.style.padding = '0';
   if(fond) el.style.backgroundImage = 'url("' + fond + '")';
@@ -7197,11 +7198,36 @@ function mFondDessine(b, v, el){
     });
     return meilleur;
   }
+  /*  \xC0 la souris, la zone suit le survol et part quand on quitte l'objet ;
+      un clic sur l'objet la garde, pour pouvoir aller jusqu'\xE0 Acheter.
+      Au doigt, elle reste apr\xE8s le lever et se referme en touchant ailleurs. */
   let presse = false;
-  scene.addEventListener('pointerdown', function(e){ presse = true; const q = sous(e); choisir(q ? q.i : null); });
-  scene.addEventListener('pointermove', function(e){ const q = sous(e); if(q) choisir(q.i); else if(presse) choisir(null); });
+  function annule(){ if(v.fmin){ clearTimeout(v.fmin); v.fmin = 0; } }
+  function plusTard(){
+    if(v.fpin || v.fsel == null || v.fmin) return;
+    v.fmin = setTimeout(function(){ v.fmin = 0; if(!v.fpin && boutiqueV === v) choisir(null); }, 220);
+  }
+  scene.addEventListener('pointerdown', function(e){
+    presse = true; annule();
+    const q = sous(e);
+    v.fpin = e.pointerType === 'mouse' && !!q;
+    choisir(q ? q.i : null);
+  });
+  scene.addEventListener('pointermove', function(e){
+    const q = sous(e);
+    if(e.pointerType === 'mouse' && !presse){
+      if(v.fpin) return;
+      if(q){ annule(); choisir(q.i); } else plusTard();
+      return;
+    }
+    if(e.pointerType === 'mouse') v.fpin = !!q;
+    if(q) choisir(q.i); else if(presse) choisir(null);
+  });
   scene.addEventListener('pointerup', function(){ presse = false; });
   scene.addEventListener('pointercancel', function(){ presse = false; });
+  scene.addEventListener('pointerleave', function(e){ if(e.pointerType === 'mouse'){ presse = false; plusTard(); } });
+  zone.addEventListener('pointerenter', function(e){ if(e.pointerType === 'mouse') annule(); });
+  zone.addEventListener('pointerleave', function(e){ if(e.pointerType === 'mouse') plusTard(); });
   objets.forEach(function(q){ q.c.addEventListener('click', function(){ choisir(q.i); }); });
   if(v.fsel != null && !objets.some(function(q){ return q.i === v.fsel; })) v.fsel = null;
   place();
