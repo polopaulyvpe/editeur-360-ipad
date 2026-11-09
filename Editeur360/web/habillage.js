@@ -648,7 +648,7 @@
   }
 
   // Ce qui ne contient jamais de panneau à onglets : on ne le parcourt pas.
-  var ZONES_CALMES_ONGLETS = "[data-e360='colonne'], [data-e360='accueil'], .e360-menu, [data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-canvas], [data-test-jeu], [data-cine-frise], svg, canvas, iframe, video";
+  var ZONES_CALMES_ONGLETS = "[data-e360='colonne'], [data-e360='accueil'], .e360-menu, [data-cb-nodes], .pz-native, [data-dlg-canvas], [data-carte-plateau], [data-hud-canvas], [data-test-jeu], [data-cine-frise], [data-atelier36], svg, canvas, iframe, video";
   function ongletsPanneaux(root) {
     var vus = [];
     var parcours = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
